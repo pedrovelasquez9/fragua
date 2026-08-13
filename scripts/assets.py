@@ -4,9 +4,13 @@
     python assets.py                          reindexa y muestra qué hay
     python assets.py --show                   sólo dice dónde está apuntando
 
-Escribe `assets.json` en la raíz de la skill: el catálogo que el agente lee para
-saber qué música, efectos, imágenes y fuentes tiene disponibles antes de escribir
+Escribe `~/.fragua/assets.json`: el catálogo que el agente lee para saber qué
+música, efectos, imágenes y fuentes tiene disponibles antes de escribir
 `plan.json`. Sin catálogo, el agente no sabe que existen.
+
+Vive fuera de la skill a propósito. Claude Code instala cada versión del plugin
+en su propia carpeta, así que guardarlo dentro haría perder la configuración en
+cada actualización.
 
 Estructura recomendada de la carpeta, aunque también funciona plana porque la
 clasificación es por extensión:
@@ -22,9 +26,9 @@ import struct
 import subprocess
 from pathlib import Path
 
-from common import ROOT, read_json, write_json
+from common import ASSETS_CONFIG, ROOT, read_json, write_json
 
-CONFIG = ROOT / "assets.json"
+CONFIG = ASSETS_CONFIG
 DEFAULT_DIR = ROOT / "assets"
 
 AUDIO_EXT = {".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac"}
@@ -184,6 +188,7 @@ def main():
                          f"Configúrala con:  python scripts/assets.py --set <ruta>")
 
     catalogue = index_directory(root)
+    CONFIG.parent.mkdir(parents=True, exist_ok=True)
     write_json(CONFIG, dict(config, dir=root.as_posix(), **catalogue))
     summarise(catalogue, root)
     print(f"\ncatálogo -> {CONFIG.name}")

@@ -192,6 +192,9 @@ un barrido, un pop cuando entra una tarjeta, tu pista bajo la voz —con ducking
 automático para que nunca compita con la narración—. También puedes pedírselo
 directamente: `mete la pista lofi de fondo y un pop en cada tarjeta`.
 
+El catálogo se guarda en `~/.fragua/assets.json`, fuera del plugin, así que
+sobrevive a las actualizaciones.
+
 Si no configuras nada, Fragua usa su propia carpeta `assets/` vacía y todo lo
 demás funciona igual.
 

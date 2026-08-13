@@ -189,6 +189,9 @@ whoosh over a whip pan, a pop when a card appears, your track under the voice â€
 ducked automatically so it never fights the narration. Ask for it explicitly if
 you prefer: `put the lofi track underneath and a pop on each card`.
 
+The catalogue is stored in `~/.fragua/assets.json`, outside the plugin, so it
+survives updates.
+
 If you never configure anything, Fragua uses its own empty `assets/` folder and
 everything else works the same.
 

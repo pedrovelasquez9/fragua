@@ -346,7 +346,8 @@ python scripts/assets.py --set D:/mis-assets   # una vez, la configura
 python scripts/assets.py                       # reindexa y muestra qué hay
 ```
 
-Escribe `assets.json` en la raíz con el inventario clasificado: `music`, `sfx`,
+Escribe `~/.fragua/assets.json` —fuera del plugin, para que sobreviva a las
+actualizaciones— con el inventario clasificado: `music`, `sfx`,
 `stickers`, `images` y `fonts`, cada uno con su ruta relativa y sus datos —
 duración de los audios, dimensiones y transparencia de las imágenes, familia
 tipográfica de las fuentes.

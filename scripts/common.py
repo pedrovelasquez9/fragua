@@ -31,7 +31,10 @@ def load_presets():
 
 # --- asset library ----------------------------------------------------------
 
-ASSETS_CONFIG = ROOT / "assets.json"
+# Fuera del plugin a propósito: Claude Code instala cada versión en su propia
+# carpeta (plugins/cache/<nombre>/<version>/), así que guardarlo dentro haría que
+# el usuario perdiera su biblioteca en cada actualización.
+ASSETS_CONFIG = Path.home() / ".fragua" / "assets.json"
 
 
 def assets_dir():
