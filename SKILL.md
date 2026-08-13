@@ -1,0 +1,460 @@
+---
+name: fragua
+description: Edita vídeo bruto para YouTube, TikTok e Instagram — quita silencios, transcribe y quema subtítulos karaoke, aplica cambios de plano y efectos, cards gráficas, color y normalización de audio; y al terminar redacta el copy de publicación (título, descripción, tags y captions por red). Úsala cuando el usuario pase un vídeo para editar, pida un corto/short/reel a partir de uno largo, pida subtítulos quemados, quitar silencios, un look cinematográfico, o el texto para publicar el vídeo. Requiere ffmpeg y whisper.cpp local.
+---
+
+# Fragua
+
+Convierte una grabación cruda en vídeo publicable. Los scripts hacen el trabajo
+mecánico; tú (el modelo) tomas las decisiones editoriales leyendo la transcripción.
+
+**Ningún script decide qué es viral.** Eso lo decides tú en `plan.json`.
+
+## Antes de nada
+
+`ffmpeg` en el PATH y whisper.cpp descargado:
+
+```bash
+powershell -ExecutionPolicy Bypass -File scripts/setup.ps1   # Windows
+./scripts/setup.sh                                           # Linux y macOS
+```
+
+Una vez por máquina (~1.6 GB). Comprueba que todo funciona:
+
+```bash
+python test_pipeline.py
+```
+
+## El flujo
+
+Cada etapa escribe un JSON que puedes leer y editar antes de la siguiente. No se
+renderiza nada hasta el final, así que iterar es gratis.
+
+```
+vídeo → analyze.py    → cuts.json    (segmentos a conservar, vía silencedetect)
+      → transcribe.py → draft.json   (para leer y decidir el montaje)
+      → [editas cuts.json y escribes plan.json]
+      → transcribe.py --cuts cuts.json → words.json   (transcribe el audio YA cortado)
+      → cards.py      → cards/*.png  (las anotaciones, rasterizadas)
+      → subtitles.py  → subs.ass     (karaoke, ya en la línea de tiempo final)
+      → render.py     → salida.mp4   (un solo pase de ffmpeg desde el original)
+      → [copy de publicación: título, descripción, tags y captions]
+```
+
+El orden importa: los subtítulos se transcriben **después** de cortar, nunca
+antes. Y el último paso no es opcional: el vídeo se entrega con su copy.
+
+### 1. Cortar silencios
+
+```bash
+python scripts/analyze.py entrada.mp4 -o cuts.json
+```
+
+Sale `cuts.json` con los segmentos que se conservan. Ajusta si hace falta:
+
+`--pad-in` (0.06) y `--pad-out` (0.22) son **asimétricos a propósito**: las colas
+de consonante y el decaimiento de la voz se prolongan más allá de donde el
+detector declara silencio, así que recortar el final de un segmento se oye mucho
+más que recortar el principio. Si una frase suena truncada, sube `--pad-out`.
+
+- `--threshold -30` — dB por debajo de los cuales hay silencio. Audio ruidoso o
+  micro flojo: prueba `-40`. Si el script avisa de que todo es silencio, ese es el motivo.
+- `--min-silence 0.35` — silencio más corto que se recorta. Bájalo a `0.25` para
+  un ritmo agresivo tipo TikTok; súbelo a `0.6` para vídeo largo que respire.
+- `--min-keep 0.12` — descarta segmentos conservados más cortos que esto.
+
+### 2. Transcribir para leer
+
+```bash
+python scripts/transcribe.py entrada.mp4 -o draft.json --lang es
+```
+
+Esta pasada es **solo para que tú decidas el montaje**. Timestamps en tiempo del
+original. Tarda aproximadamente lo que dura el vídeo en CPU.
+
+**Comprueba siempre que el último timestamp cabe en la duración del vídeo.**
+whisper.cpp deriva en audio largo, sobre todo con puerta de ruido agresiva: se
+ha visto un borrador situando palabras en el segundo 108 de un vídeo de 80. Si
+deriva, recorta el tramo que te interesa y transcríbelo suelto — en clips
+cortos no ocurre — y súmale el desplazamiento:
+
+```bash
+ffmpeg -y -ss 58 -i entrada.mp4 -c copy cola.mp4
+python scripts/transcribe.py cola.mp4 -o cola.json --lang es   # tiempos +58
+```
+
+También puede **saltarse tramos enteros** donde repites tomas casi idénticas.
+Si un trozo de la transcripción falta, mira ahí: suele ser eso.
+
+Los subtítulos NO salen de aquí: se generan en el paso 4, después de cortar.
+
+### 3. Decidir la edición (esto lo haces tú)
+
+Lee `words.json`. Es la transcripción completa con tiempos: ahí está todo lo que
+necesitas para editar sin ver el vídeo.
+
+**Para un corto**, busca el fragmento con mayor densidad de gancho: una
+afirmación fuerte, una cifra concreta, una contradicción, una historia con
+remate. Recorta `cuts.json` a esos segmentos. Un corto que funciona dura 20-45 s
+y dice algo interesante en los tres primeros segundos.
+
+**Para vídeo largo**, quita divagaciones y falsos arranques que el detector de
+silencios no ve porque tienen audio: repeticiones, "a ver, déjame que", ramas que
+no llevan a ningún sitio. Borra esos segmentos de `cuts.json`.
+
+Después escribe `plan.json`. Los tiempos van en la **línea de tiempo de salida**
+(la del vídeo ya cortado), que es la que ves al reproducir el resultado. Para
+convertir un tiempo del original usa `source_to_output()` de `scripts/common.py`.
+
+```json
+{
+  "effects": [
+    {"t": 0.0,  "type": "letterbox",  "dur": 2.5, "amount": 0.12},
+    {"t": 3.2,  "type": "zoom_punch", "hold": 2.0, "amount": 0.12},
+    {"t": 8.7,  "type": "shake",      "dur": 0.3, "amount": 8},
+    {"t": 12.0, "type": "flash",      "dur": 0.15},
+    {"t": 15.4, "type": "whip_pan",   "dur": 0.2}
+  ],
+  "cards": [
+    {"t": 0, "dur": 3.4, "y_frac": 0.07, "kind": "chip",
+     "title": "Nadie te cuenta esto"},
+    {"t": 14.6, "dur": 3.1, "y_frac": 0.66,
+     "title": "En el vídeo",
+     "body": "Cómo destacar\nTu rol con la IA\nConseguir clientes"}
+  ],
+  "stickers": [
+    {"file": "assets/stickers/fuego.png", "t": 5, "dur": 2, "scale": 0.22,
+     "x": "W*0.7", "y": "H*0.15"}
+  ],
+  "music": {"file": "assets/music/beat.mp3", "gain": -18, "duck": true}
+}
+```
+
+Todas las claves son opcionales. Sin `plan.json` sale un corte limpio con
+subtítulos y color, que ya es un vídeo entregable.
+
+**`"grade"`** reemplaza el color por defecto, que asume material bien expuesto.
+El look correcto depende del material, no de la plataforma, así que vive aquí y
+no en `presets.json`. Mide antes de decidir:
+
+```bash
+ffmpeg -ss 30 -i entrada.mp4 -frames:v 1 -vf signalstats,metadata=print -f null -
+```
+
+`YAVG` es el brillo medio (0-255) e `YHIGH` el percentil 90. Por debajo de
+YAVG 45 el material está subexpuesto y el grade por defecto lo hundirá más:
+levanta medios con `curves` en vez de aplicarlo. Sube la curva hasta un YAVG de
+50-55 y **cierra el techo en `1/0.95`** — lo que se percibe como "demasiado
+brillante" casi nunca es la media, son las altas luces de la cara lavándose.
+
+**No metas `hqdn3d` en `"grade"`.** `render.py` ya denoisa, y los dos últimos
+parámetros de `hqdn3d` son temporales: aplicarlo dos veces deja estelas de
+movimiento que se ven como pixelado y como falta de fluidez.
+
+**`"deglare"`** atenúa reflejos especulares: gafas, brillo de sudor, superficies
+pulidas. Baja los píxeles que son a la vez brillantes **y** casi neutros de
+color; esa puerta de saturación es lo que lo mantiene fuera de la piel y de las
+luces de colores, que sí son cromáticas.
+
+```json
+"deglare": true
+"deglare": {"threshold": 160, "strength": 0.65, "sat_max": 50, "feather": 30}
+```
+
+**Atenúa, no elimina.** Donde un reflejo sustituyó lo que había detrás no queda
+nada que recuperar: subir `strength` cambia una mancha blanca por una gris, que
+se lee como fallo de render mientras que la blanca el ojo la interpreta como
+reflejo y la ignora. Por encima de 0.75 empeora.
+
+Comprueba antes si merece la pena. Mide la zona del reflejo y la piel:
+
+```bash
+ffmpeg -hide_banner -nostats -ss 30 -i entrada.mp4 -frames:v 1 -vf signalstats,metadata=print -f null -
+```
+
+Si el reflejo está saturado a 255 no hay nada debajo y esto no sirve de nada.
+Si llega a ~240 sin recortar, sí hay estructura que rescatar.
+
+Cuesta **unas 4 veces más de render** (`geq` evalúa por píxel), así que va
+desactivado por defecto. Y el arreglo de verdad está en la grabación: baja el
+brillo del monitor, sácalo del eje de la cámara o inclina las patillas para que
+el reflejo caiga por debajo del objetivo. Treinta segundos de ajuste dan un
+resultado limpio que ningún filtro iguala.
+
+**Efectos disponibles**
+
+| tipo | qué hace | `amount` | cuándo |
+|---|---|---|---|
+| `zoom_punch` | **cambio de plano**: entra, mantiene, sale | 0.08–0.15 | al abrir una sección |
+| `shake` | vibración con caída | 4–14 (px) | en un remate o un dato impactante |
+| `whip_pan` | barrido lateral con desenfoque | — | entre dos ideas distintas |
+| `flash` | destello a blanco | 0.3–0.6 | en un corte duro o un beat |
+| `letterbox` | barras negras cine | 0.08–0.15 | en el hook o un momento dramático |
+
+**`zoom_punch` no es un tirón de zoom**: hace un push in con easing, **se queda
+en el plano cerrado** `hold` segundos y vuelve. Simula el corte a una segunda
+cámara. Un pico que sube y baja de inmediato se lee como un temblor; sostener el
+encuadre se lee como montaje.
+
+Se dimensiona con `ramp` (0.35 s por defecto) y `hold` (2.0 s), **no con `dur`**.
+Por defecto ocupa 2.7 s, así que sirve para abrir secciones, no para puntuar cada
+frase. Para el tirón rápido de antes: `{"hold": 0, "ramp": 0.25}`.
+
+**Los zooms no pueden solaparse.** Sus contribuciones se suman en el filtro, así
+que dos a la vez dan un zoom doble. `render.py` aborta con los tiempos exactos si
+ocurre; `zoom_punch`, `shake` y `whip_pan` cuentan todos como zoom.
+
+Ritmo: un `zoom_punch` cada 8-15 segundos, y flashes o shakes entre medias para
+lo puntual. Efecto continuo marea y el espectador se va, que es exactamente lo
+contrario de lo que buscas.
+
+**Cards**: anotaciones gráficas que resumen o estructuran lo que se dice.
+Mientras una card está en pantalla **los subtítulos se ocultan solos** — dos
+bloques de texto compitiendo es lo que hace que una edición parezca amateur.
+
+Se dibujan con Pillow en `scripts/cards.py` y se componen como PNG, no como
+texto ASS. Un rectángulo detrás de una línea de texto es lo que hace que una
+anotación parezca el título de un PowerPoint; estas tienen cabecera separada del
+cuerpo, viñetas alineadas, conectores y esquinas redondeadas.
+
+```bash
+python scripts/cards.py plan.json --preset tiktok --outdir cards
+python scripts/render.py ... --cards cards
+```
+
+| `kind` | forma | para qué |
+|---|---|---|
+| `chip` | píldora compacta con una línea | títulos y rótulos |
+| `panel` | cabecera de acento + párrafo | una idea con desarrollo |
+| `bullets` | cabecera + lista con viñetas | enumerar lo que se dice de corrido |
+| `flow` | nodo raíz + espina con nodos conectados | estructura o relación entre partes |
+| `stat` | cifra grande + etiqueta | un dato que merece pantalla |
+
+**Los títulos son cards de kind `chip`**, no texto ASS sobre el fotograma: un
+rótulo suelto encima del vídeo se lee como encabezado de diapositiva. El `chip`
+es la única card que **no** silencia los subtítulos, porque es una etiqueta y no
+un bloque de mensaje: convive con ellos sin competir.
+
+**Nada va en mayúsculas.** Ni subtítulos ni títulos ni cabeceras de card. El
+texto en caja y en versalitas es exactamente lo que da aspecto de plantilla.
+
+**Varía el tipo.** Repetir el mismo en todas las cards es exactamente lo que las
+hace parecer una plantilla. Elige por la forma del contenido: si enumeras, lista;
+si hay jerarquía o dependencia, flujo; si es una cifra, stat.
+
+Dónde colocarlas: en los tramos donde el habla es de relleno o enumera algo sin
+enseñarlo. Una card que repite palabra por palabra el subtítulo no aporta nada;
+una que convierte una frase larga en tres viñetas, sí. En el gancho y en el
+remate deja los subtítulos y no pongas card: ahí las palabras exactas importan.
+
+Ritmo: una cada 10-15 segundos como mucho, y **nunca sobre la cara**. `y_frac`
+es el borde superior; en un plano medio vertical, 0.56-0.64 las deja a la altura
+del pecho. Depende de tu encuadre, así que compruébalo en un fotograma.
+
+La clave `text` ya no existe. `subtitles.py` aborta si la encuentra en vez de
+ignorarla en silencio.
+
+`cuts.json` también admite `"speed"` por segmento (`0.5` cámara lenta, `1.5`
+acelerado) — útil para comprimir una parte aburrida sin cortarla.
+
+### 4. Subtítulos — siempre después de cortar
+
+```bash
+python scripts/transcribe.py entrada.mp4 --cuts cuts.json -o words.json --lang es
+python scripts/subtitles.py words.json -o subs.ass --preset tiktok --plan plan.json
+```
+
+`--cuts` monta el audio ya recortado y transcribe **eso**, así que los timestamps
+nacen en la línea de tiempo de salida. No hay nada que remapear y la sincronía no
+puede desviarse. `subtitles.py` rechaza un `words.json` sin cortar, precisamente
+para que no se cuele una transcripción del original.
+
+Repite estos dos comandos cada vez que toques `cuts.json`. Es la única parte del
+flujo que hay que rehacer, y en un vídeo ya recortado va más rápido que la primera.
+
+Revisa la transcripción antes de renderizar: whisper confunde palabras poco
+frecuentes, nombres propios y muletillas personales. Corrígelas en `words.json`,
+que es texto plano.
+
+### 5. Renderizar
+
+```bash
+python scripts/render.py entrada.mp4 --cuts cuts.json --subs subs.ass --plan plan.json --preset tiktok -o corto.mp4
+```
+
+Un solo pase de ffmpeg desde el original: sin pérdida por recodificaciones
+encadenadas. Con más de 300 segmentos pasa automáticamente a dos pases.
+
+`--no-grade` desactiva el color cinematográfico. `--print-cmd` imprime el
+comando de ffmpeg, que es por donde empezar cuando algo sale raro.
+
+### 6. Copy de publicación — siempre, sin que lo pidan
+
+Un vídeo sin texto de publicación no está entregado. En cuanto el render
+termina, redacta el kit completo a partir de `words.json` (el del audio ya
+cortado, que es lo que de verdad se oye en el vídeo):
+
+- **YouTube**: un título principal + 2 alternativas para testear, descripción y
+  **15 tags** separadas por coma
+- **Instagram**: caption
+- **TikTok**: caption
+
+Máximo **5 hashtags** por red. En YouTube Shorts uno de ellos es `#Shorts`.
+
+**Los tres objetivos, y qué implica cada uno**
+
+*Descubrimiento.* El término que la gente teclea va **delante** en el título, y
+el gancho después. «Trabajo remoto programador» se busca; «reflexión sobre
+modelos de trabajo» no lo busca nadie. Las mismas palabras clave tienen que
+aparecer en las dos primeras líneas de la descripción, que es lo que indexa y lo
+único que se ve antes del «más».
+
+*Retención.* La descripción no resume el vídeo, lo **abre**: plantea la tensión
+y deja la resolución dentro. Si cuentas la conclusión en el primer párrafo, ya
+no hay motivo para ver.
+
+*Audiencia nueva del nicho.* Nombra explícitamente a quién va dirigido —
+freelance, junior, quien busca trabajo— para que el que no te conoce se
+reconozca. Y el CTA pide **una anécdota concreta, no una opinión**: «¿te ha
+pasado X?» genera hilos entre comentaristas; «¿qué opinas?» genera emojis.
+
+**Reglas que ya costaron un error**
+
+- **No inventes datos, enlaces ni cifras.** Si el vídeo no da una URL, no la
+  pongas. Si no estás seguro de un repositorio o un handle, dilo en vez de
+  rellenar.
+- Usa **las palabras del autor** para los conceptos que ha acuñado: son su marca
+  y además son lo que la gente buscará después.
+- Si el vídeo aporta un dato personal (años de experiencia, un número), llévalo
+  al título o a la primera línea: es lo que separa una opinión de una posición.
+- Los hashtags con **ñ** se trocean en Instagram y TikTok: escribe
+  `#programacionenespanol`.
+- Avisa al usuario de cualquier término que hayas corregido de la transcripción
+  y de cualquier afirmación del vídeo que sea atacable sin datos.
+
+## Presets
+
+`youtube_long` (1920×1080), `tiktok`, `reels`, `youtube_short` (1080×1920). Todos
+normalizan a −14 LUFS, que es lo que las tres plataformas esperan.
+
+Edita `presets.json` para cambiar fuente, tamaño o colores de subtítulo. Los
+colores van en formato ASS `&HAABBGGRR` — azul y rojo invertidos respecto a HTML.
+
+Un mismo vídeo se exporta a varias plataformas cambiando `--preset`, pero
+regenera `subs.ass` con el mismo preset: el tamaño de letra y el número de
+caracteres por línea cambian entre vertical y horizontal.
+
+El recorte a vertical es **centrado**. Si el sujeto no está en el centro del
+encuadre original, quedará descuadrado; graba centrado o recorta a mano antes.
+
+## Lo que hace el render siempre
+
+**Imagen**: denoise suave y `cas` (sharpening adaptativo al contraste)
+**enmascarado por luma**. El look cinematográfico por defecto son sombras hacia
+el azul, luces hacia el cálido, contraste suave, viñeta y grano fino.
+
+La máscara no es un adorno. `cas` afila el contraste local que encuentre, y en
+una zona plana y oscura —una camiseta negra, un fondo en penumbra— el único
+contraste local que hay son los bloques que dejó el códec del original. Sin
+máscara los convierte en textura nítida, y eso se percibe como pixelado. Medido
+sobre el mismo fotograma:
+
+| | camiseta (plano oscuro) | cara (detalle real) |
+|---|---|---|
+| sin afilar | referencia | referencia |
+| `cas` suelto | **+121%** | +104% |
+| `cas` enmascarado | **+15%** | +38% |
+
+Se pierde algo de nitidez en la cara a cambio de multiplicar por ocho la mejora
+en las sombras. `SHARPEN_FLOOR` (45) es la luma por debajo de la cual no se
+afila nada, y `SHARPEN_RAMP` (50) el ancho de la transición.
+
+**Audio**, cadena de voz en este orden — limpiar antes de realzar, o el EQ
+amplifica justo el ruido que el denoiser debía quitar:
+
+`highpass` 85 Hz (retumbe y plosivas) → `afftdn` (ruido de sala) → −2.5 dB en
+280 Hz (quita el "cartón") → +3 dB en 3.2 kHz (presencia: ahí vive la
+inteligibilidad) → +1.5 dB en 8 kHz (aire) → `deesser` → compresor →
+`loudnorm` a −14 LUFS → fundido de 0.35 s.
+
+Ese fundido final no es decorativo: evita que un corte seco sobre la última
+palabra se perciba como una frase truncada.
+
+## Fuentes y estilo
+
+`setup.ps1` descarga a `vendor/fonts/` **Roboto** (variable), **Poppins
+ExtraBold** y **Anton**, todas OFL con su licencia. `render.py` se las pasa a
+libass por `fontsdir`, sin instalarlas en el sistema.
+
+Dos trampas al cambiar de fuente:
+
+**Roboto sólo existe como fuente variable.** libass no sintetiza negrita: pedir
+`"fontname": "Roboto"` con `bold: -1` da Regular, demasiado fina. Hay que pedir
+la **instancia nombrada**: `"fontname": "Roboto Black"` con `bold: 0`.
+
+**Recalibra `fontsize`.** La altura de mayúscula varía mucho entre familias, así
+que el mismo tamaño nominal rinde distinto. Renderiza un fotograma antes de
+lanzar el vídeo entero.
+
+Campos de estilo en `presets.json`:
+
+| campo | qué hace |
+|---|---|
+| `border_style` | 1 = contorno, 3 = caja de fondo |
+| `box` | color de la caja cuando `border_style` es 3 |
+| `outline` | con `border_style` 3 es el **relleno interior**, no el grosor del contorno |
+| `primary` / `secondary` | color de palabra ya dicha / pendiente, en el barrido karaoke |
+| `title_scale`, `card_scale` | tamaño de títulos y cards relativo al subtítulo |
+
+Los colores van en formato ASS `&HAABBGGRR`: azul y rojo invertidos respecto a
+HTML, y **el alfa es al revés de lo intuitivo** — `00` es opaco y `FF`
+transparente. Una caja casi negra sobre fondo oscuro apenas se ve por mucha
+opacidad que le pongas; si la quieres visible, súbele también la luminosidad.
+
+## Cuando algo falla
+
+| síntoma | causa |
+|---|---|
+| "todo el vídeo se detectó como silencio" | `--threshold` demasiado alto; prueba `-40` |
+| "words.json viene del vídeo sin cortar" | falta `--cuts` en `transcribe.py` |
+| timestamps más allá del final del vídeo | deriva de whisper; transcribe el tramo suelto |
+| falta un trozo de la transcripción | whisper salta zonas con tomas repetidas; transcríbelas aparte |
+| "plan.json usa 'text'" | los títulos son cards de kind `chip` |
+| subtítulos desincronizados | tocaste `cuts.json` sin rehacer los pasos 4 |
+| se ve pixelado | `crf` alto, o `hqdn3d` duplicado en `"grade"` |
+| pixelado en camiseta o zonas negras | el afilado entra en las sombras: sube `SHARPEN_FLOOR` |
+| medir artefactos da cifras absurdas | el recorte pilla la caja del subtítulo; mide por encima de `margin_v` |
+| el audio se corta sobre la última palabra | sube `--pad-out`, o alarga el último segmento a mano |
+| subtítulos diminutos tras cambiar de fuente | `fontsize` no recalibrado; cada familia tiene otra altura de mayúscula |
+| la fuente sale fina pese a `bold: -1` | es variable; pide la instancia (`Roboto Black`), libass no sintetiza negrita |
+| no se ve la caja de fondo | es casi negra sobre fondo oscuro; sube luminosidad, no sólo opacidad |
+| card tapando la cara | ajusta `y_frac` (~0.56-0.64) y compruébalo en un fotograma |
+| el reflejo queda como mancha gris | `deglare.strength` demasiado alto; baja de 0.75 |
+| `deglare` apaga brillos de la piel | sube `sat_max`, la piel es más cromática que un especular |
+| "faltan cards: ..." | ejecuta `cards.py` antes de `render.py`, o pasa `--cards` |
+| las cards parecen plantilla | estás repitiendo `kind`; varíalo según la forma del contenido |
+| "efectos de zoom solapados" | dos zooms a la vez se suman; sepáralos o baja `hold` |
+| el zoom parece un tirón | estás usando `dur`; `zoom_punch` se dimensiona con `ramp` y `hold` |
+| el movimiento parece lento o con estelas | denoise temporal doble; quita `hqdn3d` de `"grade"` |
+| se ve lavado o demasiado brillante | la curva no cierra el techo; baja el último punto a `1/0.95` |
+| letra minúscula o gigante | preset de `subtitles.py` distinto al de `render.py` |
+| ffmpeg peta al parsear el filtro | ejecuta con `--print-cmd` y mira el filtergraph |
+| whisper.cpp no encontrado | falta `scripts/setup.ps1` |
+
+Lo que no se arregla en post: si grabas a 30 fps con obturador lento, los gestos
+rápidos salen movidos en el original y ahí se quedan. Sube la velocidad de
+obturación al grabar.
+
+## Assets
+
+`assets/` está vacío y todo funciona sin él. Si metes música o stickers, los usas
+desde `plan.json`. Ver `assets/README.md` para la estructura y el aviso de licencias.
+
+## Instalación como skill
+
+Copia esta carpeta a `~/.claude/skills/fragua/` para que se active sola al
+pedir una edición.
+
+---
+
+Fragua · MIT · [Pedro Plasencia - Programación en español](https://programacion-es.dev/redes)

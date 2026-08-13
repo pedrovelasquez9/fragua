@@ -1,0 +1,143 @@
+{
+  "_comment": "crf: menor = mejor calidad y mÃ¡s peso. Las plataformas recomprimen encima, asÃ­ que subir con margen (16-17) evita que se vea pixelado tras su recodificaciÃ³n.",
+  "youtube_long": {
+    "width": 1920,
+    "height": 1080,
+    "fps": 30,
+    "crf": 15,
+    "preset": "slow",
+    "audio_bitrate": "192k",
+    "lufs": -14,
+    "subtitle": {
+      "fontname": "Roboto Black",
+      "fontsize": 35,
+      "primary": "&H004CB6D6",
+      "secondary": "&H00FFFFFF",
+      "outline": 9,
+      "shadow": 0,
+      "blur": 0.6,
+      "spacing": 0.5,
+      "bold": 0,
+      "alignment": 2,
+      "margin_h": 120,
+      "margin_v": 90,
+      "uppercase": false,
+      "max_chars": 60,
+      "box": "&H18262E38",
+      "border_style": 3
+    },
+    "card": {
+      "bg": "#14161F",
+      "bg_alpha": 232,
+      "fg": "#ECECEC",
+      "accent": "#D6B64C",
+      "base_size": 34
+    }
+  },
+  "tiktok": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "crf": 16,
+    "preset": "slow",
+    "audio_bitrate": "192k",
+    "lufs": -14,
+    "subtitle": {
+      "fontname": "Roboto Black",
+      "fontsize": 56,
+      "primary": "&H004CB6D6",
+      "secondary": "&H00FFFFFF",
+      "outline": 11,
+      "shadow": 0,
+      "blur": 0.7,
+      "spacing": 1,
+      "bold": 0,
+      "alignment": 2,
+      "margin_h": 90,
+      "margin_v": 430,
+      "uppercase": false,
+      "max_chars": 28,
+      "box": "&H18262E38",
+      "border_style": 3
+    },
+    "card": {
+      "bg": "#14161F",
+      "bg_alpha": 232,
+      "fg": "#ECECEC",
+      "accent": "#D6B64C",
+      "base_size": 51
+    }
+  },
+  "reels": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "crf": 16,
+    "preset": "slow",
+    "audio_bitrate": "192k",
+    "lufs": -14,
+    "subtitle": {
+      "fontname": "Roboto Black",
+      "fontsize": 56,
+      "primary": "&H004CB6D6",
+      "secondary": "&H00FFFFFF",
+      "outline": 11,
+      "shadow": 0,
+      "blur": 0.7,
+      "spacing": 1,
+      "bold": 0,
+      "alignment": 2,
+      "margin_h": 90,
+      "margin_v": 480,
+      "uppercase": false,
+      "max_chars": 28,
+      "box": "&H18262E38",
+      "border_style": 3
+    },
+    "card": {
+      "bg": "#14161F",
+      "bg_alpha": 232,
+      "fg": "#ECECEC",
+      "accent": "#D6B64C",
+      "base_size": 51
+    }
+  },
+  "youtube_short": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "crf": 16,
+    "preset": "slow",
+    "audio_bitrate": "192k",
+    "lufs": -14,
+    "subtitle": {
+      "fontname": "Roboto Black",
+      "fontsize": 56,
+      "primary": "&H004CB6D6",
+      "secondary": "&H00FFFFFF",
+      "outline": 11,
+      "shadow": 0,
+      "blur": 0.7,
+      "spacing": 1,
+      "bold": 0,
+      "alignment": 2,
+      "margin_h": 90,
+      "margin_v": 380,
+      "uppercase": false,
+      "max_chars": 28,
+      "box": "&H18262E38",
+      "border_style": 3
+    },
+    "card": {
+      "bg": "#14161F",
+      "bg_alpha": 232,
+      "fg": "#ECECEC",
+      "accent": "#D6B64C",
+      "base_size": 51
+    }
+  },
+  "_comment_fuente": "fontname usa el nombre de la INSTANCIA ('Roboto Black'), no la familia: Roboto sólo existe como fuente variable y libass no sintetiza negrita. Al cambiar de fuente hay que recalibrar fontsize, la altura de mayúscula varía.",
+  "_comment_fondo": "border_style 3 = caja opaca; libass la rellena con 'box' y usa 'outline' como relleno interior, no como grosor. Ojo con el alfa: ASS usa 00=opaco, FF=transparente, y una caja casi negra sobre fondo oscuro no se ve por mucha opacidad que tenga.",
+  "_comment_cards": "Las cards son PNG que dibuja scripts/cards.py con Pillow, no texto ASS. 'base_size' es el tamaño tipográfico base del que derivan título, cuerpo y nodos.",
+  "_comment_titulos": "Los títulos son cards de kind 'chip', no texto ASS, y nada va en mayúsculas por defecto: un rótulo en caja sobre el fotograma se lee como encabezado de diapositiva."
+}

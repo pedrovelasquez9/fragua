@@ -1,0 +1,52 @@
+# --- dependencias descargadas por el instalador -----------------------------
+# 1,5 GB entre el modelo de whisper, el binario y las fuentes. Se regeneran con
+# scripts/setup.ps1 o scripts/setup.sh, así que nunca deben entrar al repo.
+vendor/
+
+# --- salidas de trabajo -----------------------------------------------------
+# Los proyectos de edición son del usuario, no del repositorio.
+cards/
+*.mp4
+*.mkv
+*.mov
+*.webm
+*.wav
+*.mp3
+*.m4a
+*.ass
+*.srt
+
+# Ficheros intermedios del pipeline
+cuts.json
+words.json
+draft.json
+plan.json
+*.output.json
+
+# --- assets del usuario -----------------------------------------------------
+# La carpeta se versiona con su README, pero no el material que metas dentro:
+# puede tener licencia propia y pesar mucho.
+assets/*
+!assets/README.md
+
+# --- Python -----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# --- sistema y editores -----------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
+*~
+
+# --- agentes ----------------------------------------------------------------
+# Configuración local, no del proyecto.
+.claude/
+.opencode/

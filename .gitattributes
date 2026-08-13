@@ -1,0 +1,17 @@
+# Normaliza los finales de línea al hacer commit.
+* text=auto
+
+# Los scripts de shell DEBEN ir con LF: con CRLF, Linux y macOS fallan con
+# "bad interpreter: /usr/bin/env bash^M".
+*.sh text eol=lf
+
+# PowerShell tolera ambos, pero CRLF es lo nativo en Windows.
+*.ps1 text eol=crlf
+
+# Binarios: que Git no los toque.
+*.png binary
+*.jpg binary
+*.ttf binary
+*.mp4 binary
+*.mp3 binary
+*.wav binary
