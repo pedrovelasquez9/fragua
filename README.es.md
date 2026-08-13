@@ -30,7 +30,7 @@ Después hay que preparar las dependencias una vez —ffmpeg, Python, el modelo 
 transcripción y las fuentes—. Basta con pedírselo al agente:
 
 ```
-ejecuta el setup de fragua
+/fragua:setup
 ```
 
 O lanzarlo tú desde la carpeta instalada:
@@ -62,6 +62,17 @@ powershell -ExecutionPolicy Bypass -File install.ps1 -Target opencode   # Window
 
 El instalador copia la skill donde OpenCode la busca, resuelve todas las
 dependencias y ejecuta la suite de verificación.
+
+### Comandos
+
+Dentro de Claude Code, Fragua añade dos comandos:
+
+| Comando | Para qué |
+|---|---|
+| `/fragua:setup` | Instala y verifica todo lo que necesita. Se lanza una vez tras instalar |
+| `/fragua:assets <carpeta>` | Apunta Fragua a tu música, efectos, stickers y fuentes, e indexa lo que haya |
+
+Editar no necesita comando: basta con pedirlo.
 
 ### Opciones del instalador
 
@@ -154,11 +165,12 @@ se corta al final») y él localiza la causa.
 Fragua puede sacar música, efectos de sonido, stickers, imágenes y fuentes de una
 carpeta tuya. Apúntala una vez:
 
-```bash
-python scripts/assets.py --set D:/mis-assets
+```
+/fragua:assets D:/mis-assets
 ```
 
-O simplemente díselo al agente: `usa D:/mis-assets como mi carpeta de assets`.
+En OpenCode no hay slash commands, así que basta con decirlo:
+`usa D:/mis-assets como mi carpeta de assets`.
 
 Organízala como quieras —la clasificación mira los archivos, no el nombre de las
 carpetas—, pero esta es la estructura que espera:
@@ -172,11 +184,8 @@ mis-assets/
   fonts/     tus .ttf u .otf
 ```
 
-Cada vez que añadas algo nuevo, reindexa:
-
-```bash
-python scripts/assets.py
-```
+Cada vez que añadas algo nuevo, reindexa con `/fragua:assets` — sin argumento,
+una vez configurada la carpeta.
 
 A partir de ahí el agente sabe qué tienes y lo usa por su cuenta: un whoosh sobre
 un barrido, un pop cuando entra una tarjeta, tu pista bajo la voz —con ducking

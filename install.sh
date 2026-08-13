@@ -27,7 +27,7 @@ while [ $# -gt 0 ]; do
 done
 
 SOURCE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-[ -f "$SOURCE/SKILL.md" ] || { echo "no encuentro SKILL.md — ejecútalo desde la carpeta de la skill"; exit 1; }
+[ -f "$SOURCE/skills/fragua/SKILL.md" ] || { echo "no encuentro skills/fragua/SKILL.md — ejecútalo desde la carpeta de Fragua"; exit 1; }
 
 # --- destinos ---------------------------------------------------------------
 targets=()
@@ -49,10 +49,14 @@ for destination in "${targets[@]}"; do
     for item in "$SOURCE"/* "$SOURCE"/.[!.]*; do
         [ -e "$item" ] || continue
         case "$(basename "$item")" in
-            vendor|__pycache__|.git|cards) continue ;;
+            vendor|__pycache__|.git|cards|skills|.claude-plugin) continue ;;
         esac
         cp -R "$item" "$destination/"
     done
+    # Claude Code carga las skills desde skills/<nombre>/, pero OpenCode y la
+    # instalación suelta esperan SKILL.md en la raíz del destino. Aplanamos la
+    # skill principal; assets y setup son comandos de Claude y no aplican aquí.
+    cp "$SOURCE/skills/fragua/SKILL.md" "$destination/SKILL.md"
 
     if [ -z "$primary" ]; then
         primary="$destination"

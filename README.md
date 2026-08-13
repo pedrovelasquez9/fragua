@@ -30,7 +30,7 @@ Then set up the dependencies once — ffmpeg, Python, the transcription model an
 the fonts. Just ask the agent:
 
 ```
-run the fragua setup
+/fragua:setup
 ```
 
 Or run it yourself from the installed folder:
@@ -61,6 +61,17 @@ powershell -ExecutionPolicy Bypass -File install.ps1 -Target opencode   # Window
 
 The installer copies the skill where OpenCode looks for it, resolves every
 dependency and runs the verification suite.
+
+### Commands
+
+Inside Claude Code, Fragua adds two commands:
+
+| Command | What it does |
+|---|---|
+| `/fragua:setup` | Installs and verifies everything it needs. Run once after installing |
+| `/fragua:assets <folder>` | Points Fragua at your music, sound effects, stickers and fonts, and indexes them |
+
+Editing needs no command: just ask.
 
 ### Installer options
 
@@ -151,11 +162,12 @@ audio cuts off at the end») and the agent finds the cause.
 Fragua can pull music, sound effects, stickers, images and fonts from a folder
 you own. Point it there once:
 
-```bash
-python scripts/assets.py --set D:/my-assets
+```
+/fragua:assets D:/my-assets
 ```
 
-Or just tell the agent: `use D:/my-assets as my assets folder`.
+On OpenCode there are no slash commands, so just say it:
+`use D:/my-assets as my assets folder`.
 
 Organise it however you like — the classification reads the files, not the folder
 names — but this is the layout it expects:
@@ -169,11 +181,8 @@ my-assets/
   fonts/     your own .ttf or .otf
 ```
 
-Whenever you add something new, reindex it:
-
-```bash
-python scripts/assets.py
-```
+Whenever you add something new, reindex it with `/fragua:assets` — no argument
+needed once the folder is set.
 
 From then on the agent knows what you have and reaches for it on its own: a
 whoosh over a whip pan, a pop when a card appears, your track under the voice —

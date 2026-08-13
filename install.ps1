@@ -19,8 +19,8 @@ $ErrorActionPreference = "Stop"
 $source = $PSScriptRoot
 $SkillName = "fragua"
 
-if (-not (Test-Path (Join-Path $source "SKILL.md"))) {
-    throw "no encuentro SKILL.md — ejecuta este script desde la carpeta de la skill"
+if (-not (Test-Path (Join-Path $source "skillsragua\SKILL.md"))) {
+    throw "no encuentro skillsragua\SKILL.md — ejecuta este script desde la carpeta de Fragua"
 }
 
 # --- destinos ---------------------------------------------------------------
@@ -36,7 +36,7 @@ if ($Project) {
 # --- copia ------------------------------------------------------------------
 # vendor/ son 1.5 GB regenerables: no se copia, se instala una vez en el primero
 # y los demás destinos lo comparten con un enlace.
-$skip = @("vendor", "__pycache__", ".git", "cards")
+$skip = @("vendor", "__pycache__", ".git", "cards", "skills", ".claude-plugin")
 $primary = $null
 
 foreach ($destination in $targets) {
@@ -46,6 +46,11 @@ foreach ($destination in $targets) {
     Get-ChildItem -Path $source -Force | Where-Object { $_.Name -notin $skip } | ForEach-Object {
         Copy-Item $_.FullName -Destination $destination -Recurse -Force
     }
+    # Claude Code carga las skills desde skills\<nombre>\, pero OpenCode y la
+    # instalación suelta esperan SKILL.md en la raíz del destino. Aplanamos la
+    # skill principal; assets y setup son comandos de Claude y no aplican aquí.
+    Copy-Item (Join-Path $source "skillsragua\SKILL.md") `
+              -Destination (Join-Path $destination "SKILL.md") -Force
 
     if ($null -eq $primary) {
         $primary = $destination
