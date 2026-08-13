@@ -392,25 +392,38 @@ mucho entre familias y el mismo tamaño nominal rinde distinto.
 
 ## Instalar como skill de agente
 
-La carpeta **debe llamarse `fragua`**, igual que el campo `name` del
-frontmatter de `SKILL.md`. Algunos agentes lo validan y rechazan la skill si no
-coincide.
-
-**Claude Code**
+Lo normal es dejar que el instalador lo haga:
 
 ```bash
-cp -r fragua ~/.claude/skills/fragua
+git clone https://github.com/pedrovelasquez9/fragua
+cd fragua
+./install.sh                                                     # macOS y Linux
+powershell -ExecutionPolicy Bypass -File install.ps1             # Windows
 ```
 
-**OpenCode** (también lee `~/.claude/skills/`)
+Copia los archivos al destino, enlaza `vendor/` si instalas para varios agentes,
+ejecuta el setup y lanza la suite de comprobación. Acepta `--target claude` o
+`--target opencode`, `--project` para instalar solo en la carpeta actual y
+`--model` para elegir otro modelo de whisper.
 
-```bash
-cp -r fragua ~/.config/opencode/skills/fragua
-```
+### A mano
 
-Para uso por proyecto, `.claude/skills/` o `.opencode/skills/` en la raíz del
-repo. Después ejecuta el setup dentro de la carpeta ya copiada, para que
-`vendor/` quede donde los scripts lo buscan.
+Si prefieres controlarlo tú, los destinos son estos:
+
+| Agente | Global | Por proyecto |
+|---|---|---|
+| Claude Code | `~/.claude/skills/fragua/` | `.claude/skills/fragua/` |
+| OpenCode | `~/.config/opencode/skills/fragua/` | `.opencode/skills/fragua/` |
+
+OpenCode también lee `~/.claude/skills/`, así que una sola copia puede servir
+para ambos.
+
+La carpeta **debe llamarse `fragua`**, igual que el campo `name` del frontmatter
+de `SKILL.md`: OpenCode lo valida contra `^[a-z0-9]+(-[a-z0-9]+)*$` y rechaza la
+skill si no coincide.
+
+Después ejecuta el setup **dentro de la carpeta ya copiada**, para que `vendor/`
+quede donde los scripts lo buscan.
 
 El agente necesita permiso para ejecutar `python` y `ffmpeg` desde su herramienta
 de shell.

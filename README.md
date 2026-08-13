@@ -39,10 +39,21 @@ ffmpeg -version
 python --version
 ```
 
-### 2. Instalar la skill
+### 2. Descargar Fragua
 
-Un solo comando desde la carpeta de la skill. Copia los archivos donde los
-agentes los buscan, descarga lo que necesita y verifica que todo funciona.
+```bash
+git clone https://github.com/pedrovelasquez9/fragua
+cd fragua
+```
+
+Si no tienes git, descarga el ZIP desde
+[la página del repositorio](https://github.com/pedrovelasquez9/fragua) y
+descomprímelo.
+
+### 3. Instalar la skill
+
+Un solo comando. Copia los archivos donde los agentes los buscan, descarga lo
+que necesita y verifica que todo funciona.
 
 **Windows**
 
@@ -78,8 +89,23 @@ Otras opciones:
 | `-Project` / `--project` | Instala solo para la carpeta actual, no para todo el sistema |
 | `-Model ggml-medium` / `--model ggml-medium` | Modelo más pequeño: descarga 1,4 GB menos y transcribe más rápido, con algún fallo más |
 
-> **Ordenador nuevo**: repite estos dos pasos. No copies la carpeta `vendor/`
+> **Ordenador nuevo**: repite los tres pasos. No copies la carpeta `vendor/`
 > entre máquinas, son 1,5 GB que el instalador vuelve a descargar solo.
+
+### Actualizar a una versión nueva
+
+Desde la carpeta que clonaste:
+
+```powershell
+git pull; powershell -ExecutionPolicy Bypass -File install.ps1   # Windows
+```
+
+```bash
+git pull && ./install.sh                                         # macOS y Linux
+```
+
+El instalador ve que las dependencias ya están descargadas y solo copia los
+archivos actualizados, así que tarda segundos.
 
 ---
 
