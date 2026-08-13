@@ -302,6 +302,10 @@ cortado, que es lo que de verdad se oye en el vídeo):
 - **Instagram**: caption
 - **TikTok**: caption
 
+**El título y las 15 tags no son opcionales.** Van siempre, incluso si el
+usuario pide «sólo las descripciones» o «sólo el copy»: sin título no se puede
+publicar en YouTube y sin tags se pierde descubrimiento. Entrégalos igual.
+
 Máximo **5 hashtags** por red. En YouTube Shorts uno de ellos es `#Shorts`.
 
 **Los tres objetivos, y qué implica cada uno**
