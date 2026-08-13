@@ -115,6 +115,58 @@ def test_deglare():
     print("ok  deglare (baja el especular, respeta piel y color)")
 
 
+SFX_LIMIT = 6.0
+
+
+def test_assets_library():
+    """The catalogue classifies by content, and the render finds what it lists."""
+    sys.path.insert(0, str(SCRIPTS))
+    import assets as assets_module
+    import common
+    from render import audio_graph
+
+    with tempfile.TemporaryDirectory() as tmp:
+        library = Path(tmp) / "biblioteca"
+        for sub in ("music", "sfx", "stickers", "fonts"):
+            (library / sub).mkdir(parents=True)
+
+        # 8 s de tono = música de fondo; 0.4 s = efecto puntual
+        sh("ffmpeg", "-y", "-v", "error", "-f", "lavfi",
+           "-i", "sine=frequency=200:duration=8", str(library / "music" / "bed.wav"))
+        sh("ffmpeg", "-y", "-v", "error", "-f", "lavfi",
+           "-i", "sine=frequency=900:duration=0.4", str(library / "sfx" / "pop.wav"))
+        # PNG con alpha = sticker; JPG opaco = imagen
+        sh("ffmpeg", "-y", "-v", "error", "-f", "lavfi",
+           "-i", "color=c=red@0.5:s=64x64,format=rgba", "-frames:v", "1",
+           str(library / "stickers" / "dot.png"))
+        sh("ffmpeg", "-y", "-v", "error", "-f", "lavfi",
+           "-i", "color=c=blue:s=64x64", "-frames:v", "1", str(library / "fondo.jpg"))
+
+        catalogue = assets_module.index_directory(library)
+        assert len(catalogue["music"]) == 1, f"música mal clasificada: {catalogue['music']}"
+        assert len(catalogue["sfx"]) == 1, f"sfx mal clasificado: {catalogue['sfx']}"
+        assert catalogue["stickers"] and catalogue["stickers"][0]["alpha"], "sticker sin alpha"
+        assert catalogue["images"], "la imagen opaca debería ir a images"
+        assert catalogue["music"][0]["seconds"] > SFX_LIMIT, "no se midió la duración"
+
+        # render.py resuelve rutas relativas contra la biblioteca configurada
+        original = common.ASSETS_CONFIG
+        try:
+            common.ASSETS_CONFIG = Path(tmp) / "assets.json"
+            common.write_json(common.ASSETS_CONFIG, {"dir": library.as_posix()})
+            plan = {"music": {"file": "music/bed.wav"},
+                    "sfx": [{"t": 1.0, "file": "sfx/pop.wav"},
+                            {"t": 2.5, "file": "sfx/pop.wav"}]}
+            chunks, inputs = audio_graph(plan, 1, 10.0, -14)
+            graph = ";".join(chunks)
+            assert "adelay=1000" in graph and "adelay=2500" in graph, "sfx sin colocar"
+            assert "amix=inputs=4" in graph, f"la mezcla no cuenta las capas: {graph[-140:]}"
+            assert inputs.count("-i") == 3, "faltan entradas de audio"
+        finally:
+            common.ASSETS_CONFIG = original
+    print("ok  biblioteca de assets (clasifica, resuelve y mezcla sfx)")
+
+
 def edge_energy(path, box):
     """Local contrast in a region. On a flat area this is noise, not detail."""
     from PIL import Image
@@ -174,6 +226,7 @@ def main():
         test_overlap_guard()
         test_deglare()
         test_polish_spares_shadows()
+        test_assets_library()
 
         make_clip(clip)
         assert abs(probe_duration(clip) - 6) < 0.3

@@ -21,6 +21,7 @@ datos que salgan de tu máquina.
 4. [Comprobar que funciona](#comprobar-que-funciona)
 5. [Uso paso a paso](#uso-paso-a-paso)
 6. [Referencia de `plan.json`](#referencia-de-planjson)
+6b. [Biblioteca de assets](#biblioteca-de-assets)
 7. [Referencia de `presets.json`](#referencia-de-presetsjson)
 8. [Instalar como skill de agente](#instalar-como-skill-de-agente)
 9. [Problemas frecuentes](#problemas-frecuentes)
@@ -73,10 +74,15 @@ powershell -ExecutionPolicy Bypass -File scripts\setup.ps1
 Eso hace cuatro cosas, y es idempotente: si vuelves a ejecutarlo, no redescarga
 nada.
 
-1. Comprueba que ffmpeg está en el PATH
+1. Instala ffmpeg y Python con `winget` si faltan, y refresca el PATH de la sesión
 2. Instala Pillow si falta
 3. Descarga el binario de whisper.cpp y el modelo `ggml-large-v3-turbo` (~1.6 GB)
 4. Descarga tres fuentes OFL (Roboto, Anton, Poppins) con sus licencias
+
+La detección de Python no se fía de que el comando exista: Windows trae alias de
+ejecución de 0 bytes en `WindowsApps` para `python`, `python3` y `py` que están
+siempre, aunque no haya Python, y al lanzarlos abren el Microsoft Store. La única
+comprobación fiable es ejecutarlos y mirar qué contestan.
 
 Para un modelo más pequeño y rápido, a costa de precisión:
 
@@ -86,36 +92,13 @@ powershell -ExecutionPolicy Bypass -File scripts\setup.ps1 -Model ggml-medium
 
 ### Linux y macOS
 
-`setup.ps1` es PowerShell. Si tienes `pwsh` instalado, funciona igual:
-
 ```bash
-pwsh -File scripts/setup.ps1
+./scripts/setup.sh                  # o: ./scripts/setup.sh ggml-medium
 ```
 
-Si no, los mismos cuatro pasos a mano:
-
-```bash
-pip install pillow
-
-mkdir -p vendor/models vendor/fonts
-
-# 1. whisper.cpp: compílalo desde el repo oficial
-git clone https://github.com/ggml-org/whisper.cpp /tmp/whisper.cpp
-cmake -B /tmp/whisper.cpp/build -S /tmp/whisper.cpp && cmake --build /tmp/whisper.cpp/build -j
-cp /tmp/whisper.cpp/build/bin/whisper-cli vendor/
-
-# 2. modelo
-curl -L -o vendor/models/ggml-large-v3-turbo.bin \
-  https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin
-
-# 3. fuentes
-curl -L -o vendor/fonts/Roboto-Variable.ttf \
-  "https://github.com/google/fonts/raw/main/ofl/roboto/Roboto%5Bwdth%2Cwght%5D.ttf"
-curl -L -o vendor/fonts/Anton-Regular.ttf \
-  https://github.com/google/fonts/raw/main/ofl/anton/Anton-Regular.ttf
-curl -L -o vendor/fonts/Poppins-ExtraBold.ttf \
-  https://github.com/google/fonts/raw/main/ofl/poppins/Poppins-ExtraBold.ttf
-```
+Mismos cuatro pasos. Instala lo que falte con `brew`, `apt`, `dnf`, `pacman` o
+`zypper`, y compila whisper.cpp desde el repositorio oficial porque no publica
+binario para estas plataformas: necesitas `git`, `cmake` y un compilador.
 
 `transcribe.py` busca el binario como `whisper-cli`, `whisper-cli.exe`, `main` o
 `main.exe` en cualquier subcarpeta de `vendor/`, así que la ruta exacta da igual.
@@ -130,7 +113,7 @@ curl -L -o vendor/fonts/Poppins-ExtraBold.ttf \
 python test_pipeline.py
 ```
 
-Genera clips sintéticos, ejecuta el pipeline entero y verifica diez propiedades:
+Genera clips sintéticos, ejecuta el pipeline entero y verifica once propiedades:
 el mapeo de tiempos, la forma del cambio de plano, el rechazo de zooms
 solapados, que el atenuador de reflejos no toque la piel, que el afilado respete
 las sombras planas, el corte de silencios, las cinco plantillas de card, la
@@ -293,6 +276,43 @@ del vídeo ya cortado, que es la que ves al reproducir el resultado.
   "music": {"file": "assets/music/beat.mp3", "gain": -18, "duck": true}
 }
 ```
+
+### Biblioteca de assets
+
+`scripts/assets.py` configura de dónde salen música, efectos, stickers, imágenes
+y fuentes, y escribe `assets.json` con el catálogo que el agente consulta.
+
+```bash
+python scripts/assets.py --set D:/mis-assets   # configura la carpeta
+python scripts/assets.py                       # reindexa y muestra el inventario
+python scripts/assets.py --show                # sólo dice a dónde apunta
+```
+
+La clasificación es por contenido, no por el nombre de la carpeta: un audio de
+más de 6 s es `music` y por debajo es `sfx`; una imagen con canal alfa es
+`stickers` y sin él es `images`. De cada archivo guarda lo que hace falta para
+decidir: duración, dimensiones, transparencia y familia tipográfica.
+
+Las rutas de `plan.json` se resuelven en este orden: absoluta, relativa a la
+biblioteca, relativa a la raíz de la skill. Si la biblioteca tiene `fonts/`,
+libass la usa en lugar de `vendor/fonts` — sólo acepta un directorio, así que
+gana la del usuario.
+
+### Efectos de sonido
+
+`sfx` son golpes puntuales que se mezclan sobre la voz **sin** hacer ducking,
+al contrario que `music`. Cada uno se coloca con `adelay` y se rellena con
+`apad` hasta la duración total, porque `amix` corta la mezcla en cuanto termina
+la rama más corta.
+
+```json
+"sfx": [
+  {"t": 5.66, "file": "sfx/whoosh.wav"},
+  {"t": 11.4, "file": "sfx/pop.wav", "gain": -3}
+]
+```
+
+`gain` por defecto es −6 dB.
 
 ### Efectos
 

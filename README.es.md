@@ -149,6 +149,49 @@ se corta al final») y él localiza la causa.
 
 ---
 
+## Tus propios assets
+
+Fragua puede sacar música, efectos de sonido, stickers, imágenes y fuentes de una
+carpeta tuya. Apúntala una vez:
+
+```bash
+python scripts/assets.py --set D:/mis-assets
+```
+
+O simplemente díselo al agente: `usa D:/mis-assets como mi carpeta de assets`.
+
+Organízala como quieras —la clasificación mira los archivos, no el nombre de las
+carpetas—, pero esta es la estructura que espera:
+
+```
+mis-assets/
+  music/     pistas largas de fondo
+  sfx/       golpes cortos: whoosh, pop, riser
+  stickers/  PNG con transparencia
+  images/    capturas, logos, fondos
+  fonts/     tus .ttf u .otf
+```
+
+Cada vez que añadas algo nuevo, reindexa:
+
+```bash
+python scripts/assets.py
+```
+
+A partir de ahí el agente sabe qué tienes y lo usa por su cuenta: un whoosh sobre
+un barrido, un pop cuando entra una tarjeta, tu pista bajo la voz —con ducking
+automático para que nunca compita con la narración—. También puedes pedírselo
+directamente: `mete la pista lofi de fondo y un pop en cada tarjeta`.
+
+Si no configuras nada, Fragua usa su propia carpeta `assets/` vacía y todo lo
+demás funciona igual.
+
+> La música de CapCut o TikTok está licenciada solo para esas apps y genera
+> reclamaciones de copyright en YouTube. Usa fuentes CC0 como Pixabay, Mixkit o
+> Freesound.
+
+---
+
 ## Consejos para grabar
 
 La skill arregla mucho, pero hay cosas que se ganan mejor en la grabación. Estas

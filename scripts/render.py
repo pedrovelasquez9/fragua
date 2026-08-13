@@ -14,8 +14,8 @@ import sys
 import tempfile
 from pathlib import Path
 
-from common import (FONTS, ROOT, atempo_chain, ff_path, output_duration,
-                    preset, probe_stream, read_json)
+from common import (FONTS, ROOT, assets_dir, atempo_chain, ff_path, output_duration,
+                    preset, probe_stream, read_json, resolve_asset)
 
 # ponytail: one filtergraph per segment stops scaling somewhere past here, so we
 # fall back to a cut pass + a style pass. Two encodes, but it finishes.
@@ -233,11 +233,7 @@ def sticker_graph(stickers, start_index, width, height):
     """Returns (extra_inputs, filter_chunks). Each sticker is its own overlay."""
     inputs, chunks, label = [], [], "[styled]"
     for i, s in enumerate(stickers):
-        path = Path(s["file"])
-        if not path.is_absolute():
-            path = ROOT / path
-        if not path.exists():
-            sys.exit(f"sticker no encontrado: {path}")
+        path = asset_path(s["file"], "sticker")
         idx = start_index + i
         inputs += ["-i", str(path)]
         t0, dur = float(s["t"]), float(s.get("dur", 2))
@@ -274,37 +270,68 @@ def card_graph(cards, paths, start_index, base_label, height):
     return inputs, chunks, label
 
 
-def audio_graph(plan, music_index, duration, lufs):
+def asset_path(spec, label):
+    """Resolve a plan.json file reference against the configured asset library."""
+    path = resolve_asset(spec)
+    if not path.exists():
+        sys.exit(f"{label} no encontrado: {path}\n"
+                 f"Revisa el catálogo con:  python scripts/assets.py")
+    return path
+
+
+def audio_graph(plan, first_index, duration, lufs):
+    """Voice chain, plus optional background music and one-shot sound effects."""
     fade = TAIL_FADE if duration > TAIL_FADE * 2 else 0
     finish = f"loudnorm=I={lufs}:TP=-1.5:LRA=11"
     if fade:
         finish += f",afade=t=out:st={duration - fade:.3f}:d={fade}"
 
-    voice = f"[ac]{VOICE}"
     music = plan.get("music")
-    if not music:
-        return [f"{voice},{finish}[aout]"], []
+    sfx = plan.get("sfx", [])
+    chunks, inputs, index = [], [], first_index
 
-    path = Path(music["file"])
-    if not path.is_absolute():
-        path = ROOT / path
-    if not path.exists():
-        sys.exit(f"música no encontrada: {path}")
+    # --- voice ---------------------------------------------------------------
+    if not music and not sfx:
+        return [f"[ac]{VOICE},{finish}[aout]"], []
+    chunks.append(f"[ac]{VOICE}[voice]")
 
-    gain = music.get("gain", -18)
-    chunks = [f"{voice}[voice]", "[voice]asplit=2[voice_mix][voice_key]",
-              f"[{music_index}:a]volume={gain}dB,aloop=loop=-1:size=2000000000,"
-              f"atrim=0:{duration:.3f},asetpts=PTS-STARTPTS[bed]"]
-    if music.get("duck", True):
-        chunks.append("[bed][voice_key]sidechaincompress=threshold=0.05:ratio=8"
-                      ":attack=5:release=300[bed_ducked]")
-        bed = "[bed_ducked]"
+    layers = []
+    if music:
+        path = asset_path(music["file"], "música")
+        inputs += ["-i", str(path)]
+        gain = music.get("gain", -18)
+        chunks.append("[voice]asplit=2[voice_mix][voice_key]")
+        chunks.append(f"[{index}:a]volume={gain}dB,aloop=loop=-1:size=2000000000,"
+                      f"atrim=0:{duration:.3f},asetpts=PTS-STARTPTS[bed]")
+        if music.get("duck", True):
+            chunks.append("[bed][voice_key]sidechaincompress=threshold=0.05:ratio=8"
+                          ":attack=5:release=300[bed_ducked]")
+            layers.append("[bed_ducked]")
+        else:
+            chunks.append("[voice_key]anullsink")
+            layers.append("[bed]")
+        voice_label = "[voice_mix]"
+        index += 1
     else:
-        chunks.append("[voice_key]anullsink")
-        bed = "[bed]"
-    chunks.append(f"[voice_mix]{bed}amix=inputs=2:duration=first:normalize=0,"
-                  f"{finish}[aout]")
-    return chunks, ["-i", str(path)]
+        voice_label = "[voice]"
+
+    # --- one-shot effects ----------------------------------------------------
+    # adelay places each hit on the output timeline; apad keeps every branch the
+    # same length so amix does not cut the mix short at the first one to end.
+    for number, effect in enumerate(sfx):
+        path = asset_path(effect["file"], "sfx")
+        inputs += ["-i", str(path)]
+        start_ms = int(float(effect["t"]) * 1000)
+        gain = effect.get("gain", -6)
+        chunks.append(f"[{index}:a]volume={gain}dB,adelay={start_ms}:all=1,"
+                      f"apad=whole_dur={duration:.3f}[sfx{number}]")
+        layers.append(f"[sfx{number}]")
+        index += 1
+
+    mix_inputs = 1 + len(layers)
+    chunks.append(f"{voice_label}{''.join(layers)}"
+                  f"amix=inputs={mix_inputs}:duration=first:normalize=0,{finish}[aout]")
+    return chunks, inputs
 
 
 def video_graph(args, platform, effects, plan):
@@ -329,7 +356,11 @@ def video_graph(args, platform, effects, plan):
     look += flash_graph(effects) + blur_graph(effects) + letterbox_graph(effects, height)
     if args.subs:
         # fontsdir so libass finds the bundled fonts without installing them system-wide.
-        look += f",subtitles=filename='{ff_path(args.subs)}':fontsdir='{ff_path(FONTS)}'"
+        # fontsdir apunta a las fuentes propias si existen, y si no a las de vendor:
+        # libass sólo acepta un directorio, así que gana la biblioteca del usuario.
+        user_fonts = assets_dir() / "fonts"
+        fonts = user_fonts if user_fonts.is_dir() else FONTS
+        look += f",subtitles=filename='{ff_path(args.subs)}':fontsdir='{ff_path(fonts)}'"
     chunks.append(f"[polished]{look.lstrip(',') or 'null'}[styled]")
     return chunks
 

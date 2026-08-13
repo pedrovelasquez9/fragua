@@ -66,8 +66,10 @@ Write-Host "preparando dependencias (whisper.cpp, modelo y fuentes)..."
 # --- comprobación -----------------------------------------------------------
 Write-Host ""
 Write-Host "verificando la instalación..."
+. (Join-Path $primary "scripts\lib.ps1")
+$python = Resolve-Python
 Push-Location $primary
-try { python test_pipeline.py } finally { Pop-Location }
+try { Invoke-Tool $python @("test_pipeline.py") } finally { Pop-Location }
 
 Write-Host ""
 Write-Host "Listo. Abre Claude Code u OpenCode y escribe algo como:" -ForegroundColor Green

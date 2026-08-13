@@ -39,6 +39,9 @@ vídeo → analyze.py    → cuts.json    (segmentos a conservar, vía silencede
       → subtitles.py  → subs.ass     (karaoke, ya en la línea de tiempo final)
       → render.py     → salida.mp4   (un solo pase de ffmpeg desde el original)
       → [copy de publicación: título, descripción, tags y captions]
+
+assets.py --set <carpeta> configura la biblioteca del usuario y escribe
+assets.json con el catálogo. Léelo ANTES de escribir plan.json.
 ```
 
 El orden importa: los subtítulos se transcriben **después** de cortar, nunca
@@ -331,6 +334,52 @@ pasado X?» genera hilos entre comentaristas; «¿qué opinas?» genera emojis.
   `#programacionenespanol`.
 - Avisa al usuario de cualquier término que hayas corregido de la transcripción
   y de cualquier afirmación del vídeo que sea atacable sin datos.
+
+## Biblioteca de assets
+
+El usuario puede tener su propia carpeta de música, efectos, stickers, imágenes
+y fuentes. **Consúltala antes de escribir `plan.json`**: si no miras el catálogo,
+no sabes qué hay y el vídeo sale sin nada de eso.
+
+```bash
+python scripts/assets.py --set D:/mis-assets   # una vez, la configura
+python scripts/assets.py                       # reindexa y muestra qué hay
+```
+
+Escribe `assets.json` en la raíz con el inventario clasificado: `music`, `sfx`,
+`stickers`, `images` y `fonts`, cada uno con su ruta relativa y sus datos —
+duración de los audios, dimensiones y transparencia de las imágenes, familia
+tipográfica de las fuentes.
+
+La clasificación es por contenido, no por confianza en el nombre de la carpeta:
+un audio de más de 6 segundos es música y por debajo es efecto puntual; una
+imagen con canal alfa es sticker y sin él es imagen de fondo.
+
+En `plan.json`, las rutas se escriben **relativas a la biblioteca**:
+
+```json
+"music": {"file": "music/lofi.mp3", "gain": -18, "duck": true},
+"sfx": [
+  {"t": 5.66, "file": "sfx/whoosh.wav"},
+  {"t": 11.4, "file": "sfx/pop.wav", "gain": -3}
+],
+"stickers": [{"file": "stickers/fuego.png", "t": 5, "dur": 2, "scale": 0.22}]
+```
+
+**`sfx`** son golpes puntuales que se mezclan sobre la voz sin bajarla. Úsalos
+para acompañar lo que ya hace la imagen: un whoosh en un `whip_pan`, un pop
+cuando entra una card, un riser antes de un dato. Un efecto que no coincide con
+nada de lo que pasa en pantalla se nota como ruido. `gain` por defecto es −6 dB.
+
+**La música sí baja con la voz** (`duck`), y se repite en bucle hasta cubrir el
+vídeo. −18 dB es un punto de partida razonable bajo narración.
+
+**Fuentes propias**: si la biblioteca tiene una carpeta `fonts/`, libass usa esa
+en vez de las de `vendor/`. Pon en `presets.json` el nombre de familia que el
+catálogo reporta, no el nombre del archivo.
+
+Si el usuario no ha configurado nada, la biblioteca es la carpeta `assets/` de la
+propia skill y todo funciona igual, solo que vacía.
 
 ## Presets
 

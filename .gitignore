@@ -23,6 +23,9 @@ draft.json
 plan.json
 *.output.json
 
+# Catálogo y ruta de la biblioteca de assets: son de esta máquina.
+assets.json
+
 # --- assets del usuario -----------------------------------------------------
 # La carpeta se versiona con su README, pero no el material que metas dentro:
 # puede tener licencia propia y pesar mucho.

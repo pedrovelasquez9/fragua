@@ -10,34 +10,18 @@ $models = Join-Path $vendor "models"
 New-Item -ItemType Directory -Force -Path $models | Out-Null
 
 # --- requisitos previos -----------------------------------------------------
-# Se instalan solos con winget. Si no está disponible, se dice qué falta y ya.
-function Install-Prerequisite {
-    param([string]$Command, [string]$WingetId, [string]$Label)
+. (Join-Path $PSScriptRoot "lib.ps1")
 
-    if (Get-Command $Command -ErrorAction SilentlyContinue) { return }
-    if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
-        throw "falta $Label y no encuentro winget. Instalalo a mano y reintenta."
-    }
-    "instalando $Label..."
-    winget install --id $WingetId --silent --accept-package-agreements --accept-source-agreements | Out-Null
-
-    # winget no refresca el PATH de la sesion en curso.
-    $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
-                [Environment]::GetEnvironmentVariable("Path", "User")
-    if (-not (Get-Command $Command -ErrorAction SilentlyContinue)) {
-        throw "$Label se instalo pero no aparece en el PATH. Abre un terminal nuevo y reintenta."
-    }
-}
-
-Install-Prerequisite -Command ffmpeg -WingetId "Gyan.FFmpeg" -Label "ffmpeg"
-Install-Prerequisite -Command python -WingetId "Python.Python.3.12" -Label "Python"
+Install-Prerequisite -Command ffmpeg -TestArg "-version" -WingetId "Gyan.FFmpeg" -Label "ffmpeg"
+$python = Resolve-Python
+"usando $($python -join ' ')"
 
 # Pillow rasterises the cards. ASS can only put a box behind a line of text.
-python -c "import PIL" 2>$null
+Invoke-Tool $python @("-c", "import PIL") 2>&1 | Out-Null
 if ($LASTEXITCODE -ne 0) {
     "instalando Pillow..."
-    python -m pip install --quiet pillow
-    python -c "import PIL" 2>$null
+    Invoke-Tool $python @("-m", "pip", "install", "--quiet", "pillow")
+    Invoke-Tool $python @("-c", "import PIL") 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "no pude instalar Pillow" }
 }
 

@@ -146,6 +146,49 @@ audio cuts off at the end») and the agent finds the cause.
 
 ---
 
+## Your own assets
+
+Fragua can pull music, sound effects, stickers, images and fonts from a folder
+you own. Point it there once:
+
+```bash
+python scripts/assets.py --set D:/my-assets
+```
+
+Or just tell the agent: `use D:/my-assets as my assets folder`.
+
+Organise it however you like — the classification reads the files, not the folder
+names — but this is the layout it expects:
+
+```
+my-assets/
+  music/     long background tracks
+  sfx/       short hits: whoosh, pop, riser
+  stickers/  PNGs with transparency
+  images/    screenshots, logos, backgrounds
+  fonts/     your own .ttf or .otf
+```
+
+Whenever you add something new, reindex it:
+
+```bash
+python scripts/assets.py
+```
+
+From then on the agent knows what you have and reaches for it on its own: a
+whoosh over a whip pan, a pop when a card appears, your track under the voice —
+ducked automatically so it never fights the narration. Ask for it explicitly if
+you prefer: `put the lofi track underneath and a pop on each card`.
+
+If you never configure anything, Fragua uses its own empty `assets/` folder and
+everything else works the same.
+
+> Music from CapCut or TikTok is licensed for those apps only, and triggers
+> copyright claims on YouTube. Use CC0 sources such as Pixabay, Mixkit or
+> Freesound instead.
+
+---
+
 ## Recording tips
 
 The skill fixes a lot, but some things are cheaper to get right while shooting.

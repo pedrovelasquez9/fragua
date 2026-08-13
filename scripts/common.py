@@ -29,6 +29,35 @@ def load_presets():
     return read_json(PRESETS)
 
 
+# --- asset library ----------------------------------------------------------
+
+ASSETS_CONFIG = ROOT / "assets.json"
+
+
+def assets_dir():
+    """Where the user's music, sfx, stickers and fonts live.
+
+    Set with `python scripts/assets.py --set <path>`. Falls back to the bundled
+    assets/ folder, so everything works before anyone configures anything.
+    """
+    if ASSETS_CONFIG.exists():
+        configured = read_json(ASSETS_CONFIG).get("dir")
+        if configured:
+            return Path(configured)
+    return ROOT / "assets"
+
+
+def resolve_asset(path):
+    """Absolute path, or one relative to the asset library, or to the skill root."""
+    candidate = Path(path)
+    if candidate.is_absolute():
+        return candidate
+    for base in (assets_dir(), ROOT):
+        if (base / candidate).exists():
+            return base / candidate
+    return assets_dir() / candidate
+
+
 def preset(name):
     """One platform preset. Keys starting with '_' are documentation, not presets."""
     presets = {k: v for k, v in load_presets().items() if not k.startswith("_")}
