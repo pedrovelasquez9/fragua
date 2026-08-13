@@ -1,228 +1,204 @@
 # Fragua
 
-Una skill para **Claude Code** y **OpenCode** que convierte una grabación en
-bruto en un vídeo listo para publicar en TikTok, Reels o YouTube Shorts.
+*[Léeme en español](README.es.md)*
 
-Por [Pedro Plasencia - Programación en español](https://programacion-es.dev/redes)
+A skill for **Claude Code** and **OpenCode** that turns a raw recording into a
+video ready to publish on TikTok, Reels or YouTube Shorts.
 
-Le pasas el vídeo por el chat, y el agente lo edita: quita los silencios, quema
-subtítulos, añade cambios de plano y tarjetas gráficas, corrige el color,
-normaliza el audio y, al terminar, te redacta el título, la descripción, las
-etiquetas y los textos para cada red.
+You drop the video into the chat and the agent edits it: cuts the silences,
+burns in karaoke captions, adds shot changes and graphic cards, grades the
+colour, normalises the audio, and then writes the title, description, tags and
+captions for each network.
 
-Todo ocurre **en tu ordenador**. No hay ninguna API key, ningún servicio de pago
-y ningún archivo tuyo sale de la máquina.
+Everything runs **on your machine**. No API keys, no paid services, and none of
+your files leave the computer.
 
 ---
 
-## Instalación
+## Install
 
-### 1. Requisitos previos
+### Claude Code
 
-Necesitas dos cosas instaladas antes de empezar:
+Install it like any other plugin, from inside Claude Code:
 
-**ffmpeg**
-
-```bash
-winget install Gyan.FFmpeg     # Windows
-brew install ffmpeg            # macOS
-sudo apt install ffmpeg        # Linux
+```
+/plugin marketplace add pedrovelasquez9/fragua
+/plugin install fragua@fragua
 ```
 
-**Python 3.9 o superior** — desde [python.org](https://www.python.org/downloads/)
-o el gestor de paquetes de tu sistema.
+Then set up the dependencies once — ffmpeg, Python, the transcription model and
+the fonts. Just ask the agent:
 
-Para comprobar que están:
-
-```bash
-ffmpeg -version
-python --version
+```
+run the fragua setup
 ```
 
-### 2. Descargar Fragua
+Or run it yourself from the installed folder:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\setup.ps1   # Windows
+```
+```bash
+./scripts/setup.sh                                            # macOS and Linux
+```
+
+The setup downloads about 1.6 GB, installs anything missing through `winget`,
+`brew` or your package manager, and finishes with a self-check. When you see
+**`todo verde`**, you are ready.
+
+### OpenCode
+
+OpenCode has no marketplace, so clone the repository and run the installer:
 
 ```bash
 git clone https://github.com/pedrovelasquez9/fragua
 cd fragua
+./install.sh --target opencode                                # macOS and Linux
 ```
-
-Si no tienes git, descarga el ZIP desde
-[la página del repositorio](https://github.com/pedrovelasquez9/fragua) y
-descomprímelo.
-
-### 3. Instalar la skill
-
-Un solo comando. Copia los archivos donde los agentes los buscan, descarga lo
-que necesita y verifica que todo funciona.
-
-**Windows**
-
 ```powershell
-powershell -ExecutionPolicy Bypass -File install.ps1
+powershell -ExecutionPolicy Bypass -File install.ps1 -Target opencode   # Windows
 ```
 
-**macOS y Linux**
+The installer copies the skill where OpenCode looks for it, resolves every
+dependency and runs the verification suite.
 
-```bash
-chmod +x install.sh && ./install.sh
-```
+### Installer options
 
-Tarda unos minutos: descarga el modelo de transcripción, que ocupa 1,6 GB. Al
-acabar ejecuta una comprobación automática; si ves **`todo verde`**, ya está.
-
-Por defecto instala para Claude Code y OpenCode a la vez. Si solo usas uno:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File install.ps1 -Target claude
-powershell -ExecutionPolicy Bypass -File install.ps1 -Target opencode
-```
-
-```bash
-./install.sh --target claude
-./install.sh --target opencode
-```
-
-Otras opciones:
-
-| Opción | Para qué |
+| Option | What it does |
 |---|---|
-| `-Project` / `--project` | Instala solo para la carpeta actual, no para todo el sistema |
-| `-Model ggml-medium` / `--model ggml-medium` | Modelo más pequeño: descarga 1,4 GB menos y transcribe más rápido, con algún fallo más |
+| `--target claude` / `--target opencode` | Install for one agent only (default: both) |
+| `--project` | Install into the current folder instead of system-wide |
+| `--model ggml-medium` | Smaller model: 1.4 GB less to download, faster, slightly less accurate |
 
-> **Ordenador nuevo**: repite los tres pasos. No copies la carpeta `vendor/`
-> entre máquinas, son 1,5 GB que el instalador vuelve a descargar solo.
+On Windows the same options use PowerShell syntax: `-Target`, `-Project`, `-Model`.
 
-### Actualizar a una versión nueva
+### Updating
 
-Desde la carpeta que clonaste:
-
-```powershell
-git pull; powershell -ExecutionPolicy Bypass -File install.ps1   # Windows
+```
+/plugin marketplace update fragua        # Claude Code
 ```
 
 ```bash
-git pull && ./install.sh                                         # macOS y Linux
+git pull && ./install.sh                 # OpenCode
 ```
 
-El instalador ve que las dependencias ya están descargadas y solo copia los
-archivos actualizados, así que tarda segundos.
+> Do not copy the `vendor/` folder between machines. Those 1.5 GB are
+> regenerated by the setup on each computer.
 
 ---
 
-## Cómo se usa
+## How to use it
 
-No hay comandos que memorizar. Abre Claude Code u OpenCode y **pídelo en lenguaje
-normal**, indicando la ruta del vídeo:
-
-```
-edita este vídeo para tiktok: C:\Users\yo\Videos\grabacion.mp4
-```
-
-El agente reconoce la skill y se pone a trabajar. Tarda entre cinco y quince
-minutos según lo largo que sea el vídeo, y va contándote lo que encuentra.
-
-### Qué hace mientras tanto
-
-1. **Mide el vídeo**: duración, brillo, ruido de fondo
-2. **Detecta los silencios** y los recorta
-3. **Transcribe lo que dices** para poder leerlo
-4. **Decide el montaje**: aquí es donde te avisa si has grabado una toma dos
-   veces, si te trabas, o si los primeros segundos son aire muerto
-5. **Diseña las tarjetas** que resumen tus ideas en pantalla
-6. **Renderiza** y te devuelve el archivo
-7. **Escribe el copy** de publicación para YouTube, Instagram y TikTok
-
-### Qué le puedes pedir
-
-Todo esto funciona tal cual, escrito en el chat:
+There are no commands to memorise. Open Claude Code or OpenCode and **ask in
+plain language**, pointing at the video:
 
 ```
-edita este vídeo y dame tu opinión del contenido
-```
-```
-edítalo para reels en vez de tiktok
-```
-```
-los subtítulos están muy grandes, bájalos y vuelve a renderizar
-```
-```
-quita la segunda tarjeta, tapa lo que estoy enseñando
-```
-```
-genera solo el título y la descripción para youtube
-```
-```
-usa la toma del final, no la primera
+edit this video for tiktok: C:\Users\me\Videos\recording.mp4
 ```
 
-Si algo no te convence, **díselo y lo rehace**. No hace falta que sepas qué
-parámetro tocar: describe lo que ves («se ve pixelado en la camiseta», «el audio
-se corta al final») y él localiza la causa.
+The agent picks up the skill and gets to work. It takes five to fifteen minutes
+depending on the length, and tells you what it finds along the way.
 
-### Qué te devuelve
+### What happens meanwhile
 
-- El vídeo editado, junto al original y con `-EDIT` en el nombre
-- Una carpeta con los archivos del proyecto, por si quieres retocar algo después
-  sin repetir todo el proceso
-- El texto de publicación: título, descripción, 15 etiquetas y los pies para
-  Instagram y TikTok
+1. **Measures the video**: duration, brightness, noise floor
+2. **Detects the silences** and trims them
+3. **Transcribes what you say** so it can be read
+4. **Decides the edit** — this is where it warns you if you shot a take twice,
+   if you stumbled, or if the first seconds are dead air
+5. **Designs the cards** that summarise your ideas on screen
+6. **Renders** and hands you the file
+7. **Writes the copy** for YouTube, Instagram and TikTok
+
+### What you can ask for
+
+All of this works as typed:
+
+```
+edit this video and give me your opinion on the content
+```
+```
+make it for reels instead of tiktok
+```
+```
+the captions are too big, shrink them and render again
+```
+```
+drop the second card, it covers what I'm showing
+```
+```
+just write the youtube title and description
+```
+```
+use the take at the end, not the first one
+```
+
+If something is off, **say so and it redoes it**. You do not need to know which
+parameter to touch: describe what you see («the shirt looks pixelated», «the
+audio cuts off at the end») and the agent finds the cause.
+
+### What you get back
+
+- The edited video, next to the original with `-EDIT` in the name
+- A project folder, so you can tweak something later without redoing everything
+- The publishing copy: title, description, 15 tags and the captions for
+  Instagram and TikTok
 
 ---
 
-## Consejos para grabar
+## Recording tips
 
-La skill arregla mucho, pero hay cosas que se ganan mejor en la grabación. Estas
-tres son las que más han salido en la práctica:
+The skill fixes a lot, but some things are cheaper to get right while shooting.
+These three come up the most:
 
-**Cuida el reflejo de las gafas.** Si el monitor se refleja en los cristales,
-tapa tus ojos y ningún filtro lo recupera del todo. Baja el brillo de la
-pantalla, muévela fuera del eje de la cámara o inclina un poco las patillas.
+**Watch the glare on your glasses.** If your monitor reflects in the lenses it
+covers your eyes, and no filter fully recovers that. Lower the screen
+brightness, move it off the camera axis, or tilt the temples slightly.
 
-**No pasa nada por repetir una toma.** El agente detecta las repeticiones y se
-queda con la buena. Si te trabas, para y repite la frase entera.
+**Repeating a take is fine.** The agent spots repetitions and keeps the good
+one. If you stumble, stop and repeat the whole sentence.
 
-**Deja el gancho al principio.** La frase más fuerte del vídeo debería estar en
-los primeros cinco segundos, no en el segundo cuarenta. Si te sale al final, el
-agente te lo dirá, pero no puede reordenarte el discurso sin que se note.
+**Put the hook first.** The strongest line of the video belongs in the first
+five seconds, not at second forty. If it lands at the end the agent will tell
+you, but it cannot reorder your argument without it showing.
 
 ---
 
-## Si algo va mal
+## Troubleshooting
 
-| Lo que ves | Qué hacer |
+| What you see | What to do |
 |---|---|
-| El agente dice que no encuentra ffmpeg | Instálalo (arriba) y reinicia el terminal para que actualice el PATH |
-| «falta whisper.cpp» o similar | Vuelve a lanzar el instalador; se puede ejecutar tantas veces como quieras |
-| Los subtítulos no coinciden con lo que dices | Pídele que revise la transcripción, que es un archivo de texto que puede corregir |
-| El vídeo tarda muchísimo | Normal en grabaciones largas. Con `-Model ggml-medium` va bastante más rápido |
-| Se instaló pero el agente no la usa | Comprueba que la carpeta se llama exactamente `fragua` |
+| The agent says ffmpeg is missing | Run the setup again, and open a new terminal so the PATH refreshes |
+| «falta whisper.cpp» or similar | Run the setup again; it is safe to repeat as often as you like |
+| Captions do not match what you say | Ask it to review the transcript — it is a text file it can fix |
+| It takes forever | Normal on long recordings. `--model ggml-medium` is noticeably faster |
+| Installed but the agent ignores it | Check the folder is named exactly `fragua` |
 
-Para cualquier otra cosa, pregúntale directamente al agente: tiene la
-documentación técnica completa y sabe diagnosticar sus propios fallos.
-
----
-
-## Para desarrolladores
-
-Si quieres entender el pipeline por dentro, ejecutar los scripts a mano o
-modificar los parámetros de color, efectos y tipografía, todo está en
-**[TECHNICAL_README.md](TECHNICAL_README.md)**.
+For anything else, just ask the agent: it carries the full technical
+documentation and can diagnose its own failures.
 
 ---
 
-## Licencia
+## For developers
 
-Fragua se publica bajo licencia **MIT**: úsala, modifícala y distribúyela como
-quieras. Ver [LICENSE](LICENSE).
-
-Lo que descarga el instalador trae sus propias licencias, todas permisivas:
-whisper.cpp y el modelo Whisper bajo MIT, y las fuentes Roboto, Anton y Poppins
-bajo SIL Open Font License.
-
-Si añades música o stickers propios en `assets/`, la licencia corre de tu cuenta.
-**No uses material de CapCut o TikTok**: está licenciado solo para esas apps y su
-música genera reclamaciones de copyright en YouTube.
+To understand the pipeline, run the scripts by hand or change the colour,
+effect and typography parameters, see **[TECHNICAL_README.md](TECHNICAL_README.md)**.
 
 ---
 
-Hecho por **[Pedro Plasencia - Programación en español](https://programacion-es.dev/redes)**
+## Licence
+
+Fragua is released under the **MIT** licence — use it, modify it and distribute
+it as you like. See [LICENSE](LICENSE).
+
+What the setup downloads carries its own permissive licences: whisper.cpp and
+the Whisper model under MIT, and the Roboto, Anton and Poppins fonts under the
+SIL Open Font License.
+
+If you add your own music or stickers under `assets/`, licensing is on you.
+**Do not use CapCut or TikTok material**: it is licensed for those apps only and
+their music triggers copyright claims on YouTube.
+
+---
+
+Made by **[Pedro Plasencia - Programación en español](https://programacion-es.dev/redes)**

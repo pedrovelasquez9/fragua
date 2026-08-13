@@ -1,0 +1,21 @@
+{
+  "name": "fragua",
+  "owner": {
+    "name": "Pedro Plasencia - Programación en español",
+    "url": "https://programacion-es.dev/redes"
+  },
+  "description": "Fragua: edición de vídeo vertical para redes, en local y sin API keys.",
+  "plugins": [
+    {
+      "name": "fragua",
+      "source": "./",
+      "description": "Edita vídeo vertical para TikTok, Reels y Shorts: quita silencios, quema subtítulos karaoke, añade cards gráficas y redacta el copy de publicación.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Pedro Plasencia - Programación en español"
+      },
+      "license": "MIT",
+      "homepage": "https://github.com/pedrovelasquez9/fragua"
+    }
+  ]
+}

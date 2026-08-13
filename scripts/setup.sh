@@ -13,8 +13,29 @@ FONTS="$VENDOR/fonts"
 MODELS="$VENDOR/models"
 
 need() { command -v "$1" >/dev/null 2>&1 || { echo "falta '$1' — instálalo y reintenta"; exit 1; }; }
-need ffmpeg
-need curl
+
+# --- requisitos previos -----------------------------------------------------
+# Se instalan solos con el gestor de paquetes del sistema.
+pkg_install() {
+    if   command -v brew    >/dev/null 2>&1; then brew install "$@"
+    elif command -v apt-get >/dev/null 2>&1; then sudo apt-get update -qq && sudo apt-get install -y "$@"
+    elif command -v dnf     >/dev/null 2>&1; then sudo dnf install -y "$@"
+    elif command -v pacman  >/dev/null 2>&1; then sudo pacman -S --noconfirm "$@"
+    elif command -v zypper  >/dev/null 2>&1; then sudo zypper install -y "$@"
+    else return 1
+    fi
+}
+
+ensure() {  # ensure <comando> <paquete> <etiqueta>
+    command -v "$1" >/dev/null 2>&1 && return 0
+    echo "instalando $3..."
+    pkg_install "$2" || { echo "falta $3 y no reconozco tu gestor de paquetes. Instálalo a mano."; exit 1; }
+    command -v "$1" >/dev/null 2>&1 || { echo "$3 se instaló pero no aparece en el PATH"; exit 1; }
+}
+
+ensure ffmpeg  ffmpeg  "ffmpeg"
+ensure curl    curl    "curl"
+ensure python3 python3 "Python 3"
 
 mkdir -p "$FONTS" "$MODELS"
 
