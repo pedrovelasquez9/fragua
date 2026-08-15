@@ -386,6 +386,83 @@ catálogo reporta, no el nombre del archivo.
 Si el usuario no ha configurado nada, la biblioteca es la carpeta `assets/` de la
 propia skill y todo funciona igual, solo que vacía.
 
+## Imágenes de apoyo por palabra clave
+
+Si la biblioteca tiene una imagen llamada `youtube.png` y en algún momento el
+vídeo dice «YouTube», esa imagen aparece unos segundos en una esquina. Es la
+forma más barata de que un vídeo hablado deje de ser sólo una cara.
+
+**Cómo montarlo**, después de tener `words.json` del audio ya cortado:
+
+1. Lee `~/.fragua/assets.json`. Cada entrada de `images` trae un campo
+   `keyword` derivado del nombre del archivo: `claude-code.png` → «claude code».
+2. Busca esas palabras en la transcripción, sin distinguir mayúsculas ni tildes.
+3. Por cada coincidencia que merezca la pena, añade una entrada a `broll`.
+
+```json
+"broll": [
+  {"t": 12.4, "dur": 2.5, "file": "images/youtube.png",
+   "corner": "top-right", "sfx": "sfx/pop.wav"}
+]
+```
+
+`t` es el instante en que se dice la palabra, en la línea de tiempo de salida.
+
+**Las reglas que no se negocian**, porque el vídeo es la persona hablando:
+
+- **Nunca a pantalla completa ni sobre la cara.** Sólo esquinas: `top-right`,
+  `top-left`, `bottom-right`, `bottom-left`. En vertical la cara ocupa la franja
+  central, así que las esquinas superiores suelen ser fondo.
+- **El tamaño está topado** al 40% del ancho por código. Por defecto va al 28%.
+- **Una imagen cada 8 segundos como mínimo**, y nunca mientras hay una card en
+  pantalla: dos elementos gráficos a la vez es ruido.
+- **No la pongas en cada mención.** Si dice «YouTube» seis veces, va una. Elige
+  la primera o la más enfática, no todas.
+- **Sólo si aporta.** Un logo cuando se nombra la marca ayuda a fijar la idea;
+  una foto genérica cuando dice «trabajo» es relleno y se nota.
+
+**El sonido de entrada** (`sfx`) es opcional y va con las mismas reglas que
+cualquier efecto: corto, sutil y **cede ante la voz**. Bajar la ganancia no
+basta —dos señales se suman, así que el pico de voz+efecto siempre supera al de
+la voz sola por mucho que se atenúe—, por eso el efecto pasa por un
+`sidechaincompress` con la voz de llave. Medido: el nivel percibido no sube
+(−13.1 dB con y sin efecto) y el pico sólo sube 1.4 dB, que es el mínimo de
+cualquier capa aditiva.
+
+## Memoria de recomendaciones
+
+Las sugerencias sobre el contenido no sirven de nada si nadie lleva la cuenta de
+si se aplican. `scripts/coach.py` guarda esa memoria en
+`~/.fragua/coaching.json`, fuera del plugin.
+
+**Antes de opinar sobre un vídeo**, lee el historial:
+
+```bash
+python <skill>/scripts/coach.py
+```
+
+Te dice qué recomendaciones se han aplicado, cuáles se repiten sin aplicarse y
+cuáles se corrigieron después de señalarlas. Úsalo para no repetir mecánicamente
+lo mismo: si algo lleva tres vídeos pendiente, deja de mencionarlo de pasada y
+conviértelo en el tema principal de tu opinión, con una propuesta concreta de
+cómo resolverlo en la próxima grabación. Y si algo se ha corregido, **dilo**:
+reconocer la mejora es la mitad del valor de este registro.
+
+**Después de editar**, registra la evaluación:
+
+```bash
+python <skill>/scripts/coach.py log --file "salida.mp4" --topic "de qué va"   --applied hook-al-inicio,dato-concreto --pending anecdota-personal
+```
+
+Los criterios son un catálogo cerrado (`coach.py checks`), y eso es
+deliberado: una sugerencia en texto libre no se puede comparar entre vídeos,
+porque «mejora el gancho» dicho en marzo y en agosto son cadenas distintas.
+Evalúa **todos** los criterios que apliquen, no sólo los que fallan: sin los
+cumplidos no hay forma de detectar una mejora.
+
+Sé honesto al evaluar. Marcar como cumplido algo que no lo está rompe el
+historial y hace inútil el registro entero.
+
 ## Presets
 
 `youtube_long` (1920×1080), `tiktok`, `reels`, `youtube_short` (1080×1920). Todos

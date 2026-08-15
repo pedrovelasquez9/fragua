@@ -85,6 +85,18 @@ def font_family(path):
     return None
 
 
+def keyword_from(path):
+    """Palabra que dispara la imagen, sacada del nombre del archivo.
+
+    `youtube.png` -> "youtube".  `claude-code.png` -> "claude code".
+    Así el agente puede buscarla en la transcripción sin más configuración.
+    """
+    stem = path.stem.lower().strip()
+    for separator in ("-", "_"):
+        stem = stem.replace(separator, " ")
+    return " ".join(stem.split())
+
+
 def classify(path, root):
     """Bucket a file, using its folder as a hint and its content as the tiebreak."""
     suffix = path.suffix.lower()
@@ -106,7 +118,10 @@ def classify(path, root):
         kind = "stickers" if alpha else "images"
         if folder in ("stickers", "images", "imagenes", "imágenes"):
             kind = "stickers" if folder.startswith("sticker") else "images"
-        return kind, {"width": width, "height": height, "alpha": alpha}
+        # El nombre del archivo es la palabra a buscar en la transcripción:
+        # youtube.png se muestra cuando el vídeo dice "youtube".
+        return kind, {"width": width, "height": height, "alpha": alpha,
+                      "keyword": keyword_from(path)}
 
     if suffix in FONT_EXT:
         return "fonts", {"family": font_family(path)}
@@ -153,6 +168,8 @@ def summarise(catalogue, root):
             elif entry.get("width"):
                 detail = f"{entry['width']}x{entry['height']}"
                 detail += " con alpha" if entry.get("alpha") else ""
+                if entry.get("keyword"):
+                    detail += f"  · palabra: «{entry['keyword']}»"
             elif entry.get("family"):
                 detail = entry["family"]
             print(f"      {entry['file']:<44} {detail}")

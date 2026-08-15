@@ -199,6 +199,30 @@ everything else works the same.
 > copyright claims on YouTube. Use CC0 sources such as Pixabay, Mixkit or
 > Freesound instead.
 
+### Images that appear when you mention something
+
+Drop an image named after a word into your assets folder — `youtube.png`,
+`claude-code.png`, `github.png` — and whenever the video says that word, the
+image pops up in a corner for a couple of seconds.
+
+Nothing to configure: the filename *is* the trigger word. Reindex with
+`/fragua:assets` after adding one.
+
+It never covers your face and never fills the screen — corner only, capped at
+40% of the width, one every eight seconds at most. The entry sound, if you add
+one, ducks under your voice so it never competes with what you are saying.
+
+### It remembers what it told you
+
+After each edit Fragua records which content recommendations you applied and
+which you did not. Next time it checks that history before giving an opinion.
+
+So if something has been pending for three videos, it stops mentioning it in
+passing and makes it the main point. And when you fix something, it says so
+instead of repeating the same note forever.
+
+Ask for the report any time: `how am I improving?`
+
 ---
 
 ## Recording tips

@@ -160,7 +160,11 @@ def test_assets_library():
             chunks, inputs = audio_graph(plan, 1, 10.0, -14)
             graph = ";".join(chunks)
             assert "adelay=1000" in graph and "adelay=2500" in graph, "sfx sin colocar"
-            assert "amix=inputs=4" in graph, f"la mezcla no cuenta las capas: {graph[-140:]}"
+            # Los efectos se juntan en un bus y ese bus cede ante la voz, así que
+            # la mezcla final son tres capas: voz, música y efectos.
+            assert "[sfxbus]" in graph, "los efectos no se agrupan en un bus"
+            assert "[sfxbus][key_sfx]sidechaincompress" in graph, "el sfx no cede ante la voz"
+            assert "amix=inputs=3" in graph, f"la mezcla no cuenta las capas: {graph[-140:]}"
             assert inputs.count("-i") == 3, "faltan entradas de audio"
         finally:
             common.ASSETS_CONFIG = original
@@ -205,6 +209,39 @@ def test_polish_spares_shadows():
     print(f"ok  polish respeta sombras ({d0:.1f}->{d1:.1f}) y afila detalle ({b0:.1f}->{b1:.1f})")
 
 
+
+def test_broll_stays_in_a_corner():
+    """La imagen de apoyo nunca puede ocupar la pantalla ni centrarse sobre la
+    persona, y su golpe de sonido nunca puede pasar por encima de la voz."""
+    sys.path.insert(0, str(SCRIPTS))
+    from render import (BROLL_MAX_SCALE, SFX_MAX_GAIN, audio_graph, broll_graph,
+                        broll_position)
+
+    width, height, caption_y = 1080, 1920, 1490
+
+    # El tamaño está topado aunque el plan pida una barbaridad.
+    items = [{"t": 5.0, "dur": 2.0, "scale": 0.95, "corner": "top-right"}]
+    _, chunks, _ = broll_graph(items, ["x.png"], 1, "[in]", width, height, caption_y)
+    graph = ";".join(chunks)
+    cap = int(width * BROLL_MAX_SCALE)
+    assert f"scale={cap}:" in graph, f"no aplicó el techo de tamaño: {graph[:120]}"
+
+    # Las cuatro esquinas caen fuera de la franja central, donde está la cara.
+    for corner in ("top-right", "top-left", "bottom-right", "bottom-left"):
+        x, _ = broll_position(corner, width, height, cap, caption_y)
+        assert "w" in x or int(x) < width * 0.25, f"{corner} se va al centro: x={x}"
+
+    # El sfx del b-roll no puede superar el techo, pida lo que pida el plan.
+    with tempfile.TemporaryDirectory() as tmp:
+        hit = Path(tmp) / "pop.wav"
+        sh("ffmpeg", "-y", "-v", "error", "-f", "lavfi",
+           "-i", "sine=frequency=900:duration=0.3", str(hit))
+        plan = {"sfx": [{"t": 1.0, "file": str(hit), "gain": 12}]}
+        chunks, _ = audio_graph(plan, 1, 10.0, -14)
+        assert f"volume={SFX_MAX_GAIN}dB" in ";".join(chunks), "el sfx superó el techo"
+    print("ok  b-roll (esquina, tamaño topado, sfx bajo la voz)")
+
+
 def test_timeline_mapping():
     segments = [{"start": 0, "end": 2, "speed": 1.0}, {"start": 4, "end": 6, "speed": 1.0}]
     assert output_duration(segments) == 4.0
@@ -227,6 +264,7 @@ def main():
         test_deglare()
         test_polish_spares_shadows()
         test_assets_library()
+        test_broll_stays_in_a_corner()
 
         make_clip(clip)
         assert abs(probe_duration(clip) - 6) < 0.3

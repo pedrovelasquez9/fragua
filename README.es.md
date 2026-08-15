@@ -202,6 +202,30 @@ demás funciona igual.
 > reclamaciones de copyright en YouTube. Usa fuentes CC0 como Pixabay, Mixkit o
 > Freesound.
 
+### Imágenes que aparecen cuando mencionas algo
+
+Mete en tu carpeta de assets una imagen con el nombre de una palabra
+—`youtube.png`, `claude-code.png`, `github.png`— y cuando el vídeo diga esa
+palabra, la imagen sale un par de segundos en una esquina.
+
+No hay nada que configurar: el nombre del archivo **es** la palabra que la
+dispara. Reindexa con `/fragua:assets` después de añadir alguna.
+
+Nunca te tapa la cara ni ocupa la pantalla: sólo esquinas, con el tamaño topado
+al 40% del ancho y una imagen cada ocho segundos como máximo. El sonido de
+entrada, si se lo pones, cede ante tu voz para no competir con lo que dices.
+
+### Recuerda lo que te ha recomendado
+
+Después de cada edición, Fragua anota qué recomendaciones sobre el contenido
+aplicaste y cuáles no. La siguiente vez consulta ese historial antes de opinar.
+
+Así, si algo lleva tres vídeos pendiente, deja de mencionarlo de pasada y lo
+convierte en el tema principal. Y cuando corriges algo, te lo dice en vez de
+repetirte la misma nota para siempre.
+
+Puedes pedir el informe cuando quieras: `¿estoy mejorando?`
+
 ---
 
 ## Consejos para grabar

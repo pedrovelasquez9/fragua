@@ -91,6 +91,11 @@ def deglare_graph(cfg):
             ":cb='cb(X,Y)':cr='cr(X,Y)',format=yuv420p")
 
 
+# Un efecto puntual acompaña, no compite: por encima de -3 dB empieza a tapar la
+# voz, que va normalizada a -14 LUFS. El techo no es configurable a propósito.
+SFX_DEFAULT_GAIN = -6
+SFX_MAX_GAIN = -3
+
 # Never end on a hard audio cut — it reads as a truncated sentence.
 TAIL_FADE = 0.35
 
@@ -246,6 +251,64 @@ def sticker_graph(stickers, start_index, width, height):
     return inputs, chunks, label
 
 
+# B-roll: una imagen pequeña en una esquina cuando se menciona algo concreto.
+# Nunca a pantalla completa y nunca sobre la persona, que en un plano vertical
+# ocupa la franja central. Por eso sólo hay esquinas y el ancho está topado.
+BROLL_SCALE = 0.28          # fracción del ancho por defecto
+BROLL_MAX_SCALE = 0.40      # techo duro: por encima empieza a tapar al que habla
+BROLL_MARGIN = 0.05         # separación al borde, en fracción del ancho
+BROLL_FADE = 0.25
+
+# El eje Y del pie evita la banda de subtítulos, que vive en margin_v.
+BROLL_CORNERS = ("top-right", "top-left", "bottom-right", "bottom-left")
+
+
+def broll_position(corner, width, height, image_width, caption_y):
+    """(x, y) de la esquina pedida, en píxeles del fotograma de salida."""
+    margin = int(width * BROLL_MARGIN)
+    top = int(margin * 1.6)
+    # Por abajo, apoyado sobre la banda de subtítulos para no invadirla.
+    bottom = f"{caption_y}-h-{margin}"
+    right = f"{width - margin}-w"
+    return {
+        "top-right":    (right, str(top)),
+        "top-left":     (str(margin), str(top)),
+        "bottom-right": (right, bottom),
+        "bottom-left":  (str(margin), bottom),
+    }[corner]
+
+
+def broll_graph(items, paths, start_index, base_label, width, height, caption_y):
+    """Superpone cada imagen de apoyo con entrada por fundido y deslizamiento."""
+    inputs, chunks, label = [], [], base_label
+    for i, (spec, path) in enumerate(zip(items, paths)):
+        t0 = float(spec["t"])
+        dur = float(spec.get("dur", 2.5))
+        corner = spec.get("corner", "top-right")
+        if corner not in BROLL_CORNERS:
+            sys.exit(f"esquina desconocida para el b-roll: {corner}. "
+                     f"Usa: {', '.join(BROLL_CORNERS)}")
+        scale = min(float(spec.get("scale", BROLL_SCALE)), BROLL_MAX_SCALE)
+        fade = min(BROLL_FADE, dur / 3)
+
+        inputs += ["-loop", "1", "-t", f"{dur:.3f}", "-i", str(path)]
+        chunks.append(
+            f"[{start_index + i}:v]scale={int(width * scale)}:-1,format=rgba,"
+            f"fade=t=in:st=0:d={fade:.2f}:alpha=1,"
+            f"fade=t=out:st={dur - fade:.3f}:d={fade:.2f}:alpha=1,"
+            f"setpts=PTS+{t0:.3f}/TB[b{i}]")
+
+        x, y = broll_position(corner, width, height, int(width * scale), caption_y)
+        # Entra deslizándose unos píxeles desde el borde más cercano.
+        rise = int(height * 0.012)
+        y_expr = f"{y}+{rise}*(1-min(1,(t-{t0})/{fade:.2f}))"
+        nxt = f"[bv{i}]"
+        chunks.append(f"{label}[b{i}]overlay=x='{x}':y='{y_expr}'"
+                      f":enable='between(t,{t0},{t0 + dur})'{nxt}")
+        label = nxt
+    return inputs, chunks, label
+
+
 def card_graph(cards, paths, start_index, base_label, height):
     """Overlay each pre-rendered card PNG, fading and sliding it into place.
 
@@ -290,47 +353,61 @@ def audio_graph(plan, first_index, duration, lufs):
     sfx = plan.get("sfx", [])
     chunks, inputs, index = [], [], first_index
 
-    # --- voice ---------------------------------------------------------------
     if not music and not sfx:
         return [f"[ac]{VOICE},{finish}[aout]"], []
+
+    # La voz se reparte: una copia va a la mezcla y otra hace de llave para el
+    # ducking de cada capa que deba ceder ante ella.
+    keys = ["voice_mix"] + (["key_music"] if music else []) + (["key_sfx"] if sfx else [])
     chunks.append(f"[ac]{VOICE}[voice]")
+    chunks.append(f"[voice]asplit={len(keys)}" + "".join(f"[{k}]" for k in keys))
 
     layers = []
+
     if music:
         path = asset_path(music["file"], "música")
         inputs += ["-i", str(path)]
         gain = music.get("gain", -18)
-        chunks.append("[voice]asplit=2[voice_mix][voice_key]")
         chunks.append(f"[{index}:a]volume={gain}dB,aloop=loop=-1:size=2000000000,"
                       f"atrim=0:{duration:.3f},asetpts=PTS-STARTPTS[bed]")
         if music.get("duck", True):
-            chunks.append("[bed][voice_key]sidechaincompress=threshold=0.05:ratio=8"
+            chunks.append("[bed][key_music]sidechaincompress=threshold=0.05:ratio=8"
                           ":attack=5:release=300[bed_ducked]")
             layers.append("[bed_ducked]")
         else:
-            chunks.append("[voice_key]anullsink")
+            chunks.append("[key_music]anullsink")
             layers.append("[bed]")
-        voice_label = "[voice_mix]"
-        index += 1
-    else:
-        voice_label = "[voice]"
-
-    # --- one-shot effects ----------------------------------------------------
-    # adelay places each hit on the output timeline; apad keeps every branch the
-    # same length so amix does not cut the mix short at the first one to end.
-    for number, effect in enumerate(sfx):
-        path = asset_path(effect["file"], "sfx")
-        inputs += ["-i", str(path)]
-        start_ms = int(float(effect["t"]) * 1000)
-        gain = effect.get("gain", -6)
-        chunks.append(f"[{index}:a]volume={gain}dB,adelay={start_ms}:all=1,"
-                      f"apad=whole_dur={duration:.3f}[sfx{number}]")
-        layers.append(f"[sfx{number}]")
         index += 1
 
-    mix_inputs = 1 + len(layers)
-    chunks.append(f"{voice_label}{''.join(layers)}"
-                  f"amix=inputs={mix_inputs}:duration=first:normalize=0,{finish}[aout]")
+    if sfx:
+        # adelay coloca cada golpe; apad iguala la longitud de las ramas, porque
+        # amix corta la mezcla en cuanto termina la más corta.
+        branches = []
+        for number, effect in enumerate(sfx):
+            path = asset_path(effect["file"], "sfx")
+            inputs += ["-i", str(path)]
+            start_ms = int(float(effect["t"]) * 1000)
+            gain = min(float(effect.get("gain", SFX_DEFAULT_GAIN)), SFX_MAX_GAIN)
+            chunks.append(f"[{index}:a]volume={gain}dB,adelay={start_ms}:all=1,"
+                          f"apad=whole_dur={duration:.3f}[sfx{number}]")
+            branches.append(f"[sfx{number}]")
+            index += 1
+
+        if len(branches) > 1:
+            chunks.append(f"{''.join(branches)}amix=inputs={len(branches)}:"
+                          f"duration=first:normalize=0[sfxbus]")
+        else:
+            chunks.append(f"{branches[0]}anull[sfxbus]")
+
+        # Bajar la ganancia NO basta: dos señales se suman, así que el pico de
+        # voz+efecto siempre supera al de la voz sola por mucho que se atenúe.
+        # La única forma de que el apoyo no pase por encima es que ceda ante ella.
+        chunks.append("[sfxbus][key_sfx]sidechaincompress=threshold=0.02:ratio=6"
+                      ":attack=3:release=180[sfx_ducked]")
+        layers.append("[sfx_ducked]")
+
+    chunks.append(f"[voice_mix]{''.join(layers)}"
+                  f"amix=inputs={1 + len(layers)}:duration=first:normalize=0,{finish}[aout]")
     return chunks, inputs
 
 
@@ -376,6 +453,11 @@ def resolve_card_paths(cards_dir, count):
     return paths
 
 
+def resolve_broll_paths(items):
+    """Cada imagen de apoyo, resuelta contra la biblioteca de assets."""
+    return [asset_path(item["file"], "b-roll") for item in items]
+
+
 def encoder_flags(platform, output):
     """x264 settings shared by both render paths."""
     return ["-c:v", "libx264", "-preset", platform["preset"], "-crf", str(platform["crf"]),
@@ -408,12 +490,26 @@ def build(args, platform, segments, plan, source):
     graph += card_chunks
     next_input += len(cards)
 
+    broll = plan.get("broll", [])
+    caption_y = platform["height"] - platform["subtitle"]["margin_v"]
+    broll_inputs, broll_chunks, video_label = broll_graph(
+        broll, resolve_broll_paths(broll), next_input, video_label,
+        width, height, caption_y)
+    graph += broll_chunks
+    next_input += len(broll)
+
+    # Cada imagen de apoyo puede traer su propio golpe de sonido de entrada.
+    plan_with_broll_sfx = dict(plan)
+    plan_with_broll_sfx["sfx"] = list(plan.get("sfx", [])) + [
+        {"t": item["t"], "file": item["sfx"], "gain": item.get("sfx_gain", SFX_DEFAULT_GAIN)}
+        for item in broll if item.get("sfx")]
+
     audio_chunks, music_input = audio_graph(
-        plan, next_input, output_duration(segments), platform["lufs"])
+        plan_with_broll_sfx, next_input, output_duration(segments), platform["lufs"])
     graph += audio_chunks
 
     return (["ffmpeg", "-y", "-hide_banner", "-i", str(source)]
-            + sticker_inputs + card_inputs + music_input
+            + sticker_inputs + card_inputs + broll_inputs + music_input
             + ["-filter_complex", ";".join(graph), "-map", video_label, "-map", "[aout]"]
             + encoder_flags(platform, args.output))
 
