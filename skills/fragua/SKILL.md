@@ -402,8 +402,12 @@ forma más barata de que un vídeo hablado deje de ser sólo una cara.
 
 **Cómo montarlo**, después de tener `words.json` del audio ya cortado:
 
-1. Lee `~/.fragua/assets.json`. Cada entrada de `images` trae un campo
-   `keyword` derivado del nombre del archivo: `claude-code.png` → «claude code».
+1. Lee `~/.fragua/assets.json`. Cada entrada de `images` **y de `stickers`**
+   trae un campo `keyword` derivado del nombre del archivo: `claude-code.png` →
+   «claude code». Los logos suelen tener alfa, así que caen en `stickers`: si
+   sólo miras `images` te pierdes justo los que más sentido tienen.
+   Las palabras genéricas se descartan al indexar (`Youtube_logo.png` →
+   «youtube»), porque nadie dice «logo de youtube» al hablar.
 2. Busca esas palabras en la transcripción, sin distinguir mayúsculas ni tildes.
 3. Por cada coincidencia que merezca la pena, añade una entrada a `broll`.
 

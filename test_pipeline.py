@@ -169,6 +169,10 @@ def test_assets_library():
             assert inputs.count("-i") == 3, "faltan entradas de audio"
         finally:
             common.ASSETS_CONFIG = original
+    from assets import keyword_from
+    assert keyword_from(Path("Youtube_logo.png")) == "youtube"
+    assert keyword_from(Path("claude-code.png")) == "claude code"
+    assert keyword_from(Path("logo.png")) == "logo", "sin palabra útil, mejor la mala que ninguna"
     print("ok  biblioteca de assets (clasifica, resuelve y mezcla sfx)")
 
 

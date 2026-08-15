@@ -55,4 +55,10 @@ Freesound, y que el material de CapCut o TikTok está licenciado sólo para esas
 apps y dispara reclamaciones de copyright en YouTube.
 
 Termina diciéndole que a partir de ahora las ediciones tirarán de ahí solas, y
-que vuelva a lanzar `/fragua:assets` cada vez que añada material nuevo.
+que **no tiene que reindexar nunca**: cada edición refresca el catálogo antes de
+empezar. Este comando queda para cambiar de carpeta o para ver el inventario.
+
+Si alguna imagen se llama de forma que la palabra que la dispara no se
+pronuncia (`captura_pantalla_1.png`), díselo: el nombre del archivo **es** la
+palabra que se busca en la transcripción, así que `youtube.png` funciona y
+`img_final_v2.png` no.

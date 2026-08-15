@@ -85,16 +85,25 @@ def font_family(path):
     return None
 
 
+# Nadie dice «el logo de youtube» al hablar, dice «youtube». Los archivos, en
+# cambio, se descargan llamándose youtube_logo.png, así que la palabra que
+# dispararía la imagen no se pronuncia nunca.
+GENERIC_WORDS = {"logo", "logotipo", "icon", "icono", "img", "image", "imagen"}
+
+
 def keyword_from(path):
     """Palabra que dispara la imagen, sacada del nombre del archivo.
 
     `youtube.png` -> "youtube".  `claude-code.png` -> "claude code".
+    `Youtube_logo.png` -> "youtube".
     Así el agente puede buscarla en la transcripción sin más configuración.
     """
     stem = path.stem.lower().strip()
     for separator in ("-", "_"):
         stem = stem.replace(separator, " ")
-    return " ".join(stem.split())
+    words = [w for w in stem.split() if w not in GENERIC_WORDS]
+    # Si sólo se llamaba "logo.png" no queda nada; mejor la palabra mala que ninguna.
+    return " ".join(words or stem.split())
 
 
 def classify(path, root):

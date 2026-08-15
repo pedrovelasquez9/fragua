@@ -8,6 +8,18 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.6.1 — 2026-08-15
+
+### Fixed
+- A logo saved as `Youtube_logo.png` never triggered, because the word searched
+  for was «youtube logo» and nobody says that out loud. Generic words (`logo`,
+  `icon`, `imagen`…) are now dropped from the trigger.
+- Logos are PNGs with transparency, so they are catalogued as stickers — and the
+  keyword feature was only looking at images, missing exactly the files it is
+  most useful for.
+
+---
+
 ## 1.6.0 — 2026-08-15
 
 ### Added
