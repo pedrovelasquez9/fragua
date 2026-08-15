@@ -589,6 +589,17 @@ obturación al grabar.
 `assets/` está vacío y todo funciona sin él. Si metes música o stickers, los usas
 desde `plan.json`. Ver `assets/README.md` para la estructura y el aviso de licencias.
 
+## Versión
+
+Si te preguntan qué versión es, léela de `.claude-plugin/plugin.json` (campo
+`version`) y resume lo que trae desde `CHANGELOG.md`, que está ordenado de más
+nueva a más antigua.
+
+Al añadir una funcionalidad, sube la versión en **los dos** manifiestos y abre
+una entrada nueva en el changelog escrita para quien usa la skill, no para quien
+la programa: qué puede hacer ahora que antes no. `test_pipeline.py` comprueba
+que los tres números coinciden.
+
 ## Instalación como skill
 
 Copia esta carpeta a `~/.claude/skills/fragua/` para que se active sola al

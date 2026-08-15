@@ -290,12 +290,30 @@ def test_timeline_mapping():
     print("ok  mapeo de timeline")
 
 
+def test_version_is_consistent():
+    """La versión vive en tres sitios y se desincroniza sola si nadie mira:
+    los dos manifiestos y la entrada más reciente del changelog."""
+    root = Path(__file__).parent
+    plugin = json.loads((root / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+    market = json.loads((root / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
+    version = plugin["version"]
+
+    assert market["plugins"][0]["version"] == version, (
+        f"marketplace.json dice {market['plugins'][0]['version']}, plugin.json dice {version}")
+
+    changelog = (root / "CHANGELOG.md").read_text(encoding="utf-8")
+    latest = next(line for line in changelog.splitlines() if line.startswith("## "))
+    assert latest.split()[1] == version, f"el changelog empieza en {latest!r}, no en {version}"
+    print(f"ok  versión {version} coherente (manifiestos y changelog)")
+
+
 def main():
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
         clip, cuts, words, subs, out = (tmp / n for n in
                                         ("in.mp4", "cuts.json", "words.json", "subs.ass", "out.mp4"))
 
+        test_version_is_consistent()
         test_timeline_mapping()
         test_shot_shape()
         test_overlap_guard()

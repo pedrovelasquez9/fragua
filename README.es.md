@@ -98,6 +98,16 @@ git pull && ./install.sh                 # OpenCode
 > No copies la carpeta `vendor/` entre máquinas. Son 1,5 GB que el setup vuelve
 > a generar en cada ordenador.
 
+### ¿Qué versión tengo?
+
+Pregúntaselo al agente — `¿qué versión de fragua es esta?` — y te la dice, junto
+con lo que ha cambiado desde la tuya.
+
+En **[CHANGELOG.md](CHANGELOG.md)** está cada versión y lo que trajo, de la más
+nueva a la más antigua. Merece un vistazo después de actualizar: casi todo lo
+nuevo funciona sin que tengas que hacer nada, así que es fácil no enterarte de
+que ya está ahí.
+
 ---
 
 ## Cómo se usa
