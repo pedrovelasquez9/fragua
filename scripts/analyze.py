@@ -42,7 +42,10 @@ def invert(silences, duration, pad_in, pad_out, min_keep):
     keep, cursor = [], 0.0
     for silence_start, silence_end in silences:
         end = min(duration, silence_start + pad_out)
-        if end - cursor >= min_keep:
+        # Casi toda grabación empieza en silencio: se le da a grabar y luego se
+        # habla. Ahí silence_start es 0 y sin este guardia el pad_out fabrica un
+        # segmento de silencio puro al principio del vídeo.
+        if silence_start > cursor and end - cursor >= min_keep:
             keep.append({"start": round(cursor, 3), "end": round(end, 3), "speed": 1.0})
         cursor = max(cursor, silence_end - pad_in)
     if duration - cursor >= min_keep:

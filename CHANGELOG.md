@@ -8,6 +8,20 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.6.2 — 2026-08-15
+
+### Fixed
+- A recording that starts with silence — which is every recording, since you hit
+  record and *then* start talking — produced a fraction of a second of dead video
+  at the head of the edit.
+- The colour grade was crushing dimly lit footage. The guidance said to write a
+  custom grade below an average brightness of 45; measured on real material, the
+  vignette alone costs 24% and the threshold had to be 60. Low-key setups were
+  coming out with the face sunk in the shadows.
+- `subtitles.py` reported every card as hiding the captions, when chips do not.
+
+---
+
 ## 1.6.1 — 2026-08-15
 
 ### Fixed

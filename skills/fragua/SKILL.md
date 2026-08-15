@@ -146,9 +146,14 @@ no en `presets.json`. Mide antes de decidir:
 ffmpeg -ss 30 -i entrada.mp4 -frames:v 1 -vf signalstats,metadata=print -f null -
 ```
 
-`YAVG` es el brillo medio (0-255) e `YHIGH` el percentil 90. Por debajo de
-YAVG 45 el material está subexpuesto y el grade por defecto lo hundirá más:
-levanta medios con `curves` en vez de aplicarlo. Sube la curva hasta un YAVG de
+`YAVG` es el brillo medio (0-255) e `YHIGH` el percentil 90. **Por debajo de
+YAVG 60 el grade por defecto hundirá el material**, así que levanta medios con
+`curves` en vez de aplicarlo.
+
+Ese umbral parece alto porque no lo marca la curva sino la **viñeta**. Medido en
+un plano medio a YAVG 53: la curva por sí sola deja 44.7 (−15%), y la viñeta
+sola deja 40.3 (−24%). Juntas, 34 — la cara se hunde en las sombras. En material
+bien iluminado se compensa; en luz baja, no. Sube la curva hasta un YAVG de
 50-55 y **cierra el techo en `1/0.95`** — lo que se percibe como "demasiado
 brillante" casi nunca es la media, son las altas luces de la cara lavándose.
 

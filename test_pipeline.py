@@ -284,6 +284,21 @@ def test_broll_stays_in_a_corner():
     print("ok  b-roll (esquina, tamaño topado, sfx bajo la voz)")
 
 
+def test_silence_at_the_head():
+    """Una grabación que empieza en silencio no debe producir un segmento mudo."""
+    sys.path.insert(0, str(SCRIPTS))
+    from analyze import invert
+
+    # se da a grabar, se habla a los 3.9 s, se calla a los 8
+    keep = invert([(0.0, 3.87), (7.94, 8.69)], 10.0, 0.06, 0.22, 0.12)
+    assert keep[0]["start"] > 3.0, f"segmento de silencio al principio: {keep[0]}"
+    assert len(keep) == 2, keep
+
+    # y con audio desde el primer fotograma no se pierde nada
+    assert invert([(5.0, 6.0)], 10.0, 0.06, 0.22, 0.12)[0]["start"] == 0.0
+    print("ok  silencio inicial (no fabrica un segmento mudo)")
+
+
 def test_timeline_mapping():
     segments = [{"start": 0, "end": 2, "speed": 1.0}, {"start": 4, "end": 6, "speed": 1.0}]
     assert output_duration(segments) == 4.0
@@ -318,6 +333,7 @@ def main():
                                         ("in.mp4", "cuts.json", "words.json", "subs.ass", "out.mp4"))
 
         test_version_is_consistent()
+        test_silence_at_the_head()
         test_timeline_mapping()
         test_shot_shape()
         test_overlap_guard()

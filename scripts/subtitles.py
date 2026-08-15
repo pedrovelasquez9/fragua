@@ -170,7 +170,8 @@ def main():
         handle.write(header)
         handle.write("\n".join(events) + "\n")
 
-    print(f"{len(lines)} subtítulos · {len(cards)} cards que los ocultan -> {args.output}")
+    blocking = len(blocked_windows(cards))
+    print(f"{len(lines)} subtítulos · {len(cards)} cards, {blocking} los ocultan -> {args.output}")
 
 
 if __name__ == "__main__":
