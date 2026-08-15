@@ -181,8 +181,9 @@ my-assets/
   fonts/     your own .ttf or .otf
 ```
 
-Whenever you add something new, reindex it with `/fragua:assets` — no argument
-needed once the folder is set.
+You never have to reindex. Every edit refreshes the catalogue first, so
+anything you dropped in the folder this morning is already available this
+afternoon. `/fragua:assets` is still there if you want to see the inventory.
 
 From then on the agent knows what you have and reaches for it on its own: a
 whoosh over a whip pan, a pop when a card appears, your track under the voice —
@@ -205,8 +206,8 @@ Drop an image named after a word into your assets folder — `youtube.png`,
 `claude-code.png`, `github.png` — and whenever the video says that word, the
 image pops up in a corner for a couple of seconds.
 
-Nothing to configure: the filename *is* the trigger word. Reindex with
-`/fragua:assets` after adding one.
+Nothing to configure and nothing to run: the filename *is* the trigger word,
+and every edit reindexes the folder before starting.
 
 It never covers your face and never fills the screen — corner only, capped at
 40% of the width, one every eight seconds at most. The entry sound, if you add

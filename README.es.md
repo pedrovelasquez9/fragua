@@ -184,8 +184,9 @@ mis-assets/
   fonts/     tus .ttf u .otf
 ```
 
-Cada vez que añadas algo nuevo, reindexa con `/fragua:assets` — sin argumento,
-una vez configurada la carpeta.
+No tienes que reindexar nunca. Cada edición refresca el catálogo antes de
+empezar, así que lo que metas en la carpeta por la mañana ya está disponible por
+la tarde. `/fragua:assets` sigue ahí si quieres ver el inventario.
 
 A partir de ahí el agente sabe qué tienes y lo usa por su cuenta: un whoosh sobre
 un barrido, un pop cuando entra una tarjeta, tu pista bajo la voz —con ducking
@@ -208,8 +209,8 @@ Mete en tu carpeta de assets una imagen con el nombre de una palabra
 —`youtube.png`, `claude-code.png`, `github.png`— y cuando el vídeo diga esa
 palabra, la imagen sale un par de segundos en una esquina.
 
-No hay nada que configurar: el nombre del archivo **es** la palabra que la
-dispara. Reindexa con `/fragua:assets` después de añadir alguna.
+No hay nada que configurar ni que ejecutar: el nombre del archivo **es** la
+palabra que la dispara, y cada edición reindexa la carpeta antes de empezar.
 
 Nunca te tapa la cara ni ocupa la pantalla: sólo esquinas, con el tamaño topado
 al 40% del ancho y una imagen cada ocho segundos como máximo. El sonido de

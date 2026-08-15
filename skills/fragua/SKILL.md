@@ -35,13 +35,15 @@ vídeo → analyze.py    → cuts.json    (segmentos a conservar, vía silencede
       → transcribe.py → draft.json   (para leer y decidir el montaje)
       → [editas cuts.json y escribes plan.json]
       → transcribe.py --cuts cuts.json → words.json   (transcribe el audio YA cortado)
+      → assets.py --auto → reindexa la biblioteca (SIEMPRE, antes de plan.json)
       → cards.py      → cards/*.png  (las anotaciones, rasterizadas)
       → subtitles.py  → subs.ass     (karaoke, ya en la línea de tiempo final)
       → render.py     → salida.mp4   (un solo pase de ffmpeg desde el original)
       → [copy de publicación: título, descripción, tags y captions]
 
-assets.py --set <carpeta> configura la biblioteca del usuario y escribe
-assets.json con el catálogo. Léelo ANTES de escribir plan.json.
+`assets.py --auto` se ejecuta en **cada edición**, sin que nadie lo pida: así
+una imagen o una pista añadida esta mañana ya está disponible esta tarde. El
+usuario no tiene que acordarse de reindexar nada.
 ```
 
 El orden importa: los subtítulos se transcriben **después** de cortar, nunca
@@ -346,9 +348,15 @@ y fuentes. **Consúltala antes de escribir `plan.json`**: si no miras el catálo
 no sabes qué hay y el vídeo sale sin nada de eso.
 
 ```bash
-python scripts/assets.py --set D:/mis-assets   # una vez, la configura
-python scripts/assets.py                       # reindexa y muestra qué hay
+python scripts/assets.py --auto                # en CADA edición, antes de plan.json
+python scripts/assets.py --set D:/mis-assets   # una vez, para configurarla
 ```
+
+**`--auto` es obligatorio antes de escribir `plan.json`.** Reindexa y te
+devuelve el inventario actualizado, y si el usuario todavía no ha configurado
+ninguna biblioteca no falla: avisa y la edición continúa sin música ni
+imágenes. Cuesta menos de un segundo con una biblioteca normal, así que no hay
+motivo para saltárselo.
 
 Escribe `~/.fragua/assets.json` —fuera del plugin, para que sobreviva a las
 actualizaciones— con el inventario clasificado: `music`, `sfx`,

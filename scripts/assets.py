@@ -182,6 +182,8 @@ def parse_args():
     parser.add_argument("--set", dest="new_dir", default=None,
                         help="carpeta de assets a usar a partir de ahora")
     parser.add_argument("--show", action="store_true", help="sólo mostrar la ruta configurada")
+    parser.add_argument("--auto", action="store_true",
+                        help="reindexado previo a una edición: no falla si aún no hay biblioteca")
     return parser.parse_args()
 
 
@@ -201,9 +203,16 @@ def main():
         return
 
     if not root.is_dir():
+        # En modo automático esto no es un error: simplemente aún no hay
+        # biblioteca, y la edición debe continuar sin música ni imágenes.
+        if args.auto:
+            print(f"sin biblioteca de assets ({root}); la edición sigue sin ella")
+            return
         raise SystemExit(f"no existe la carpeta de assets: {root}\n"
                          f"Configúrala con:  python scripts/assets.py --set <ruta>")
 
+    # ponytail: indexado completo cada vez. Son ~0.8 s con 50 archivos, así que
+    # no compensa una caché por mtime mientras la biblioteca no crezca mucho.
     catalogue = index_directory(root)
     CONFIG.parent.mkdir(parents=True, exist_ok=True)
     write_json(CONFIG, dict(config, dir=root.as_posix(), **catalogue))

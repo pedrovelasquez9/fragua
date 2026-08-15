@@ -4,6 +4,7 @@ Every script in this skill imports from here. Nothing in the pipeline talks to a
 network service, so there are no credentials to configure anywhere.
 """
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -34,7 +35,10 @@ def load_presets():
 # Fuera del plugin a propósito: Claude Code instala cada versión en su propia
 # carpeta (plugins/cache/<nombre>/<version>/), así que guardarlo dentro haría que
 # el usuario perdiera su biblioteca en cada actualización.
-ASSETS_CONFIG = Path.home() / ".fragua" / "assets.json"
+# FRAGUA_CONFIG permite apuntarlo a otro sitio, que es como lo prueba la suite
+# sin tocar la configuración real de quien la ejecuta.
+ASSETS_CONFIG = Path(os.environ.get("FRAGUA_CONFIG",
+                                    Path.home() / ".fragua" / "assets.json"))
 
 
 def assets_dir():

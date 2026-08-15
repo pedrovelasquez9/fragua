@@ -6,6 +6,7 @@ Skips transcription (that needs the whisper model); words.json is faked so the
 subtitle timing and the cut-timeline remapping still get exercised.
 """
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -171,6 +172,43 @@ def test_assets_library():
     print("ok  biblioteca de assets (clasifica, resuelve y mezcla sfx)")
 
 
+def test_assets_autorefresh():
+    """--auto recoge lo añadido desde el último indexado, y no rompe si no hay
+    biblioteca: una edición no puede fallar porque falten assets opcionales."""
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        library = tmp / "lib" / "images"
+        library.mkdir(parents=True)
+        config = tmp / "assets.json"
+        sh("ffmpeg", "-y", "-v", "error", "-f", "lavfi",
+           "-i", "color=c=red:s=64x64", "-frames:v", "1", str(library / "github.png"))
+
+        env = dict(os.environ, FRAGUA_CONFIG=str(config))
+        def run_assets(*extra):
+            return subprocess.run(
+                [sys.executable, str(SCRIPTS / "assets.py"), *extra],
+                capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
+
+        first = run_assets("--set", str(tmp / "lib"))
+        assert first.returncode == 0, first.stderr
+        assert "github" in first.stdout, "no indexó la primera imagen"
+
+        # El usuario añade otra y NO reindexa a mano.
+        sh("ffmpeg", "-y", "-v", "error", "-f", "lavfi",
+           "-i", "color=c=blue:s=64x64", "-frames:v", "1", str(library / "youtube.png"))
+        auto = run_assets("--auto")
+        assert auto.returncode == 0, auto.stderr
+        assert "youtube" in auto.stdout, "--auto no recogió la imagen nueva"
+
+        # Sin biblioteca configurada, --auto avisa pero no falla.
+        missing = dict(env, FRAGUA_CONFIG=str(tmp / "no-existe.json"))
+        blank = subprocess.run(
+            [sys.executable, str(SCRIPTS / "assets.py"), "--auto"],
+            capture_output=True, text=True, encoding="utf-8", errors="replace", env=missing)
+        assert blank.returncode == 0, "una edición no debe fallar por falta de assets"
+    print("ok  reindexado automático antes de editar")
+
+
 def edge_energy(path, box):
     """Local contrast in a region. On a flat area this is noise, not detail."""
     from PIL import Image
@@ -264,6 +302,7 @@ def main():
         test_deglare()
         test_polish_spares_shadows()
         test_assets_library()
+        test_assets_autorefresh()
         test_broll_stays_in_a_corner()
 
         make_clip(clip)
