@@ -8,6 +8,23 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.9.2 — 2026-08-19
+
+### Documentation
+- The technical reference had fallen behind the last four releases. It now
+  documents `cut_in`, `dip`, `pullback` and the `title` card, the padding trick
+  that lets zoompan pull back below 1:1 and why the factor has to be exactly
+  1.5, the easing and the velocity-step measurement behind it, and the Remotion
+  card renderer.
+- Card placement guidance corrected there too: measure the face across the whole
+  card window rather than eyeballing a frame, which puts cards at 0.66-0.68 on a
+  vertical mid-shot rather than the 0.56 the old text suggested.
+- Both READMEs now describe what shot changes and transitions actually look
+  like. They are things a viewer sees, so leaving them out of the user-facing
+  docs made the edit sound plainer than it is.
+
+---
+
 ## 1.9.1 — 2026-08-19
 
 ### Changed

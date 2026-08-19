@@ -244,10 +244,13 @@ del vídeo ya cortado, que es la que ves al reproducir el resultado.
   "deglare": {"threshold": 160, "strength": 0.65},
 
   "effects": [
-    {"t": 4.2,  "type": "zoom_punch", "hold": 2.0, "amount": 0.11},
-    {"t": 9.0,  "type": "flash",      "dur": 0.12, "amount": 0.20},
+    {"t": 4.2,  "type": "zoom_punch", "hold": 1.8, "amount": 0.11},
+    {"t": 9.0,  "type": "cut_in",     "dur": 2.4,  "amount": 0.14},
+    {"t": 15.0, "type": "pullback",   "dur": 3.0,  "ramp": 0.55, "scale": 0.76},
     {"t": 22.5, "type": "shake",      "dur": 0.35, "amount": 6},
     {"t": 31.0, "type": "whip_pan",   "dur": 0.20},
+    {"t": 36.0, "type": "dip",        "dur": 0.22},
+    {"t": 44.0, "type": "flash",      "dur": 0.12, "amount": 0.20},
     {"t": 0.0,  "type": "letterbox",  "dur": 2.50, "amount": 0.12}
   ],
 
@@ -265,7 +268,10 @@ del vídeo ya cortado, que es la que ves al reproducir el resultado.
      "title": "Cabecera", "body": "Un párrafo que se ajusta solo al ancho."},
 
     {"t": 50.0, "dur": 3.2, "y_frac": 0.60, "kind": "stat",
-     "value": "2015", "label": "la cifra que sostiene el argumento"}
+     "value": "2015", "label": "la cifra que sostiene el argumento"},
+
+    {"t": 15.5, "dur": 3.1, "y_frac": 0.045, "kind": "title",
+     "title": "El rótulo del pullback de arriba"}
   ],
 
   "stickers": [
@@ -318,17 +324,54 @@ la rama más corta.
 
 | `type` | Se dimensiona con | `amount` | Cuándo usarlo |
 |---|---|---|---|
-| `zoom_punch` | `ramp` (0.35) + `hold` (2.0) | 0.08–0.15 | Cambio de plano: entra, **se queda** y sale. Ocupa ~2.7 s, marca secciones |
+| `pullback` | `ramp` (0.55) + `dur` | `scale` 0.72–0.82 | **Cambio de tema.** El vídeo se encoge sobre negro y vuelve |
+| `zoom_punch` | `ramp` (0.9) + `hold` (1.8) | 0.08–0.15 | Cambio de plano progresivo. Ocupa ~3.7 s, marca secciones |
+| `cut_in` | `dur` (2.4) | 0.10–0.16 | El salto: cambia de plano en un fotograma, sin rampa |
 | `shake` | `dur` | 4–14 px | Un remate, un dato que golpea |
 | `whip_pan` | `dur` | — | Transición entre dos ideas distintas |
+| `dip` | `dur` | −0.4 a −0.7 | Bajón a negro, un golpe seco sin rótulo |
 | `flash` | `dur` | 0.3–0.6 | Un corte duro, un cambio de bloque |
 | `letterbox` | `dur` | 0.08–0.15 | Momento dramático. Ojo si la cara va alta en el encuadre |
 
 **Los zooms no pueden solaparse**: sus contribuciones se suman y darían un zoom
 doble. `render.py` aborta con los tiempos exactos si ocurre. Cuentan como zoom
-`zoom_punch`, `shake` y `whip_pan`.
+`zoom_punch`, `cut_in`, `shake`, `whip_pan` y `pullback`.
 
-Para el tirón rápido en vez del plano sostenido: `{"hold": 0, "ramp": 0.25}`.
+#### `pullback`: encoger sobre negro
+
+`zoompan` no sabe alejarse por debajo de 1:1, así que el cuadro se rellena antes
+a **1.5×** y se encuadra dentro: con `z=1.5` se ve el vídeo a tamaño natural y
+bajando `z` aparece el relleno negro alrededor. El 1.5 es exacto para que en
+reposo el recorte caiga justo 1:1 — medida la varianza laplaciana con y sin el
+efecto, 116.05 en ambos casos, y el render tarda lo mismo.
+
+Del hueco que se abre, el **72% va arriba**: ahí se lee el rótulo y ahí no están
+los subtítulos. Con `scale` s el vídeo ocupa de `(1-s)*0.72` a `(1-s)*0.72+s`;
+con s=0.76 son 332 px de banda negra arriba, y un `kind: "title"` en `y_frac`
+0.045 cae centrado en ella. Por debajo de `scale` 0.70 no queda relleno donde
+retroceder y el render aborta diciéndolo.
+
+#### Curvas
+
+`zoom_punch` y `pullback` usan `6u⁵-15u⁴+10u³` en todas sus juntas: velocidad y
+aceleración cero al entrar y al salir de cada tramo. Lo que se ve como brusco no
+es lo que dura el movimiento sino el **escalón de velocidad entre dos
+fotogramas** — la curva anterior pasaba de 0 a 7.78 en un solo fotograma, y esta
+no pasa de 0.24.
+
+Por eso `zoom_punch` **no se acorta** para conseguir un tirón: un cambio de plano
+de un tercio de segundo se lee como salto mal hecho. Para el salto está `cut_in`,
+que es instantáneo a propósito y no debe suavizarse nunca.
+
+Los dos derivan mientras aguantan (`SHOT_DRIFT`, 22% del pico): una cámara real
+nunca se para en seco y un plano perfectamente quieto es lo que se ve plano.
+
+#### `dip` y `flash`
+
+Los dos mueven el brillo **y la saturación a la vez**. Mover la luma sin tocar el
+croma deja píxeles casi negros conservando toda su amplitud de color: en vez de
+negro sale suciedad de color. El `whip_pan` desenfoca sólo la luma, sólo en
+horizontal y sólo en el tramo central del barrido, por lo mismo.
 
 ### Cards
 
@@ -339,13 +382,43 @@ Para el tirón rápido en vez del plano sostenido: `{"hold": 0, "ramp": 0.25}`.
 | `bullets` | Cabecera + lista con viñetas | Enumerar lo que se dice de corrido |
 | `flow` | Nodo raíz + espina con nodos conectados | Estructura o dependencia |
 | `stat` | Cifra grande + etiqueta | Un dato que merece pantalla |
+| `title` | Texto grande, sin panel detrás | La banda negra que abre un `pullback` |
 
-`y_frac` es el borde superior de la card como fracción de la altura. En un plano
-medio vertical, **0.56–0.64** la deja a la altura del pecho. Compruébalo en un
-fotograma, depende de tu encuadre.
+`y_frac` es el borde superior de la card como fracción de la altura. **No lo
+estimes de un fotograma: mídelo.** Una cara quieta engaña, porque al hablar se
+gesticula y se inclina. Saca seis fotogramas repartidos por la ventana de la
+card, busca en cada uno la fila más baja con piel en la banda central —rojo por
+encima del azul, que separa cara y manos de una camiseta negra y de un fondo
+frío— y quédate con la peor. En un plano medio vertical eso sale **0.66–0.68**,
+no 0.56: con 0.56 la card se come la barba. Por abajo no pases de **0.85**,
+donde TikTok e Instagram ponen su interfaz.
 
 Mientras una card está en pantalla, **los subtítulos se ocultan solos** — salvo
-`chip`, que es una etiqueta y convive con ellos.
+`chip`, que es una etiqueta, y `title`, que vive por encima del vídeo encogido.
+
+#### Cards animadas
+
+```bash
+python scripts/cards.py plan.json --preset tiktok --outdir cards --animated
+```
+
+Las dibuja con **Remotion** (`remotion/src/Card.tsx`) en vez de con Pillow: las
+viñetas entran una a una, el filete se traza, la espina del flujo se dibuja de
+arriba abajo y la cifra de una `stat` cuenta hasta su valor. Mismo `plan.json`
+—los componentes de React leen el spec tal cual—, mismos colores del preset.
+
+Salen `cardNN.mov` (ProRes 4444 con alfa) en vez de `cardNN.png`, y `render.py`
+prefiere el `.mov` cuando existe, así que una edición ya hecha se reanima
+volviendo a lanzar sólo este comando. Cuesta unos 30 s por vídeo: un bundle de
+3.7 s más ~6 s por card.
+
+Necesita Node con las dependencias de `remotion/` instaladas. **Es opcional a
+propósito**: Remotion arrastra Node y su propio Chrome, así que el setup sólo lo
+prepara si Node ya está en la máquina. Sin él las cards salen quietas y todo lo
+demás funciona igual.
+
+Para inventarse un `kind` nuevo basta con un componente en `Card.tsx` y su
+equivalente en `cards.py` para quien no tenga Node.
 
 Varía el `kind`: repetir el mismo en todas es lo que las hace parecer plantilla.
 

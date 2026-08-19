@@ -222,6 +222,22 @@ It never covers your face and never fills the screen — corner only, capped at
 40% of the width, one every eight seconds at most. The entry sound, if you add
 one, ducks under your voice so it never competes with what you are saying.
 
+### Shot changes and transitions
+
+Where the subject changes, the video shrinks onto black and a headline animates
+into the space that opens above it, then eases back to full size. A fade to
+black only covers the join; this one uses it — it puts the phrase you just said
+on screen, so it can happen three or four times in a video without tiring.
+
+Shot changes are movements, not jumps: close to a second of travel, leaving and
+arriving at a standstill. When a line deserves a real jump instead, the framing
+changes between one frame and the next, the way an editor cuts to a second
+camera.
+
+You never choose any of this by name. The agent reads your transcript, finds the
+lines that carry weight, and puts the movement on the first word of the phrase —
+never spaced evenly by the clock, which is what makes an edit feel random.
+
 ### Animated cards
 
 Cards can be drawn as motion instead of a still: the bullets arrive one at a

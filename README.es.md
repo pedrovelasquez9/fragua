@@ -226,6 +226,22 @@ Nunca te tapa la cara ni ocupa la pantalla: sólo esquinas, con el tamaño topad
 al 40% del ancho y una imagen cada ocho segundos como máximo. El sonido de
 entrada, si se lo pones, cede ante tu voz para no competir con lo que dices.
 
+### Cambios de plano y transiciones
+
+Donde cambia el tema, el vídeo se encoge sobre negro y en el hueco que se abre
+arriba entra un rótulo con lo que acabas de decir, y luego vuelve a su tamaño.
+Un fundido a negro sólo tapa la junta; esto la aprovecha, así que se puede usar
+tres o cuatro veces en un vídeo sin cansar.
+
+Los cambios de plano son movimientos, no saltos: casi un segundo de recorrido,
+saliendo de parado y frenando sin tirón. Y cuando una frase pide un salto de
+verdad, el encuadre cambia entre un fotograma y el siguiente, como quien corta a
+una segunda cámara.
+
+Nada de esto lo eliges tú por su nombre. El agente lee tu transcripción, busca
+las frases que pesan y pone el movimiento en su primera palabra — nunca
+repartido por reloj, que es lo que hace que una edición parezca aleatoria.
+
 ### Cards animadas
 
 Las cards pueden dibujarse con movimiento en vez de quietas: las viñetas entran
