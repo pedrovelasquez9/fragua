@@ -264,8 +264,10 @@ movimiento en vez de aparecer sobre una imagen ya quieta.
 oscuro se ve como una caja flotando en la nada. Convive con los subtítulos: está
 arriba y ellos siguen sobre el vídeo encogido.
 
-**No bajes de `scale` 0.70**: por debajo no queda relleno donde retroceder y el
-render aborta diciéndolo. Y sepáralos bien — dos retrocesos seguidos cansan.
+**No bajes de `scale` 0.75**: por debajo el desplazamiento del hueco no cabe en
+el relleno y el render aborta diciéndolo. El límite no es de gusto, es
+aritmética: `s ≥ (1+2b)/(PAD+2b)` con `b = PULLBACK_TOP-0.5`, que con el relleno
+actual da 0.742. Y sepáralos bien — dos retrocesos seguidos cansan.
 
 `dip` y `cut_in` **en el mismo instante** siguen siendo válidos para un golpe
 seco sin rótulo: el plano cambia mientras la pantalla está oscura, así que el

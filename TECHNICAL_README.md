@@ -348,8 +348,14 @@ efecto, 116.05 en ambos casos, y el render tarda lo mismo.
 Del hueco que se abre, el **72% va arriba**: ahí se lee el rótulo y ahí no están
 los subtítulos. Con `scale` s el vídeo ocupa de `(1-s)*0.72` a `(1-s)*0.72+s`;
 con s=0.76 son 332 px de banda negra arriba, y un `kind: "title"` en `y_frac`
-0.045 cae centrado en ella. Por debajo de `scale` 0.70 no queda relleno donde
-retroceder y el render aborta diciéndolo.
+0.045 cae centrado en ella.
+
+El suelo de `scale` es **0.75**, y no es una preferencia. Desplazar el hueco
+hacia arriba cuesta `(TOP-0.5)*(1-s)/s` del alto y sólo hay `(PAD-1/s)/2` de
+margen, así que la condición es `s ≥ (1+2b)/(PAD+2b)` con `b = TOP-0.5`: con
+PAD 1.5 y TOP 0.72, eso son 0.742. Por debajo `zoompan` recorta el
+desplazamiento sin avisar — medido a 0.72, la banda de arriba sale de 346 px
+cuando tocarían 387. El render aborta antes de llegar ahí.
 
 #### Curvas
 

@@ -8,6 +8,19 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.9.3 — 2026-08-19
+
+### Fixed
+- A pull-back below `scale` 0.75 was quietly clipped instead of refused. The
+  black band it opens is shifted upward, and that shift has to fit inside the
+  padding — with the current padding the real floor is 0.742, not the 0.70 the
+  guard allowed. Measured at 0.72, the top band came out 346 px wide where the
+  geometry called for 387. The guard now sits at 0.75.
+- The test for it compares the constant against the derivation rather than
+  against a number typed in by hand, which is how the wrong floor got in.
+
+---
+
 ## 1.9.2 — 2026-08-19
 
 ### Documentation

@@ -122,7 +122,12 @@ PULLBACK_RAMP = 0.55
 # Cuánto del hueco liberado va ARRIBA. El rótulo se lee mejor sobre la cabeza que
 # a los pies, y abajo ya están los subtítulos.
 PULLBACK_TOP = 0.72
-PULLBACK_MIN = 0.70
+# El suelo no lo pone el gusto sino la aritmética del relleno. Desplazar el hueco
+# hacia arriba cuesta 0.22*(1-s)/s del alto y sólo hay (PAD-1/s)/2 de margen, así
+# que con PAD=1.5 la desigualdad se cumple hasta s=0.742. Por debajo, zoompan
+# recorta el desplazamiento en silencio: medido a 0.72, la banda de arriba sale
+# de 346 px cuando tocarían 387.
+PULLBACK_MIN = 0.75
 SHOT_HOLD = 1.8
 
 # Effects that contribute to the zoom expression, and therefore cannot overlap.

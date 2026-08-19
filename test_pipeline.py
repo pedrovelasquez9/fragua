@@ -110,10 +110,21 @@ def test_pullback_geometry():
     plain = motion_graph([{"t": 1.0, "type": "zoom_punch"}], 30, 1080, 1920)
     assert "pad=" not in plain, "rellena aunque no haya retroceso"
 
+    # El suelo tiene que ser el que aguanta el relleno, no uno elegido a ojo: por
+    # debajo, zoompan recorta el desplazamiento del hueco sin avisar.
+    from render import PULLBACK_MIN, PULLBACK_PAD, PULLBACK_TOP
+    # El hueco visible (alto/s) menos el desplazamiento hacia arriba tiene que
+    # caber en el relleno:  s >= (1+2b) / (PAD+2b),  con b = TOP-0.5.
+    b = PULLBACK_TOP - 0.5
+    limite = (1 + 2 * b) / (PULLBACK_PAD + 2 * b)
+    assert PULLBACK_MIN >= limite - 1e-9, (
+        f"PULLBACK_MIN {PULLBACK_MIN} deja pasar escalas que el relleno no sostiene "
+        f"(el mínimo real con PAD={PULLBACK_PAD} es {limite:.3f})")
+
     r = subprocess.run([sys.executable, "-c",
                         "import sys; sys.path.insert(0, r'%s');"
                         "from render import motion_graph;"
-                        "motion_graph([{'t':1,'type':'pullback','scale':0.4}],30,1080,1920)"
+                        "motion_graph([{'t':1,'type':'pullback','scale':0.72}],30,1080,1920)"
                         % SCRIPTS], capture_output=True, text=True)
     assert r.returncode != 0 and "scale" in r.stderr + r.stdout, "acepta un scale imposible"
     print("ok  retroceso de plano (1:1 en reposo, encoge a lo pedido)")
