@@ -37,43 +37,45 @@ def make_clip(path):
 
 
 def test_shot_shape():
-    """zoom_punch: entra rápido, deriva mientras aguanta, sale despacio."""
+    """El plano arranca de parado, deriva y frena sin tirones."""
     sys.path.insert(0, str(SCRIPTS))
     from render import (CUT_HOLD, SHOT_DRIFT, SHOT_HOLD, SHOT_OUT, SHOT_RAMP,
                         effect_span, hard_cut, shot)
 
     e = {"t": 10.0, "type": "zoom_punch", "amount": 0.12}
-    start, end = effect_span(e)
+    span = effect_span(e)
     expected = 10 + SHOT_RAMP * (1 + SHOT_OUT) + SHOT_HOLD
-    assert start == 10.0 and abs(end - expected) < 1e-9, f"ventana inesperada: {start}-{end}"
+    assert span[0] == 10.0 and abs(span[1] - expected) < 1e-9, f"ventana inesperada: {span}"
 
     import math
+    NAMES = {"PI": math.pi, "cos": math.cos, "pow": pow,
+             "between": lambda x, a, b: a <= x <= b,
+             "iff": lambda c, a, b: a if c else b}
 
     def evaluate(expr):
-        def value(t):  # se evalúa igual que lo haría ffmpeg
-            return eval(expr.replace("T", repr(t)).replace("PI", "math.pi")
-                        .replace("if(", "iff(").replace("between(", "btw("),
-                        {"iff": lambda c, a, b: a if c else b, "pow": pow,
-                         "btw": lambda t, a, b: a <= t <= b, "math": math, "cos": math.cos})
-        return value
+        return lambda when: eval(expr.replace("if(", "iff("), dict(NAMES), {"T": when})
 
-    peak = 0.12
-    v = evaluate(shot(10.0, 0.4, 2.0, peak))
+    peak, ramp = 0.12, SHOT_RAMP
+    v = evaluate(shot(10.0, ramp, SHOT_HOLD, peak))
     assert v(9.9) == 0, "arranca antes de tiempo"
-    # al 20% de la rampa, una cúbica de salida lleva ya ~el 49%; lineal llevaría 20%
-    assert v(10.08) > peak * 0.40, "la entrada debe ser rápida y asentarse, no lineal"
-    assert v(10.4) <= peak * 1.001, "se pasa del pico al entrar"
-    assert v(12.4) > v(10.5), "el plano se queda congelado: sin deriva se ve plano"
-    assert abs(v(12.4) - peak * (1 + SHOT_DRIFT)) < 1e-6, f"deriva inesperada: {v(12.4)}"
-    assert 0 < v(12.9) < peak, "la salida no es progresiva"
-    assert v(10 + 0.4 * (1 + SHOT_OUT) + 2.0 + 0.01) == 0, "no vuelve al plano original"
+    assert abs(v(10 + ramp / 2) - peak / 2) < 1e-9, "la curva no es simétrica en la rampa"
+    assert v(10 + SHOT_HOLD) > v(10 + ramp + 0.05), "el plano se congela: sin deriva se ve plano"
+    assert v(expected + 0.01) == 0, "no vuelve al plano original"
 
-    # el corte no tiene rampa: en un fotograma ya está en el plano cerrado
+    # Lo que de verdad se ve como brusco es un escalón de velocidad entre dos
+    # fotogramas. Con una cúbica de salida el primero valía 7.78; medir el mayor
+    # escalón es lo único que distingue "suave" de "corto".
+    frames = [v(10.0 - 0.1 + i / 30) for i in range(int((expected - 9.9) * 30) + 1)]
+    speed = [(b - a) * 30 / peak for a, b in zip(frames, frames[1:])]
+    jerk = max(abs(b - a) for a, b in zip(speed, speed[1:]))
+    assert jerk < 0.5, f"tirón de velocidad entre fotogramas: {jerk:.3f}"
+
+    # el corte sí es instantáneo: para eso está, y no debe suavizarse nunca
     c = evaluate(hard_cut(20.0, CUT_HOLD, 0.14))
-    assert c(19.99) == 0 and abs(c(20.01) - 0.14) < 0.002, "cut_in no es instantáneo"
+    assert c(19.99) == 0 and abs(c(20.01) - 0.14) < 0.002, "cut_in dejó de ser instantáneo"
     assert c(20.0 + CUT_HOLD - 0.01) > c(20.05), "el corte tampoco debe congelarse"
     assert c(20.0 + CUT_HOLD + 0.01) == 0, "el corte no vuelve"
-    print("ok  plano (entra rápido, deriva, sale despacio) y corte instantáneo")
+    print(f"ok  plano fluido (mayor tirón {jerk:.3f}) y corte instantáneo")
 
 
 def test_pullback_geometry():

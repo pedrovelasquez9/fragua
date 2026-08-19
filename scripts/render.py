@@ -102,10 +102,10 @@ TAIL_FADE = 0.35
 CARD_FADE = 0.28
 
 # zoom_punch defaults: push in over SHOT_RAMP, stay SHOT_HOLD, pull back out.
-SHOT_RAMP = 0.35
-# La salida más larga que la entrada: se entra a un plano de golpe y se sale de
-# él con calma, que es como se monta. Simétrico se nota mecánico.
-SHOT_OUT = 1.6
+# Casi un segundo de recorrido: un plano que tarda un tercio de segundo se lee
+# como salto por suave que sea la curva. Para el salto ya está `cut_in`.
+SHOT_RAMP = 0.9
+SHOT_OUT = 1.15
 # Cuánto sigue empujando el plano mientras "aguanta", en tanto por uno del pico.
 # Sin esto el encuadre se queda congelado y es exactamente lo que se ve plano.
 SHOT_DRIFT = 0.22
@@ -123,7 +123,7 @@ PULLBACK_RAMP = 0.55
 # a los pies, y abajo ya están los subtítulos.
 PULLBACK_TOP = 0.72
 PULLBACK_MIN = 0.70
-SHOT_HOLD = 2.0
+SHOT_HOLD = 1.8
 
 # Effects that contribute to the zoom expression, and therefore cannot overlap.
 ZOOMING = ("zoom_punch", "cut_in", "shake", "whip_pan", "pullback")
@@ -161,22 +161,37 @@ def shot(t0, ramp, hold, peak):
     A hump peaks and immediately retreats, which reads as a twitch. Holding the
     new framing for a couple of seconds reads as a cut to a second camera.
 
-    Two details separate this from a stock zoom. The way in is an ease-OUT cubic
-    (fast, then settling) because that is how an operator lands on a new framing;
-    a symmetric cosine in and out reads as a machine. And the hold is not frozen:
-    it creeps a further `SHOT_DRIFT` of the peak across its length. A real camera
-    never stops dead, and a perfectly static push is what makes a zoom look flat.
+    Every joint in the curve has zero velocity, which is what makes it read as a
+    move rather than a jump: `smooth` on the way in, `smooth` again across the
+    creep, `smooth` on the way out. Anything with a velocity step at a junction
+    shows up as a tick, however small the step is.
+
+    And the hold is not frozen: it creeps a further `SHOT_DRIFT` of the peak
+    across its length. A real camera never stops dead, and a perfectly static
+    push is what makes a zoom look flat.
     """
     a, b = t0 + ramp, t0 + ramp + hold
     out = ramp * SHOT_OUT
     end = b + out
     settled = peak * (1 + SHOT_DRIFT)
-    rise = f"{peak}*(1-pow(1-(T-{t0})/{ramp},3))"
-    creep = f"{peak}+{peak * SHOT_DRIFT}*(T-{a})/{hold}" if hold > 0 else f"{peak}"
-    fall = f"{settled}*(0.5+0.5*cos(PI*(T-{b})/{out}))"
+    rise = f"{peak}*{smooth(f'(T-{t0})/{ramp}')}"
+    creep = (f"{peak}+{peak * SHOT_DRIFT}*{smooth(f'(T-{a})/{hold}')}"
+             if hold > 0 else f"{peak}")
+    fall = f"{settled}*(1-{smooth(f'(T-{b})/{out}')})"
     return (f"if(between(T,{t0},{a}),{rise},"
             f"if(between(T,{a},{b}),{creep},"
             f"if(between(T,{b},{end}),{fall},0)))")
+
+
+def smooth(u):
+    """6u^5-15u^4+10u^3, con `u` normalizado a 0..1.
+
+    Velocidad **y** aceleración cero en los dos extremos. Ahí está la diferencia:
+    una cúbica de salida arranca a velocidad máxima en el primer fotograma, y ese
+    tirón inicial es lo que se ve como acercamiento brusco por muy corto que sea.
+    Con esta el plano se pone en marcha desde parado y se detiene sin frenazo.
+    """
+    return f"(({u})*({u})*({u})*(({u})*(({u})*6-15)+10))"
 
 
 def envelope(t0, ramp, hold):
@@ -187,8 +202,8 @@ def envelope(t0, ramp, hold):
     """
     a, b = t0 + ramp, t0 + ramp + hold
     end = b + ramp
-    rise = f"(0.5-0.5*cos(PI*(T-{t0})/{ramp}))"
-    fall = f"(0.5+0.5*cos(PI*(T-{b})/{ramp}))"
+    rise = smooth(f"(T-{t0})/{ramp}")
+    fall = f"(1-{smooth(f'(T-{b})/{ramp}')})"
     return (f"if(between(T,{t0},{a}),{rise},"
             f"if(between(T,{a},{b}),1,"
             f"if(between(T,{b},{end}),{fall},0)))")

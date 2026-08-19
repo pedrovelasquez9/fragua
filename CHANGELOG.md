@@ -8,6 +8,23 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.9.1 — 2026-08-19
+
+### Changed
+- Shot changes now read as a move rather than a push. What makes a zoom feel
+  abrupt is not how long it takes but the **velocity step between two frames**:
+  the previous easing went from standing still to full speed in a single frame.
+  Every joint in the curve — in, creep, out — now leaves and arrives at zero
+  velocity and zero acceleration. Measured across the whole move, the largest
+  frame-to-frame velocity step fell from 7.78 to 0.24.
+- The travel is close to a second instead of a third of one. A shot change that
+  quick reads as a badly made jump however smooth the curve; when you want the
+  jump, `cut_in` is the well made one.
+- The pull-back's envelope got the same easing, so it leaves and returns without
+  a trace of a start.
+
+---
+
 ## 1.9.0 — 2026-08-19
 
 ### Added

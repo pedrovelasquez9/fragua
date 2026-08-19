@@ -196,7 +196,7 @@ resultado limpio que ningún filtro iguala.
 | tipo | qué hace | `amount` | cuándo |
 |---|---|---|---|
 | `cut_in` | **corte** a plano cerrado, sin rampa | 0.10–0.16 | sobre la primera palabra de una frase fuerte |
-| `zoom_punch` | **cambio de plano**: entra, deriva, sale | 0.08–0.15 | al abrir una sección |
+| `zoom_punch` | **cambio de plano** progresivo: entra, deriva, sale | 0.08–0.15 | al abrir una sección |
 | `shake` | vibración con caída | 4–14 (px) | en un remate o un dato impactante |
 | `whip_pan` | barrido lateral con desenfoque | — | entre dos ideas distintas |
 | `pullback` | el vídeo se encoge sobre negro y vuelve | `scale` 0.72–0.82 | **donde cambia el tema** |
@@ -219,11 +219,19 @@ zoom; el salto instantáneo se lee como segunda cámara, que es lo que quieres e
 la frase importante. Sobre una palabra cualquiera, en cambio, se lee como un
 fallo: sin frase que lo justifique, no lo pongas.
 
-**`zoom_punch` entra rápido y deriva.** La entrada es una cúbica de salida (entra
-de golpe y se asienta) y el plano sigue empujando un poco mientras aguanta: una
-cámara real nunca se para en seco, y un plano perfectamente quieto es justo lo
-que se ve plano. La salida dura 1.6 veces la entrada, porque se entra a un plano
-de golpe y se sale de él con calma.
+**`zoom_punch` es una transición, no un acercamiento.** Casi un segundo de
+recorrido, y todas las juntas de la curva —entrada, deriva, salida— con
+velocidad cero: el plano se pone en marcha desde parado y se detiene sin
+frenazo. Lo que se ve como brusco no es la duración, es el **escalón de
+velocidad entre dos fotogramas**; medido, la curva anterior pasaba de 0 a 7.78 en
+un solo fotograma y esta no pasa de 0.24.
+
+El plano sigue empujando un poco mientras aguanta: una cámara real nunca se para
+en seco, y un plano perfectamente quieto es justo lo que se ve plano.
+
+Si lo que quieres es el salto, **no acortes el `zoom_punch`**: un plano de un
+tercio de segundo se lee como salto mal hecho. Usa `cut_in`, que es el salto
+bien hecho.
 
 **Las transiciones van donde cambia el tema, no donde había una pausa.** Que el
 detector de silencios haya quitado cuatro segundos no significa que ahí empiece
