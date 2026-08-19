@@ -37,31 +37,43 @@ def make_clip(path):
 
 
 def test_shot_shape():
-    """zoom_punch must ease in, hold flat, then ease out."""
+    """zoom_punch: entra rápido, deriva mientras aguanta, sale despacio."""
     sys.path.insert(0, str(SCRIPTS))
-    from render import SHOT_HOLD, SHOT_RAMP, effect_span, shot
+    from render import (CUT_HOLD, SHOT_DRIFT, SHOT_HOLD, SHOT_OUT, SHOT_RAMP,
+                        effect_span, hard_cut, shot)
 
     e = {"t": 10.0, "type": "zoom_punch", "amount": 0.12}
     start, end = effect_span(e)
-    assert start == 10.0 and abs(end - (10 + 2 * SHOT_RAMP + SHOT_HOLD)) < 1e-9, \
-        f"ventana inesperada: {start}-{end}"
+    expected = 10 + SHOT_RAMP * (1 + SHOT_OUT) + SHOT_HOLD
+    assert start == 10.0 and abs(end - expected) < 1e-9, f"ventana inesperada: {start}-{end}"
 
-    expr = shot(10.0, 0.4, 2.0, 0.12)
     import math
 
-    def value(t):  # evaluate the ffmpeg expression the same way ffmpeg would
-        return eval(expr.replace("T", repr(t)).replace("PI", "math.pi")
-                    .replace("if(", "iff(").replace("between(", "btw("),
-                    {"iff": lambda c, a, b: a if c else b,
-                     "btw": lambda t, a, b: a <= t <= b, "math": math, "cos": math.cos})
+    def evaluate(expr):
+        def value(t):  # se evalúa igual que lo haría ffmpeg
+            return eval(expr.replace("T", repr(t)).replace("PI", "math.pi")
+                        .replace("if(", "iff(").replace("between(", "btw("),
+                        {"iff": lambda c, a, b: a if c else b, "pow": pow,
+                         "btw": lambda t, a, b: a <= t <= b, "math": math, "cos": math.cos})
+        return value
 
-    assert value(9.9) == 0, "arranca antes de tiempo"
-    assert value(10.2) < 0.12, "la entrada no es progresiva"
-    assert abs(value(11.0) - 0.12) < 1e-9, "no mantiene el plano"
-    assert abs(value(12.2) - 0.12) < 1e-9, "no mantiene el plano hasta el final"
-    assert 0 < value(12.6) < 0.12, "la salida no es progresiva"
-    assert value(12.9) == 0, "no vuelve al plano original"
-    print("ok  plano sostenido (entra, mantiene 2s, sale)")
+    peak = 0.12
+    v = evaluate(shot(10.0, 0.4, 2.0, peak))
+    assert v(9.9) == 0, "arranca antes de tiempo"
+    # al 20% de la rampa, una cúbica de salida lleva ya ~el 49%; lineal llevaría 20%
+    assert v(10.08) > peak * 0.40, "la entrada debe ser rápida y asentarse, no lineal"
+    assert v(10.4) <= peak * 1.001, "se pasa del pico al entrar"
+    assert v(12.4) > v(10.5), "el plano se queda congelado: sin deriva se ve plano"
+    assert abs(v(12.4) - peak * (1 + SHOT_DRIFT)) < 1e-6, f"deriva inesperada: {v(12.4)}"
+    assert 0 < v(12.9) < peak, "la salida no es progresiva"
+    assert v(10 + 0.4 * (1 + SHOT_OUT) + 2.0 + 0.01) == 0, "no vuelve al plano original"
+
+    # el corte no tiene rampa: en un fotograma ya está en el plano cerrado
+    c = evaluate(hard_cut(20.0, CUT_HOLD, 0.14))
+    assert c(19.99) == 0 and abs(c(20.01) - 0.14) < 0.002, "cut_in no es instantáneo"
+    assert c(20.0 + CUT_HOLD - 0.01) > c(20.05), "el corte tampoco debe congelarse"
+    assert c(20.0 + CUT_HOLD + 0.01) == 0, "el corte no vuelve"
+    print("ok  plano (entra rápido, deriva, sale despacio) y corte instantáneo")
 
 
 def test_overlap_guard():

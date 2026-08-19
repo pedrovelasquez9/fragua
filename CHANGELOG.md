@@ -8,6 +8,31 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.8.0 — 2026-08-19
+
+### Added
+- **`cut_in`**: a real cut to a tighter framing, with no ramp at all. A push
+  that takes even a third of a second still reads as a zoom; landing on the new
+  framing between one frame and the next reads as cutting to a second camera.
+- **`dip`**: a quick dip to black. Put a `dip` and a `cut_in` at the same instant
+  and the framing changes while the screen is dark, so the jump is never seen —
+  that is a cut, rather than an effect laid over the video.
+
+### Changed
+- Shot changes no longer feel flat. The way in is an ease-out cubic instead of a
+  symmetric cosine, the hold creeps a little further instead of freezing, and the
+  way out is 1.6× longer than the way in — you land on a framing fast and leave
+  it slowly, which is how it is cut.
+- Guidance on **where** effects go: on the first word of a phrase that carries
+  weight, never spaced by the clock. Spacing them evenly is exactly what reads as
+  random and abrupt. And a transition belongs where the subject changes, not
+  merely where the silence detector removed a pause.
+- Cards are placed by measuring the face across the whole card window rather
+  than eyeballing one frame. On a vertical mid-shot that puts them at 0.66-0.68,
+  not 0.56 — at 0.56 the card eats the speaker's beard.
+
+---
+
 ## 1.7.0 — 2026-08-19
 
 ### Added

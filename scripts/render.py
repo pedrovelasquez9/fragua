@@ -103,10 +103,17 @@ CARD_FADE = 0.28
 
 # zoom_punch defaults: push in over SHOT_RAMP, stay SHOT_HOLD, pull back out.
 SHOT_RAMP = 0.35
+# La salida más larga que la entrada: se entra a un plano de golpe y se sale de
+# él con calma, que es como se monta. Simétrico se nota mecánico.
+SHOT_OUT = 1.6
+# Cuánto sigue empujando el plano mientras "aguanta", en tanto por uno del pico.
+# Sin esto el encuadre se queda congelado y es exactamente lo que se ve plano.
+SHOT_DRIFT = 0.22
+CUT_HOLD = 2.4
 SHOT_HOLD = 2.0
 
 # Effects that contribute to the zoom expression, and therefore cannot overlap.
-ZOOMING = ("zoom_punch", "shake", "whip_pan")
+ZOOMING = ("zoom_punch", "cut_in", "shake", "whip_pan")
 
 # aq-mode=3 biases bit allocation toward dark areas — this footage is mostly shadow,
 # and flat AQ is what leaves blocking in the background.
@@ -136,18 +143,39 @@ def bump(t0, dur, peak):
 
 
 def shot(t0, ramp, hold, peak):
-    """Ease in, hold, ease out — a push to a tighter framing that stays there.
+    """Snap in, drift, ease out — a push to a tighter framing that stays there.
 
     A hump peaks and immediately retreats, which reads as a twitch. Holding the
     new framing for a couple of seconds reads as a cut to a second camera.
+
+    Two details separate this from a stock zoom. The way in is an ease-OUT cubic
+    (fast, then settling) because that is how an operator lands on a new framing;
+    a symmetric cosine in and out reads as a machine. And the hold is not frozen:
+    it creeps a further `SHOT_DRIFT` of the peak across its length. A real camera
+    never stops dead, and a perfectly static push is what makes a zoom look flat.
     """
     a, b = t0 + ramp, t0 + ramp + hold
-    end = b + ramp
-    rise = f"{peak}*(0.5-0.5*cos(PI*(T-{t0})/{ramp}))"
-    fall = f"{peak}*(0.5+0.5*cos(PI*(T-{b})/{ramp}))"
+    out = ramp * SHOT_OUT
+    end = b + out
+    settled = peak * (1 + SHOT_DRIFT)
+    rise = f"{peak}*(1-pow(1-(T-{t0})/{ramp},3))"
+    creep = f"{peak}+{peak * SHOT_DRIFT}*(T-{a})/{hold}" if hold > 0 else f"{peak}"
+    fall = f"{settled}*(0.5+0.5*cos(PI*(T-{b})/{out}))"
     return (f"if(between(T,{t0},{a}),{rise},"
-            f"if(between(T,{a},{b}),{peak},"
+            f"if(between(T,{a},{b}),{creep},"
             f"if(between(T,{b},{end}),{fall},0)))")
+
+
+def hard_cut(t0, dur, peak):
+    """An instant recompose that holds, then an instant return: a real cut.
+
+    No ramp at all. A push that takes even a third of a second still reads as a
+    zoom; landing on the tighter framing between one frame and the next is what
+    reads as cutting to a second camera. Put it on the first word of a phrase —
+    on nothing, it reads as a glitch.
+    """
+    return (f"if(between(T,{t0},{t0 + dur}),"
+            f"{peak}+{peak * SHOT_DRIFT}*(T-{t0})/{dur},0)")
 
 
 def effect_span(e):
@@ -155,7 +183,9 @@ def effect_span(e):
     t0 = float(e["t"])
     if e["type"] == "zoom_punch":
         ramp = float(e.get("ramp", SHOT_RAMP))
-        return t0, t0 + 2 * ramp + float(e.get("hold", SHOT_HOLD))
+        return t0, t0 + ramp * (1 + SHOT_OUT) + float(e.get("hold", SHOT_HOLD))
+    if e["type"] == "cut_in":
+        return t0, t0 + float(e.get("dur", CUT_HOLD))
     return t0, t0 + float(e.get("dur", 0.5))
 
 
@@ -184,6 +214,8 @@ def motion_graph(effects, fps, width, height):
         if kind == "zoom_punch":
             zoom.append(shot(t0, float(e.get("ramp", SHOT_RAMP)),
                              float(e.get("hold", SHOT_HOLD)), e.get("amount", 0.15)))
+        elif kind == "cut_in":
+            zoom.append(hard_cut(t0, float(e.get("dur", CUT_HOLD)), e.get("amount", 0.14)))
         elif kind == "shake":
             amp = e.get("amount", 8)
             decay = f"(1-(T-{t0})/{dur})"
@@ -205,9 +237,15 @@ def motion_graph(effects, fps, width, height):
     return f",zoompan=z='{z}':x='{x}':y='{y}':d=1:fps={fps}:s={width}x{height}"
 
 
+# A dip is a flash with the sign flipped: down to black instead of up to white.
+# Same filter, and at a cut it reads as a scene change rather than a beat.
+FLASH_AMOUNT = {"flash": 0.45, "dip": -0.55}
+
+
 def flash_graph(effects):
-    bumps = [bump(float(e["t"]), float(e.get("dur", 0.15)), e.get("amount", 0.45))
-             for e in effects if e["type"] == "flash"]
+    bumps = [bump(float(e["t"]), float(e.get("dur", 0.15)),
+                  e.get("amount", FLASH_AMOUNT[e["type"]]))
+             for e in effects if e["type"] in FLASH_AMOUNT]
     if not bumps:
         return ""
     return f",eq=brightness='{'+'.join(bumps).replace('T', 't')}':eval=frame"

@@ -195,11 +195,50 @@ resultado limpio que ningún filtro iguala.
 
 | tipo | qué hace | `amount` | cuándo |
 |---|---|---|---|
-| `zoom_punch` | **cambio de plano**: entra, mantiene, sale | 0.08–0.15 | al abrir una sección |
+| `cut_in` | **corte** a plano cerrado, sin rampa | 0.10–0.16 | sobre la primera palabra de una frase fuerte |
+| `zoom_punch` | **cambio de plano**: entra, deriva, sale | 0.08–0.15 | al abrir una sección |
 | `shake` | vibración con caída | 4–14 (px) | en un remate o un dato impactante |
 | `whip_pan` | barrido lateral con desenfoque | — | entre dos ideas distintas |
+| `dip` | bajón a negro | −0.4 a −0.7 | donde cambia el tema |
 | `flash` | destello a blanco | 0.3–0.6 | en un corte duro o un beat |
 | `letterbox` | barras negras cine | 0.08–0.15 | en el hook o un momento dramático |
+
+### Dónde van los efectos (esto es lo que separa un montaje de un adorno)
+
+**Cada efecto va sobre una frase concreta, no cada N segundos.** Repartirlos por
+reloj es exactamente lo que se ve como «aleatorio y brusco»: el espectador nota
+que el movimiento no responde a nada. Antes de colocar ninguno, busca en
+`words.json` los instantes que de verdad cargan el vídeo —la vuelta de tuerca,
+la cifra, la frase que el autor subraya con la voz, el «repito», el remate— y
+pon el efecto **en la primera palabra** de esa frase, no en medio.
+
+**`cut_in` es un corte de verdad.** Cambia de plano entre un fotograma y el
+siguiente, sin rampa. Un empuje de un tercio de segundo se sigue leyendo como
+zoom; el salto instantáneo se lee como segunda cámara, que es lo que quieres en
+la frase importante. Sobre una palabra cualquiera, en cambio, se lee como un
+fallo: sin frase que lo justifique, no lo pongas.
+
+**`zoom_punch` entra rápido y deriva.** La entrada es una cúbica de salida (entra
+de golpe y se asienta) y el plano sigue empujando un poco mientras aguanta: una
+cámara real nunca se para en seco, y un plano perfectamente quieto es justo lo
+que se ve plano. La salida dura 1.6 veces la entrada, porque se entra a un plano
+de golpe y se sale de él con calma.
+
+**Las transiciones van donde cambia el tema, no donde había una pausa.** Que el
+detector de silencios haya quitado cuatro segundos no significa que ahí empiece
+una idea nueva: mira la transcripción y comprueba si la frase siguiente abre
+algo («y por supuesto», «y es que», «y si quieres») o si sólo continúa una
+enumeración. En una enumeración, ninguna transición.
+
+**El truco que hace que un corte impacte**: pon un `dip` y un `cut_in` **en el
+mismo instante**. El plano cambia mientras la pantalla está oscura, así que el
+salto no se ve — y se sale del negro con otro encuadre. Eso es un corte de
+montaje, no un efecto encima del vídeo.
+
+```json
+{"t": 43.13, "type": "dip",    "dur": 0.22},
+{"t": 43.13, "type": "cut_in", "dur": 3.4, "amount": 0.14}
+```
 
 **`zoom_punch` no es un tirón de zoom**: hace un push in con easing, **se queda
 en el plano cerrado** `hold` segundos y vuelve. Simula el corte a una segunda
@@ -273,9 +312,18 @@ enseñarlo. Una card que repite palabra por palabra el subtítulo no aporta nada
 una que convierte una frase larga en tres viñetas, sí. En el gancho y en el
 remate deja los subtítulos y no pongas card: ahí las palabras exactas importan.
 
-Ritmo: una cada 10-15 segundos como mucho, y **nunca sobre la cara**. `y_frac`
-es el borde superior; en un plano medio vertical, 0.56-0.64 las deja a la altura
-del pecho. Depende de tu encuadre, así que compruébalo en un fotograma.
+Ritmo: una cada 10-15 segundos como mucho, y **nunca sobre la cara**.
+
+`y_frac` es el borde superior. **No lo estimes de un fotograma: mídelo.** Una
+cara quieta engaña, porque al hablar se gesticula, se inclina y la barba baja.
+Saca seis fotogramas repartidos por la ventana de la card, busca en cada uno la
+fila más baja con piel en la banda central —rojo por encima del azul, que separa
+cara y manos de una camiseta negra y de un fondo frío— y quédate con la peor de
+las seis. Ese es el suelo real.
+
+Medido así en un plano medio vertical sale **0.66-0.68**, no 0.56: con 0.56 la
+card se come la barba, que es el fallo que más se nota. Por abajo, no pases de
+**0.85**: TikTok e Instagram ponen ahí su propia interfaz.
 
 La clave `text` ya no existe. `subtitles.py` aborta si la encuentra en vez de
 ignorarla en silencio.
