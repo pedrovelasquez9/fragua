@@ -241,6 +241,13 @@ def motion_graph(effects, fps, width, height):
 # Same filter, and at a cut it reads as a scene change rather than a beat.
 FLASH_AMOUNT = {"flash": 0.45, "dip": -0.55}
 
+# Moving luma without touching chroma is what makes these look wrong. Pushed to
+# black the pixels go dark while keeping their full colour amplitude, so instead
+# of black you get coloured murk; pushed to white they wash out. Measured on a
+# dip: luma 59 -> 2 while saturation sat at 13.1, unchanged. A real fade carries
+# the colour with it, so saturation collapses in step with the brightness move.
+SAT_COLLAPSE = 1.8
+
 
 def flash_graph(effects):
     bumps = [bump(float(e["t"]), float(e.get("dur", 0.15)),
@@ -248,15 +255,36 @@ def flash_graph(effects):
              for e in effects if e["type"] in FLASH_AMOUNT]
     if not bumps:
         return ""
-    return f",eq=brightness='{'+'.join(bumps).replace('T', 't')}':eval=frame"
+    brightness = "+".join(bumps).replace("T", "t")
+    saturation = f"clip(1-abs({brightness})*{SAT_COLLAPSE},0,1)"
+    return f",eq=brightness='{brightness}':saturation='{saturation}':eval=frame"
+
+
+# A whip is a horizontal move, so the smear is horizontal: an isotropic gaussian
+# reads as out-of-focus rather than as speed. And it runs on the luma plane only
+# (planes=1), because blurring chroma averages neighbouring colours toward grey.
+# Measured against the same pan without any blur: the old gaussian cost 3.5% of
+# saturation, this costs 0.2%. (Most of the drop across a whip is neither — it
+# is the lateral move bringing duller background into frame.)
+WHIP_SMEAR = 40
+# Sólo el tramo central del barrido, donde el plano va de verdad rápido. Con el
+# desenfoque encendido de punta a punta también se emborronan los fotogramas en
+# los que apenas se ha movido nada, y eso es lo que se ve exagerado y sucio.
+WHIP_FAST = (0.22, 0.78)
 
 
 def blur_graph(effects):
-    windows = [f"between(t,{e['t']},{float(e['t']) + float(e.get('dur', 0.2))})"
-               for e in effects if e["type"] == "whip_pan"]
+    windows = []
+    for e in effects:
+        if e["type"] != "whip_pan":
+            continue
+        t0, dur = float(e["t"]), float(e.get("dur", 0.2))
+        a, b = (t0 + dur * f for f in WHIP_FAST)
+        windows.append(f"between(t,{a:.3f},{b:.3f})")
     if not windows:
         return ""
-    return f",gblur=sigma=12:enable='{'+'.join(windows)}'"
+    return (f",avgblur=sizeX={WHIP_SMEAR}:sizeY=1:planes=1"
+            f":enable='{'+'.join(windows)}'")
 
 
 def letterbox_graph(effects, height):

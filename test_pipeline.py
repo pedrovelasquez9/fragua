@@ -76,6 +76,46 @@ def test_shot_shape():
     print("ok  plano (entra rápido, deriva, sale despacio) y corte instantáneo")
 
 
+def test_transitions_keep_colour():
+    """Un fundido tiene que llevarse el color con él, y el barrido no comérselo.
+
+    Mover la luma sin tocar el croma deja píxeles casi negros con toda su
+    amplitud de color: en vez de negro sale suciedad de color. Medido antes del
+    arreglo: luma 59 -> 2 con la saturación clavada en 13.1.
+    """
+    sys.path.insert(0, str(SCRIPTS))
+    from render import blur_graph, flash_graph
+
+    graph = flash_graph([{"t": 10.0, "type": "dip", "dur": 0.22}])
+    assert "saturation=" in graph, "el fundido no toca la saturación"
+
+    import math
+    brightness, saturation = [graph.split(f"{k}='")[1].split("'")[0]
+                              for k in ("brightness", "saturation")]
+
+    # `t` va como variable, no sustituyendo texto: reemplazarla en la cadena
+    # también le entra a la "t" de between, clip y sin.
+    NAMES = {"PI": math.pi, "sin": math.sin, "cos": math.cos, "abs": abs,
+             "clip": lambda v, lo, hi: max(lo, min(hi, v)),
+             "between": lambda x, a, b: a <= x <= b,
+             "iff": lambda c, a, b: a if c else b}
+
+    def at(expr, when):
+        return eval(expr.replace("if(", "iff("), dict(NAMES), {"t": when})
+
+    peak = 10.11   # mitad del dip
+    assert at(brightness, peak) < -0.4, f"el fundido no baja: {at(brightness, peak)}"
+    assert at(saturation, peak) < 0.1, f"el color no acompaña al fundido: {at(saturation, peak)}"
+    assert abs(at(saturation, 9.5) - 1.0) < 1e-9, "fuera del fundido la saturación debe ser 1"
+
+    # el barrido desenfoca sólo la luma, sólo en horizontal y sólo en el tramo rápido
+    whip = blur_graph([{"t": 20.0, "type": "whip_pan", "dur": 0.2}])
+    assert "planes=1" in whip, "desenfocar el croma promedia los colores hacia el gris"
+    assert "sizeY=1" in whip, "un barrido lateral se emborrona en horizontal, no en redondo"
+    assert "between(t,20.044,20.156)" in whip, f"debe cubrir sólo el centro: {whip}"
+    print("ok  transiciones (el fundido se lleva el color, el barrido no)")
+
+
 def test_overlap_guard():
     """Overlapping zooms sum, so render.py must refuse them."""
     with tempfile.TemporaryDirectory() as tmp:
@@ -378,6 +418,7 @@ def main():
                                         ("in.mp4", "cuts.json", "words.json", "subs.ass", "out.mp4"))
 
         test_version_is_consistent()
+        test_transitions_keep_colour()
         test_animated_cards_wiring()
         test_silence_at_the_head()
         test_timeline_mapping()

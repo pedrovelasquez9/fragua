@@ -8,6 +8,22 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.8.1 — 2026-08-19
+
+### Fixed
+- Transitions were draining the colour out of the picture. A dip moved the
+  brightness without touching the colour, so instead of going black the frame
+  filled with dark coloured murk — measured, luma fell from 59 to 2 while
+  saturation sat unmoved at 13.1. The colour now collapses in step with the
+  brightness, as a real fade does.
+- The whip pan blurred the colour planes as well as the picture, averaging
+  neighbouring colours toward grey. It now smears the luma only, horizontally —
+  a whip is a sideways move, and a round blur reads as out of focus rather than
+  as speed — and only across the fast middle of the sweep, so the frames where
+  the shot has barely moved stay sharp.
+
+---
+
 ## 1.8.0 — 2026-08-19
 
 ### Added
