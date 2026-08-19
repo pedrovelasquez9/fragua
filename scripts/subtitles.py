@@ -116,14 +116,19 @@ def build_styles(platform):
     return STYLE.format(name="Caption", **platform["subtitle"])
 
 
+ALONGSIDE_CAPTIONS = ("chip", "title")
+
+
 def blocked_windows(cards):
     """Time ranges where a card replaces the captions.
 
     A chip is a small label, not a block of message, so it coexists with them.
-    Every other kind takes over the screen while it is up.
+    A title lives in the black band a `pullback` opens above the shrunk video,
+    so it never lands on top of the captions either. Every other kind takes over
+    the screen while it is up.
     """
     return [(float(card["t"]), float(card["t"]) + float(card.get("dur", 3)))
-            for card in cards if card.get("kind", "panel") != "chip"]
+            for card in cards if card.get("kind", "panel") not in ALONGSIDE_CAPTIONS]
 
 
 def parse_args():

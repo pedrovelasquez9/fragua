@@ -249,8 +249,19 @@ const Chip: React.FC<CardProps> = ({ theme, base, spec }) => (
   </Enter>
 );
 
+/** Loose text with no panel behind it, for the black band a pullback opens.
+    A dark panel on black reads as a box floating in nothing. */
+const Title: React.FC<CardProps> = ({ theme, base, width, spec }) => (
+  <div style={{ width: width * 0.86, textAlign: "center" }}>
+    <WordsIn text={String(spec.title ?? spec.body ?? "")} delay={HEADING}
+             style={{ fontSize: base * 1.25, fontWeight: 900, color: theme.accent,
+                      lineHeight: `${base * 1.5}px`, display: "inline-block" }} />
+  </div>
+);
+
 const KINDS: Record<string, React.FC<CardProps>> = {
   bullets: Bullets, panel: PanelCard, flow: Flow, stat: Stat, chip: Chip,
+  title: Title,
 };
 
 export const Card: React.FC<CardProps> = (props) => {

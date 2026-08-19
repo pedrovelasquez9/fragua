@@ -199,7 +199,8 @@ resultado limpio que ningún filtro iguala.
 | `zoom_punch` | **cambio de plano**: entra, deriva, sale | 0.08–0.15 | al abrir una sección |
 | `shake` | vibración con caída | 4–14 (px) | en un remate o un dato impactante |
 | `whip_pan` | barrido lateral con desenfoque | — | entre dos ideas distintas |
-| `dip` | bajón a negro | −0.4 a −0.7 | donde cambia el tema |
+| `pullback` | el vídeo se encoge sobre negro y vuelve | `scale` 0.72–0.82 | **donde cambia el tema** |
+| `dip` | bajón a negro | −0.4 a −0.7 | un golpe seco, sin rótulo |
 | `flash` | destello a blanco | 0.3–0.6 | en un corte duro o un beat |
 | `letterbox` | barras negras cine | 0.08–0.15 | en el hook o un momento dramático |
 
@@ -230,15 +231,38 @@ una idea nueva: mira la transcripción y comprueba si la frase siguiente abre
 algo («y por supuesto», «y es que», «y si quieres») o si sólo continúa una
 enumeración. En una enumeración, ninguna transición.
 
-**El truco que hace que un corte impacte**: pon un `dip` y un `cut_in` **en el
-mismo instante**. El plano cambia mientras la pantalla está oscura, así que el
-salto no se ve — y se sale del negro con otro encuadre. Eso es un corte de
-montaje, no un efecto encima del vídeo.
+**Para un cambio de tema, usa `pullback`, no un fundido.** El vídeo se encoge
+sobre negro, en el hueco que se abre arriba entra un rótulo con lo que se está
+diciendo en ese momento, y vuelve a su tamaño. Ese es el recurso que aguanta
+tres o cuatro veces en un vídeo sin cansar, porque no interrumpe: **aporta**.
+Un fundido a negro, por muy bien hecho que esté, sólo tapa.
 
 ```json
-{"t": 43.13, "type": "dip",    "dur": 0.22},
-{"t": 43.13, "type": "cut_in", "dur": 3.4, "amount": 0.14}
+"effects": [{"t": 43.13, "type": "pullback", "dur": 3.1, "ramp": 0.5, "scale": 0.74}],
+"cards":   [{"t": 43.55, "dur": 3.3, "y_frac": 0.045, "kind": "title",
+             "title": "No se puede desperdiciar"}]
 ```
+
+Las cuentas, para colocar el rótulo. Con `scale` s, el hueco liberado es
+`1-s` del alto y el 72% de él va **arriba**: el vídeo ocupa de `(1-s)*0.72` a
+`(1-s)*0.72+s`. Con s=0.76 son 332 px de banda negra arriba, así que un
+`kind: "title"` en `y_frac` 0.045 cae centrado en ella.
+
+El rótulo entra **0.4-0.5 s después** del inicio del efecto, mientras el plano
+todavía se está encogiendo, y sale antes de que vuelva. Así el texto acompaña al
+movimiento en vez de aparecer sobre una imagen ya quieta.
+
+`kind: "title"` es texto grande sin panel detrás, porque sobre negro un panel
+oscuro se ve como una caja flotando en la nada. Convive con los subtítulos: está
+arriba y ellos siguen sobre el vídeo encogido.
+
+**No bajes de `scale` 0.70**: por debajo no queda relleno donde retroceder y el
+render aborta diciéndolo. Y sepáralos bien — dos retrocesos seguidos cansan.
+
+`dip` y `cut_in` **en el mismo instante** siguen siendo válidos para un golpe
+seco sin rótulo: el plano cambia mientras la pantalla está oscura, así que el
+salto no se ve. Pero para cambiar de tema, el retroceso dice algo y el fundido
+no.
 
 **`zoom_punch` no es un tirón de zoom**: hace un push in con easing, **se queda
 en el plano cerrado** `hold` segundos y vuelve. Simula el corte a una segunda
@@ -290,6 +314,7 @@ defecto y cae a las estáticas sólo si no hay Node.**
 | `kind` | forma | para qué |
 |---|---|---|
 | `chip` | píldora compacta con una línea | títulos y rótulos |
+| `title` | texto grande, sin panel | en la banda negra que abre un `pullback` |
 | `panel` | cabecera de acento + párrafo | una idea con desarrollo |
 | `bullets` | cabecera + lista con viñetas | enumerar lo que se dice de corrido |
 | `flow` | nodo raíz + espina con nodos conectados | estructura o relación entre partes |

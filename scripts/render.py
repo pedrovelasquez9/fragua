@@ -110,10 +110,23 @@ SHOT_OUT = 1.6
 # Sin esto el encuadre se queda congelado y es exactamente lo que se ve plano.
 SHOT_DRIFT = 0.22
 CUT_HOLD = 2.4
+
+# Retroceso de plano: el vídeo se encoge sobre negro y deja sitio para un rótulo.
+# zoompan no sabe alejarse por debajo de 1, así que el truco es rellenar antes a
+# PULLBACK_PAD y encuadrar dentro: con z=1.5 se ve el vídeo a tamaño natural y
+# bajando z aparece el relleno alrededor. 1.5 exacto para que el relleno sea un
+# múltiplo entero de las dos dimensiones y a tamaño natural el remuestreo sea 1:1.
+PULLBACK_PAD = 1.5
+PULLBACK_SCALE = 0.76
+PULLBACK_RAMP = 0.55
+# Cuánto del hueco liberado va ARRIBA. El rótulo se lee mejor sobre la cabeza que
+# a los pies, y abajo ya están los subtítulos.
+PULLBACK_TOP = 0.72
+PULLBACK_MIN = 0.70
 SHOT_HOLD = 2.0
 
 # Effects that contribute to the zoom expression, and therefore cannot overlap.
-ZOOMING = ("zoom_punch", "cut_in", "shake", "whip_pan")
+ZOOMING = ("zoom_punch", "cut_in", "shake", "whip_pan", "pullback")
 
 # aq-mode=3 biases bit allocation toward dark areas — this footage is mostly shadow,
 # and flat AQ is what leaves blocking in the background.
@@ -166,6 +179,21 @@ def shot(t0, ramp, hold, peak):
             f"if(between(T,{b},{end}),{fall},0)))")
 
 
+def envelope(t0, ramp, hold):
+    """0 -> 1 -> 0, con la misma curva suave a la entrada y a la salida.
+
+    Aquí sí conviene simétrico: no es un corte, es el plano apartándose para
+    dejar ver otra cosa y volviendo. Lo que se pide es que no se note el salto.
+    """
+    a, b = t0 + ramp, t0 + ramp + hold
+    end = b + ramp
+    rise = f"(0.5-0.5*cos(PI*(T-{t0})/{ramp}))"
+    fall = f"(0.5+0.5*cos(PI*(T-{b})/{ramp}))"
+    return (f"if(between(T,{t0},{a}),{rise},"
+            f"if(between(T,{a},{b}),1,"
+            f"if(between(T,{b},{end}),{fall},0)))")
+
+
 def hard_cut(t0, dur, peak):
     """An instant recompose that holds, then an instant return: a real cut.
 
@@ -186,6 +214,9 @@ def effect_span(e):
         return t0, t0 + ramp * (1 + SHOT_OUT) + float(e.get("hold", SHOT_HOLD))
     if e["type"] == "cut_in":
         return t0, t0 + float(e.get("dur", CUT_HOLD))
+    if e["type"] == "pullback":
+        ramp = float(e.get("ramp", PULLBACK_RAMP))
+        return t0, t0 + 2 * ramp + float(e.get("dur", 3.0))
     return t0, t0 + float(e.get("dur", 0.5))
 
 
@@ -203,9 +234,23 @@ def check_overlaps(effects):
                 f"Los zooms se suman: sepáralos o baja 'hold'.")
 
 
+def pullback_graph(effects, width, height):
+    """Padding that gives zoompan somewhere to pull back to, or "" if unused."""
+    if not any(e["type"] == "pullback" for e in effects):
+        return "", 1.0
+    for e in effects:
+        if e["type"] == "pullback" and float(e.get("scale", PULLBACK_SCALE)) < PULLBACK_MIN:
+            sys.exit(f"pullback en {e['t']}s pide scale {e.get('scale')}, y por debajo de "
+                     f"{PULLBACK_MIN} no queda relleno donde retroceder. Sube el scale.")
+    pad_w, pad_h = int(width * PULLBACK_PAD), int(height * PULLBACK_PAD)
+    return (f",pad={pad_w}:{pad_h}:{(pad_w - width) // 2}:{(pad_h - height) // 2}:black",
+            PULLBACK_PAD)
+
+
 def motion_graph(effects, fps, width, height):
-    """zoom punches, shakes and whip pans, all as one zoompan filter."""
+    """zoom punches, shakes, whip pans and pull-backs, all as one zoompan."""
     zoom, xoff, yoff = ["1"], ["0"], ["0"]
+    shrink = []
     for e in effects:
         t0, dur = float(e["t"]), float(e.get("dur", 0.5))
         if effect_span(e)[1] <= t0:   # zoom_punch is sized by ramp/hold, not dur
@@ -225,16 +270,33 @@ def motion_graph(effects, fps, width, height):
         elif kind == "whip_pan":
             zoom.append(bump(t0, dur, 0.30))
             xoff.append(f"if(between(T,{t0},{t0 + dur}),iw*0.22*sin(2*PI*(T-{t0})/{dur}),0)")
+        elif kind == "pullback":
+            scale = float(e.get("scale", PULLBACK_SCALE))
+            env = envelope(t0, float(e.get("ramp", PULLBACK_RAMP)), float(e.get("dur", 3.0)))
+            # Multiplica, no suma: encoger es un factor sobre el encuadre entero.
+            shrink.append(f"(1-{1 - scale:.4f}*({env}))")
 
-    if len(zoom) == 1 and len(xoff) == 1 and len(yoff) == 1:
+    pad, factor = pullback_graph(effects, width, height)
+    if len(zoom) == 1 and len(xoff) == 1 and len(yoff) == 1 and not shrink:
         return ""
 
     time = f"(on/{fps})"
-    z = "+".join(zoom).replace("T", time)
-    x = f"(iw/2-(iw/zoom/2))+({'+'.join(xoff)})".replace("T", time)
-    y = f"(ih/2-(ih/zoom/2))+({'+'.join(yoff)})".replace("T", time)
+    z = f"{factor}*({'+'.join(zoom)})"
+    for s in shrink:
+        z += f"*{s}"
+    z = z.replace("T", time)
+
+    x = f"(iw-iw/zoom)/2+({'+'.join(xoff)})".replace("T", time)
+    if shrink:
+        # El hueco que se abre no se reparte a medias: PULLBACK_TOP de él va
+        # arriba, que es donde se lee el rótulo. Cuando no hay retroceso el
+        # sobrante es cero y esto se queda en el encuadre centrado de siempre.
+        base_y = (f"(ih-ih/zoom)/2-{PULLBACK_TOP - 0.5:.4f}*(ih/zoom-{height})")
+    else:
+        base_y = "(ih-ih/zoom)/2"
+    y = f"{base_y}+({'+'.join(yoff)})".replace("T", time)
     # s= is mandatory: zoompan silently defaults to 1280x720 otherwise.
-    return f",zoompan=z='{z}':x='{x}':y='{y}':d=1:fps={fps}:s={width}x{height}"
+    return (f"{pad},zoompan=z='{z}':x='{x}':y='{y}':d=1:fps={fps}:s={width}x{height}")
 
 
 # A dip is a flash with the sign flipped: down to black instead of up to white.

@@ -8,6 +8,30 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.9.0 — 2026-08-19
+
+### Added
+- **`pullback`**: the video shrinks onto black, a headline animates into the
+  space that opens above it, and it eases back to full size. This is now the way
+  to change subject. A fade to black only covers the join; a pullback uses it —
+  it puts the phrase you just said on screen, so it can be used three or four
+  times in a video without tiring.
+- **`title` card**: large text with no panel behind it, for that black band. A
+  dark panel on black reads as a box floating in nothing. It sits above the
+  shrunk video, so the captions carry on underneath undisturbed.
+
+### Changed
+- The dip-to-black and whip-pan transitions are still there for a hard beat, but
+  they are no longer the default for a change of subject.
+
+### Notes
+- zoompan cannot pull back below 1:1, so the frame is padded first and the shot
+  is composed inside it. The padding is an exact 1.5×, which means that at rest
+  the crop lands 1:1 — measured, sharpness is identical with and without the
+  effect (Laplacian variance 116.05 either way), and render time is unchanged.
+
+---
+
 ## 1.8.1 — 2026-08-19
 
 ### Fixed

@@ -249,7 +249,28 @@ def draw_chip(spec, theme, width, base):
     return image.crop((0, 0, width, height + 20))
 
 
+def draw_title(spec, theme, width, base):
+    """Texto grande y suelto, sin panel detrás.
+
+    Va en el hueco negro que abre un `pullback`. Ahí un panel oscuro sobre negro
+    se ve como una caja flotando en la nada: lo que se lee es el texto solo.
+    """
+    font = load_font(int(base * 1.25))
+    image = Image.new("RGBA", (width, width), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    lines = wrap(draw, spec.get("title") or spec.get("body", ""), font, int(width * 0.86))
+    line_height = int(base * 1.5)
+
+    y = 0
+    for line in lines:
+        line_width = text_size(draw, line, font)[0]
+        draw.text(((width - line_width) // 2, y), line, font=font, fill=theme["accent"])
+        y += line_height
+    return image.crop((0, 0, width, y + 16))
+
+
 KINDS = {"panel": draw_panel, "bullets": draw_bullets, "flow": draw_flow,
+         "title": draw_title,
          "stat": draw_stat, "chip": draw_chip}
 
 

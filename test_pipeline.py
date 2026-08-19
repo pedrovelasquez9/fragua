@@ -76,6 +76,47 @@ def test_shot_shape():
     print("ok  plano (entra rápido, deriva, sale despacio) y corte instantáneo")
 
 
+def test_pullback_geometry():
+    """El vídeo se encoge a lo pedido, y en reposo el encuadre es 1:1.
+
+    zoompan no sabe alejarse por debajo de 1: el truco es rellenar antes y
+    encuadrar dentro. Si en reposo z no cae justo en el factor de relleno, todo
+    el vídeo pasa por un remuestreo que no necesitaba.
+    """
+    sys.path.insert(0, str(SCRIPTS))
+    import math
+    from render import PULLBACK_PAD, motion_graph
+
+    graph = motion_graph([{"t": 10.0, "type": "pullback", "dur": 2.0,
+                           "ramp": 0.5, "scale": 0.76}], 30, 1080, 1920)
+    assert f"pad={int(1080 * PULLBACK_PAD)}:{int(1920 * PULLBACK_PAD)}" in graph, graph
+
+    z = graph.split("z='")[1].split("'")[0]
+
+    def at(second):
+        return eval(z.replace("if(", "iff(").replace("on", repr(second * 30)),
+                    {"PI": math.pi, "cos": math.cos,
+                     "between": lambda x, a, b: a <= x <= b,
+                     "iff": lambda c, a, b: a if c else b})
+
+    assert abs(at(5.0) - PULLBACK_PAD) < 1e-9, f"en reposo debe ser 1:1, es {at(5.0)}"
+    assert abs(at(11.5) - PULLBACK_PAD * 0.76) < 1e-9, f"no se encoge a 0.76: {at(11.5)}"
+    assert abs(at(13.5) - PULLBACK_PAD) < 1e-6, "no vuelve al tamaño original"
+    assert PULLBACK_PAD * 0.76 < at(10.25) < PULLBACK_PAD, "la entrada no es progresiva"
+
+    # sin retroceso no se rellena nada: el resto de vídeos no paga por esto
+    plain = motion_graph([{"t": 1.0, "type": "zoom_punch"}], 30, 1080, 1920)
+    assert "pad=" not in plain, "rellena aunque no haya retroceso"
+
+    r = subprocess.run([sys.executable, "-c",
+                        "import sys; sys.path.insert(0, r'%s');"
+                        "from render import motion_graph;"
+                        "motion_graph([{'t':1,'type':'pullback','scale':0.4}],30,1080,1920)"
+                        % SCRIPTS], capture_output=True, text=True)
+    assert r.returncode != 0 and "scale" in r.stderr + r.stdout, "acepta un scale imposible"
+    print("ok  retroceso de plano (1:1 en reposo, encoge a lo pedido)")
+
+
 def test_transitions_keep_colour():
     """Un fundido tiene que llevarse el color con él, y el barrido no comérselo.
 
@@ -418,6 +459,7 @@ def main():
                                         ("in.mp4", "cuts.json", "words.json", "subs.ass", "out.mp4"))
 
         test_version_is_consistent()
+        test_pullback_geometry()
         test_transitions_keep_colour()
         test_animated_cards_wiring()
         test_silence_at_the_head()
