@@ -299,6 +299,39 @@ def test_silence_at_the_head():
     print("ok  silencio inicial (no fabrica un segmento mudo)")
 
 
+def test_animated_cards_wiring():
+    """El .mov gana al .png y no se le vuelve a animar encima.
+
+    No se renderiza nada con remotion aquí: eso necesita Node y 230 MB de
+    dependencias. Lo que se comprueba es el cableado, que es lo que se rompe.
+    """
+    sys.path.insert(0, str(SCRIPTS))
+    from render import card_graph, resolve_card_paths
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        (tmp / "card00.png").write_bytes(b"x")
+        paths = resolve_card_paths(tmp, 1)
+        assert paths[0].suffix == ".png", paths
+
+        (tmp / "card00.mov").write_bytes(b"x")
+        paths = resolve_card_paths(tmp, 1)
+        assert paths[0].suffix == ".mov", "el clip animado debe ganar al PNG"
+
+        spec = [{"t": 4.0, "dur": 5.0, "y_frac": 0.5}]
+        inputs, chunks, _ = card_graph(spec, paths, 1, "[v]", 1920)
+        graph = ";".join(chunks)
+        assert "fade=" not in graph, "el clip ya trae su entrada: no se le añade fundido"
+        assert "-loop" not in inputs, "un .mov no se repite como si fuera una imagen"
+        assert "y='960'" in graph, f"la card debe quedarse quieta en su sitio: {graph}"
+
+        # y el PNG sigue con su fundido y su subida de siempre
+        (tmp / "card00.mov").unlink()
+        _, still, _ = card_graph(spec, resolve_card_paths(tmp, 1), 1, "[v]", 1920)
+        assert "fade=" in ";".join(still), "la card estática perdió el fundido"
+    print("ok  cards animadas (el clip gana al PNG, sin animar dos veces)")
+
+
 def test_timeline_mapping():
     segments = [{"start": 0, "end": 2, "speed": 1.0}, {"start": 4, "end": 6, "speed": 1.0}]
     assert output_duration(segments) == 4.0
@@ -333,6 +366,7 @@ def main():
                                         ("in.mp4", "cuts.json", "words.json", "subs.ass", "out.mp4"))
 
         test_version_is_consistent()
+        test_animated_cards_wiring()
         test_silence_at_the_head()
         test_timeline_mapping()
         test_shot_shape()

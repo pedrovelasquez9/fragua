@@ -8,6 +8,24 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.7.0 — 2026-08-19
+
+### Added
+- **Animated cards, drawn with Remotion.** The bullets arrive one at a time, the
+  rule under a heading draws itself, the flow card's spine grows top-down, and a
+  stat card counts up to its figure — none of which a still image can do.
+  Same `plan.json`, same preset colours: the React components read the card spec
+  directly, so there is nothing to keep in sync between Python and TypeScript.
+- Ask for them with `--animated`; an edit that already exists can be upgraded by
+  re-running the card step alone, without re-planning anything.
+
+### Changed
+- Remotion is optional. It pulls in Node and its own headless Chrome, so the
+  setup installs it only when Node is already on the machine, and says so when
+  it is not. Without it, everything works exactly as before with still cards.
+
+---
+
 ## 1.6.2 — 2026-08-15
 
 ### Fixed

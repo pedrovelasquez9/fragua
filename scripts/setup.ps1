@@ -84,6 +84,23 @@ foreach ($name in $want.Keys) {
     Invoke-WebRequest $want[$name] -OutFile $dest
 }
 
+# --- cards animadas (opcional) ----------------------------------------------
+# Remotion es opcional a propósito: arrastra Node y su propio Chrome. Si Node ya
+# está, se preparan las dependencias; si no, la edición sigue con las cards
+# quietas y esto no descarga nada.
+$remotion = Join-Path (Split-Path $PSScriptRoot -Parent) "remotion"
+if (Get-Command npm -ErrorAction SilentlyContinue) {
+    "preparando cards animadas (remotion)..."
+    Push-Location $remotion
+    npm install --silent --no-fund --no-audit
+    Pop-Location
+    if ($LASTEXITCODE -eq 0) { "ok  cards animadas disponibles" }
+    else { "aviso: npm install falló en remotion/; las cards seguirán quietas" }
+} else {
+    "sin Node: las cards saldrán quietas. Para animarlas:"
+    "  winget install OpenJS.NodeJS.LTS   y vuelve a lanzar este setup"
+}
+
 # --- verify -----------------------------------------------------------------
 $cli = Find-Whisper
 if (-not $cli) { throw "la descarga terminó pero no encuentro el ejecutable en $vendor" }

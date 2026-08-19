@@ -90,6 +90,22 @@ fetch_font "OFL-Roboto.txt"        "$RAW/roboto/OFL.txt"
 fetch_font "OFL-Anton.txt"         "$RAW/anton/OFL.txt"
 fetch_font "OFL-Poppins.txt"       "$RAW/poppins/OFL.txt"
 
+# --- cards animadas (opcional) ----------------------------------------------
+# Remotion arrastra Node y su propio Chrome, así que no se instala solo. Si Node
+# ya está en la máquina, se preparan las dependencias; si no, la edición sigue
+# con las cards quietas.
+if command -v npm >/dev/null 2>&1; then
+    echo "preparando cards animadas (remotion)..."
+    if (cd "$ROOT/remotion" && npm install --silent --no-fund --no-audit); then
+        echo "ok  cards animadas disponibles"
+    else
+        echo "aviso: npm install falló en remotion/; las cards seguirán quietas"
+    fi
+else
+    echo "sin Node: las cards saldrán quietas. Para animarlas, instala Node y"
+    echo "vuelve a lanzar este setup (brew install node / apt install nodejs npm)."
+fi
+
 # --- verify -----------------------------------------------------------------
 cli="$(find "$VENDOR" -name whisper-cli -o -name main | head -1)"
 [ -n "$cli" ] || { echo "no encuentro el ejecutable en $VENDOR"; exit 1; }

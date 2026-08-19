@@ -310,23 +310,32 @@ def broll_graph(items, paths, start_index, base_label, width, height, caption_y)
 
 
 def card_graph(cards, paths, start_index, base_label, height):
-    """Overlay each pre-rendered card PNG, fading and sliding it into place.
+    """Overlay each pre-rendered card at its cue.
 
-    The PNG is looped into a short clip so `fade` has a timeline to work on,
-    then shifted to its cue with setpts.
+    A still PNG is looped into a short clip so `fade` has a timeline to work on;
+    an animated .mov already has one. Either way `setpts` shifts it into place.
     """
     inputs, chunks, label = [], [], base_label
     for i, (spec, path) in enumerate(zip(cards, paths)):
         t0, dur = float(spec["t"]), float(spec.get("dur", 3))
-        rise = int(height * 0.018)
-        fade = min(CARD_FADE, dur / 3)
-        inputs += ["-loop", "1", "-t", f"{dur:.3f}", "-i", str(path)]
-        chunks.append(
-            f"[{start_index + i}:v]format=rgba,"
-            f"fade=t=in:st=0:d={fade:.2f}:alpha=1,"
-            f"fade=t=out:st={dur - fade:.3f}:d={fade:.2f}:alpha=1,"
-            f"setpts=PTS+{t0:.3f}/TB[c{i}]")
-        y = f"{int(height * spec.get('y_frac', 0.60))}+{rise}*(1-min(1,(t-{t0})/{fade:.2f}))"
+        top = int(height * spec.get("y_frac", 0.60))
+        if path.suffix == ".mov":
+            # The clip already carries its entrance and exit, so adding a fade
+            # and a slide here would animate the animation.
+            inputs += ["-i", str(path)]
+            chunks.append(f"[{start_index + i}:v]format=rgba,"
+                          f"setpts=PTS-STARTPTS+{t0:.3f}/TB[c{i}]")
+            y = str(top)
+        else:
+            rise = int(height * 0.018)
+            fade = min(CARD_FADE, dur / 3)
+            inputs += ["-loop", "1", "-t", f"{dur:.3f}", "-i", str(path)]
+            chunks.append(
+                f"[{start_index + i}:v]format=rgba,"
+                f"fade=t=in:st=0:d={fade:.2f}:alpha=1,"
+                f"fade=t=out:st={dur - fade:.3f}:d={fade:.2f}:alpha=1,"
+                f"setpts=PTS+{t0:.3f}/TB[c{i}]")
+            y = f"{top}+{rise}*(1-min(1,(t-{t0})/{fade:.2f}))"
         nxt = f"[cv{i}]"
         chunks.append(f"{label}[c{i}]overlay=x=0:y='{y}':enable='between(t,{t0},{t0 + dur})'{nxt}")
         label = nxt
@@ -443,13 +452,23 @@ def video_graph(args, platform, effects, plan):
 
 
 def resolve_card_paths(cards_dir, count):
-    """cardNN.png for each card in plan order, failing early if any is missing."""
+    """cardNN.mov (animated) or cardNN.png (still), in plan order.
+
+    The .mov wins when both exist, so re-running cards.py --animated upgrades an
+    edit without touching plan.json. The index is the contract with cards.py.
+    """
     if not cards_dir or not count:
         return []
-    paths = [Path(cards_dir) / f"card{index:02d}.png" for index in range(count)]
-    missing = [path for path in paths if not path.exists()]
-    if missing:
-        sys.exit(f"faltan cards: {missing[0]} — ejecuta scripts/cards.py primero")
+    paths = []
+    for index in range(count):
+        stem = Path(cards_dir) / f"card{index:02d}"
+        clip, still = stem.with_suffix(".mov"), stem.with_suffix(".png")
+        if clip.exists():
+            paths.append(clip)
+        elif still.exists():
+            paths.append(still)
+        else:
+            sys.exit(f"falta la card {index}: {still} — ejecuta scripts/cards.py primero")
     return paths
 
 

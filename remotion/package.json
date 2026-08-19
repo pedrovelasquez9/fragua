@@ -1,0 +1,17 @@
+{
+  "name": "fragua-cards",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Animated card renderer for Fragua. Same plan.json, motion instead of a still.",
+  "license": "MIT",
+  "dependencies": {
+    "@remotion/cli": "4.0.*",
+    "react": "19.*",
+    "react-dom": "19.*",
+    "remotion": "4.0.*"
+  },
+  "devDependencies": {
+    "@types/react": "19.*",
+    "typescript": "5.*"
+  }
+}

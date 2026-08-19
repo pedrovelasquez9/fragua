@@ -14,11 +14,13 @@ Four kinds, chosen per card with "kind":
   stat     una cifra grande + su etiqueta
 """
 import argparse
+import shutil
+import subprocess
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-from common import FONTS, preset, read_json
+from common import FONTS, ROOT, preset, read_json, write_json
 
 RADIUS = 26
 PAD = 34
@@ -286,11 +288,77 @@ def render_all(cards, platform, output_dir):
     return paths
 
 
+REMOTION = ROOT / "remotion"
+
+
+def remotion_ready():
+    """Whether the animated renderer can run: Node on PATH and deps installed."""
+    return bool(shutil.which("npx")) and (REMOTION / "node_modules").is_dir()
+
+
+def render_animated(cards, platform, output_dir):
+    """Render each card as a ProRes 4444 clip with alpha, animation baked in.
+
+    Same plan.json entries as the still renderer — the React components read the
+    spec directly, so nothing has to be kept in sync between Python and TS.
+    """
+    if not remotion_ready():
+        raise SystemExit(
+            "las cards animadas necesitan Node y las dependencias de remotion/.\n"
+            "Ejecuta /fragua:setup, o  npm install  dentro de remotion/.")
+
+    # staticFile() sólo lee de public/, así que la fuente vive ahí mientras dure
+    # el render. Es la misma que usa Pillow: una sola fuente de verdad.
+    font = FONTS / "Roboto-Variable.ttf"
+    if font.exists():
+        (REMOTION / "public").mkdir(exist_ok=True)
+        shutil.copyfile(font, REMOTION / "public" / font.name)
+
+    # Un bundle por edición en vez de uno por card: son 3.7 s frente a ~10 s de
+    # arranque en cada render. Se rehace siempre, que sale más barato que llevar
+    # la cuenta de si el TSX ha cambiado desde la última vez.
+    npx = shutil.which("npx")
+    bundled = subprocess.run([npx, "remotion", "bundle", "--log=error"], cwd=REMOTION,
+                             capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if bundled.returncode != 0:
+        raise SystemExit(f"remotion bundle falló:\n{(bundled.stderr or bundled.stdout)[-2000:]}")
+
+    settings = platform["card"]
+    theme = {"bg": settings["bg"], "bgAlpha": settings["bg_alpha"],
+             "fg": settings["fg"], "accent": settings["accent"]}
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    paths = []
+    for index, spec in enumerate(cards):
+        kind = spec.get("kind", "panel")
+        if kind not in KINDS:
+            raise SystemExit(f"card {index}: kind '{kind}' desconocido. Usa: {', '.join(KINDS)}")
+        path = output_dir / f"card{index:02d}.mov"
+        props = output_dir / f"card{index:02d}.props.json"
+        write_json(props, {"kind": kind, "dur": float(spec.get("dur", 3)),
+                           "width": platform["width"], "base": settings["base_size"],
+                           "theme": theme, "spec": spec})
+        result = subprocess.run(
+            [npx, "remotion", "render", "build", "Card",
+             str(path.resolve()), f"--props={props.resolve()}", "--log=error"],
+            cwd=REMOTION, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        if result.returncode != 0:
+            raise SystemExit(f"card {index} ({kind}) falló en remotion:\n"
+                             f"{(result.stderr or result.stdout)[-2000:]}")
+        props.unlink(missing_ok=True)
+        paths.append(path)
+        print(f"  {kind:8} animada  {path.name}")
+    return paths
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("plan")
     parser.add_argument("--preset", default="tiktok")
     parser.add_argument("--outdir", default="cards")
+    parser.add_argument("--animated", action="store_true",
+                        help="anima las cards con remotion en vez de rasterizarlas quietas")
     return parser.parse_args()
 
 
@@ -300,7 +368,8 @@ def main():
     if not cards:
         print("plan.json no tiene cards")
         return
-    render_all(cards, preset(args.preset), args.outdir)
+    draw = render_animated if args.animated else render_all
+    draw(cards, preset(args.preset), args.outdir)
     print(f"{len(cards)} cards -> {args.outdir}/")
 
 

@@ -222,6 +222,23 @@ It never covers your face and never fills the screen — corner only, capped at
 40% of the width, one every eight seconds at most. The entry sound, if you add
 one, ducks under your voice so it never competes with what you are saying.
 
+### Animated cards
+
+Cards can be drawn as motion instead of a still: the bullets arrive one at a
+time, the rule under a heading draws itself, and a figure counts up to its
+value. Just ask — `edit this with animated cards` — or say it once and it
+sticks for that video.
+
+They are React components rendered with [Remotion](https://remotion.dev), which
+means two things worth knowing. It adds about half a minute to an edit. And if
+you write React, a new card type is a component in `remotion/src/Card.tsx` — you
+do not have to touch any Python.
+
+Remotion is optional and is **not** installed by default, because it pulls in
+Node and its own headless Chrome. If you already have Node, `/fragua:setup`
+prepares it for you. Without it, everything works exactly as before with still
+cards.
+
 ### It remembers what it told you
 
 After each edit Fragua records which content recommendations you applied and

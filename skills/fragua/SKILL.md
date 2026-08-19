@@ -229,8 +229,24 @@ cuerpo, viñetas alineadas, conectores y esquinas redondeadas.
 
 ```bash
 python scripts/cards.py plan.json --preset tiktok --outdir cards
+python scripts/cards.py plan.json --preset tiktok --outdir cards --animated
 python scripts/render.py ... --cards cards
 ```
+
+**`--animated`** las dibuja con Remotion en vez de con Pillow: las viñetas
+entran una a una, el filete se traza, la espina del flujo se dibuja de arriba
+abajo y la cifra de una `stat` cuenta hasta su valor. Mismo `plan.json`, mismos
+colores del preset; los componentes de React leen el spec directamente, así que
+no hay nada que mantener sincronizado entre Python y TypeScript.
+
+Salen `cardNN.mov` (ProRes 4444 con alfa) en vez de `cardNN.png`, y `render.py`
+prefiere el `.mov` cuando existe. Eso significa que puedes reanimar una edición
+ya hecha volviendo a lanzar sólo este comando.
+
+Cuesta unos **30 s por vídeo** (un bundle de 3.7 s más ~6 s por card) y necesita
+Node con las dependencias de `remotion/` instaladas. Si no están, el comando
+falla diciéndolo y las cards quietas siguen funcionando: **usa `--animated` por
+defecto y cae a las estáticas sólo si no hay Node.**
 
 | `kind` | forma | para qué |
 |---|---|---|

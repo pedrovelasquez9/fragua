@@ -226,6 +226,21 @@ Nunca te tapa la cara ni ocupa la pantalla: sólo esquinas, con el tamaño topad
 al 40% del ancho y una imagen cada ocho segundos como máximo. El sonido de
 entrada, si se lo pones, cede ante tu voz para no competir con lo que dices.
 
+### Cards animadas
+
+Las cards pueden dibujarse con movimiento en vez de quietas: las viñetas entran
+una a una, el filete bajo el título se traza solo y una cifra cuenta hasta su
+valor. Se piden hablando — `edítalo con cards animadas` — y ya está.
+
+Son componentes de React renderizados con [Remotion](https://remotion.dev), y
+eso implica dos cosas que conviene saber. Añade alrededor de medio minuto a cada
+edición. Y si escribes React, inventarte un tipo de card nuevo es escribir un
+componente en `remotion/src/Card.tsx`, sin tocar nada de Python.
+
+Remotion es opcional y **no** se instala por defecto, porque arrastra Node y su
+propio Chrome. Si ya tienes Node, `/fragua:setup` te lo deja listo. Sin él, todo
+funciona igual que antes con las cards quietas.
+
 ### Recuerda lo que te ha recomendado
 
 Después de cada edición, Fragua anota qué recomendaciones sobre el contenido
