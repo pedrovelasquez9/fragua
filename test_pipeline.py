@@ -108,6 +108,13 @@ def test_cutaways():
             assert "overlay=0:0" in graph, "el clip no va a pantalla completa"
             assert "between(t,4.0,7.000)" in graph, f"ventana mal puesta: {graph}"
             assert "eq=brightness=-0.05" in graph, "ignora el igualado de color"
+            assert "fade=t=in" in graph and "fade=t=out" in graph, "entra y sale de golpe"
+            assert "alpha=1" in graph, "el fundido tiene que ir en alfa, no en brillo"
+
+            # sin polish no se afila nada: se pidió la imagen original
+            _, raw, _ = cutaway_graph(items, 1, "[graded]", 1080, 1920, 30, polish=False)
+            assert "unsharp" not in ";".join(raw), "afila aunque se pidió sin filtros"
+            assert "fade=t=in" in ";".join(raw), "el fundido no depende del afilado"
             assert "scale=1080:1920" in graph, "no se lleva al tamaño de salida"
             assert ":a]" not in graph and "amix" not in graph, \
                 "el clip no debe aportar audio: el del vídeo original sigue corriendo"

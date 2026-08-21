@@ -407,6 +407,10 @@ def sticker_graph(stickers, start_index, width, height):
 # subirlos a 1080x1920 pierden borde, así que llevan un afilado suave propio: el
 # `polish` del vídeo principal queda antes en la cadena y no les llega.
 CUTAWAY_SHARPEN = "unsharp=5:5:0.6:5:5:0.0"
+# Entrar y salir de un plano de recurso con un corte seco funciona si cae en un
+# corte de frase; en medio de una palabra canta. Un fundido corto lo cose sin
+# convertirlo en un efecto.
+CUTAWAY_FADE = 0.35
 
 BROLL_SCALE = 0.28          # fracción del ancho por defecto
 BROLL_MAX_SCALE = 0.40      # techo duro: por encima empieza a tapar al que habla
@@ -463,7 +467,7 @@ def broll_graph(items, paths, start_index, base_label, width, height, caption_y)
     return inputs, chunks, label
 
 
-def cutaway_graph(items, start_index, base_label, width, height, fps):
+def cutaway_graph(items, start_index, base_label, width, height, fps, polish=True):
     """Clips de vídeo a pantalla completa sobre el plano principal.
 
     Es un plano de recurso, no un adorno: tapa la imagen y **deja correr el
@@ -486,10 +490,17 @@ def cutaway_graph(items, start_index, base_label, width, height, fps):
         # Mide los dos y escribe aquí lo que haga falta; no hay automatismo porque
         # el punto al que igualar depende de qué se ve en el clip.
         match = f",{item['grade']}" if item.get("grade") else ""
+        # El afilado no es un look: compensa el reescalado. Un clip de 478x850
+        # subido a 1080x1920 llega sin borde, y eso no es "la imagen original".
+        crisp = f",{CUTAWAY_SHARPEN}" if polish else ""
+        fade = min(float(item.get("fade", CUTAWAY_FADE)), dur / 3)
+        fades = ("" if fade <= 0 else
+                 f",fade=t=in:st=0:d={fade:.2f}:alpha=1"
+                 f",fade=t=out:st={dur - fade:.3f}:d={fade:.2f}:alpha=1")
         chunks.append(
             f"[{start_index + i}:v]fps={fps},"
             f"scale={width}:{height}:force_original_aspect_ratio=increase:flags=lanczos,"
-            f"crop={width}:{height},{CUTAWAY_SHARPEN}{match},"
+            f"crop={width}:{height}{crisp}{match},format=rgba{fades},"
             f"setpts=PTS-STARTPTS+{t0:.3f}/TB[cw{i}]")
         nxt = f"[cwv{i}]"
         chunks.append(f"{label}[cw{i}]overlay=0:0:"
@@ -629,6 +640,7 @@ def audio_graph(plan, first_index, duration, lufs):
 
 def video_graph(args, platform, effects, plan, cutaway_index):
     """Frame -> motion -> polish -> look -> cutaways -> subtitles, at [styled]."""
+    polish = not args.no_polish
     width, height, fps = platform["width"], platform["height"], platform["fps"]
 
     # Polish is its own labelled sub-graph because the sharpening mask needs a split.
@@ -639,7 +651,12 @@ def video_graph(args, platform, effects, plan, cutaway_index):
     framing += motion_graph(effects, fps, width, height)
 
     chunks = [f"[vc]{framing}[prepolish]"]
-    chunks += polish_graph("[prepolish]", "[polished]")
+    if polish:
+        chunks += polish_graph("[prepolish]", "[polished]")
+    else:
+        # Denoise y afilado son las dos cosas que sí modifican el píxel de la
+        # grabación. Sin ellas la imagen que sale es la que entró.
+        chunks.append("[prepolish]null[polished]")
 
     look = ""
     if not args.no_grade:
@@ -660,7 +677,7 @@ def video_graph(args, platform, effects, plan, cutaway_index):
     cutaways = plan.get("cutaways", [])
     check_cutaways(cutaways, effects)
     cutaway_inputs, cutaway_chunks, label = cutaway_graph(
-        cutaways, cutaway_index, "[graded]", width, height, fps)
+        cutaways, cutaway_index, "[graded]", width, height, fps, polish)
     chunks += cutaway_chunks
     chunks.append(f"{label}{subtitles}[styled]")
     return chunks, cutaway_inputs
@@ -769,6 +786,8 @@ def parse_args():
     parser.add_argument("--cards", default=None, help="carpeta con los PNG de cards.py")
     parser.add_argument("-o", "--output", default="output.mp4")
     parser.add_argument("--no-grade", action="store_true", help="skip the cinematic look")
+    parser.add_argument("--no-polish", action="store_true",
+                        help="sin denoise ni afilado: el píxel de la grabación, intacto")
     parser.add_argument("--print-cmd", action="store_true",
                         help="print the ffmpeg command before running it")
     return parser.parse_args()

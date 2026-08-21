@@ -392,6 +392,7 @@ horizontal y sólo en el tramo central del barrido, por lo mismo.
 | `file` | Ruta relativa a la biblioteca de assets |
 | `start` | Desde dónde se lee el clip (0 por defecto) |
 | `grade` | Cadena de filtros para igualar su color al del vídeo |
+| `fade` | Fundido de entrada y salida en segundos (0.35; 0 = corte seco) |
 
 El clip se lleva a la resolución de salida con lanczos y un `unsharp` suave —el
 `polish` del vídeo principal queda antes en la cadena y no le llega— y se compone

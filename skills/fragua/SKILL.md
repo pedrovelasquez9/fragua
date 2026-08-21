@@ -394,7 +394,17 @@ python scripts/render.py entrada.mp4 --cuts cuts.json --subs subs.ass --plan pla
 Un solo pase de ffmpeg desde el original: sin pérdida por recodificaciones
 encadenadas. Con más de 300 segmentos pasa automáticamente a dos pases.
 
-`--no-grade` desactiva el color cinematográfico. `--print-cmd` imprime el
+`--no-grade` desactiva el color cinematográfico y `--no-polish` el denoise y
+el afilado. Los dos juntos son «la imagen original»: lo único que queda sobre el
+píxel grabado es el recorte, el encuadre de los efectos y lo que se compone
+encima. Con `--no-polish` los cutaways tampoco se afilan, así que un clip de
+menos resolución que la salida entra más blando — es el precio de no tocar nada.
+
+Cuando se pide sin filtros, **el igualado de los cutaways sigue haciendo falta**:
+no es un look sobre la grabación, es lo que hace que material de otra cámara
+pertenezca al mismo vídeo. Y sin grade la referencia es más oscura, así que los
+números cambian: mídelos de nuevo contra el original, no reutilices los de una
+edición con color. `--print-cmd` imprime el
 comando de ffmpeg, que es por donde empezar cuando algo sale raro.
 
 ### 6. Copy de publicación — siempre, sin que lo pidan
@@ -559,7 +569,24 @@ cámara y no como un corte: la voz no se interrumpe, sólo cambia lo que se ve.
 ```
 
 `start` es desde dónde empieza a leerse el clip; si pides más metraje del que
-queda, el render aborta diciéndolo en vez de sacar negro.
+queda, el render aborta diciéndolo en vez de sacar negro. `fade` (0.35 s por
+defecto, 0 para corte seco) funde la entrada y la salida en alfa.
+
+**Entra en una pausa, no en mitad de una palabra.** Busca los huecos reales
+entre palabras de `words.json` —los mayores de 0.25 s— y pon el `t` justo antes
+de uno, para que el fundido caiga sobre el silencio. Un plano de recurso que
+aparece mientras se pronuncia una sílaba se nota aunque esté bien elegido; el
+mismo plano entrando en la respiración entre dos frases, no.
+
+```bash
+python - <<'PY'
+import json
+w = json.load(open("words.json", encoding="utf-8"))["words"]
+for a, b in zip(w, w[1:]):
+    if b["start"] - a["end"] > 0.25:
+        print(f'{a["end"]:.2f} -> {b["start"]:.2f}   ...{a["text"]} | {b["text"]}...')
+PY
+```
 
 **Iguala el color, siempre.** Un clip de otra cámara casi nunca cae en el mismo
 brillo ni en la misma saturación, y el salto se lee como «otro vídeo» en vez de
