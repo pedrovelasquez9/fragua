@@ -15,6 +15,7 @@ import tempfile
 from pathlib import Path
 
 from common import (FONTS, ROOT, assets_dir, atempo_chain, ff_path, output_duration,
+                    probe_duration,
                     preset, probe_stream, read_json, resolve_asset)
 
 # ponytail: one filtergraph per segment stops scaling somewhere past here, so we
@@ -402,6 +403,11 @@ def sticker_graph(stickers, start_index, width, height):
 # B-roll: una imagen pequeña en una esquina cuando se menciona algo concreto.
 # Nunca a pantalla completa y nunca sobre la persona, que en un plano vertical
 # ocupa la franja central. Por eso sólo hay esquinas y el ancho está topado.
+# Los clips de recurso suelen venir de otra cámara y a otra resolución. Al
+# subirlos a 1080x1920 pierden borde, así que llevan un afilado suave propio: el
+# `polish` del vídeo principal queda antes en la cadena y no les llega.
+CUTAWAY_SHARPEN = "unsharp=5:5:0.6:5:5:0.0"
+
 BROLL_SCALE = 0.28          # fracción del ancho por defecto
 BROLL_MAX_SCALE = 0.40      # techo duro: por encima empieza a tapar al que habla
 BROLL_MARGIN = 0.05         # separación al borde, en fracción del ancho
@@ -455,6 +461,59 @@ def broll_graph(items, paths, start_index, base_label, width, height, caption_y)
                       f":enable='between(t,{t0},{t0 + dur})'{nxt}")
         label = nxt
     return inputs, chunks, label
+
+
+def cutaway_graph(items, start_index, base_label, width, height, fps):
+    """Clips de vídeo a pantalla completa sobre el plano principal.
+
+    Es un plano de recurso, no un adorno: tapa la imagen y **deja correr el
+    audio**, que es lo que hace que se lea como un cambio de cámara y no como un
+    corte. Va después del color, para que cada clip conserve el suyo, y antes de
+    los subtítulos, porque la persona sigue hablando por debajo.
+    """
+    inputs, chunks, label = [], [], base_label
+    for i, item in enumerate(items):
+        t0, dur = float(item["t"]), float(item.get("dur", 3.0))
+        source = asset_path(item["file"], "cutaway")
+        available = probe_duration(source) - float(item.get("start", 0.0))
+        if dur > available + 0.05:
+            sys.exit(f"cutaway en {t0}s pide {dur}s de «{item['file']}» y desde "
+                     f"start={item.get('start', 0)} sólo quedan {available:.1f}s.")
+        inputs += ["-ss", f"{float(item.get('start', 0.0)):.3f}", "-t", f"{dur:.3f}",
+                   "-i", str(source)]
+        # Un clip de otra cámara casi nunca cae en el mismo brillo ni en la misma
+        # saturación, y el salto se lee como «otro vídeo» en vez de «otro plano».
+        # Mide los dos y escribe aquí lo que haga falta; no hay automatismo porque
+        # el punto al que igualar depende de qué se ve en el clip.
+        match = f",{item['grade']}" if item.get("grade") else ""
+        chunks.append(
+            f"[{start_index + i}:v]fps={fps},"
+            f"scale={width}:{height}:force_original_aspect_ratio=increase:flags=lanczos,"
+            f"crop={width}:{height},{CUTAWAY_SHARPEN}{match},"
+            f"setpts=PTS-STARTPTS+{t0:.3f}/TB[cw{i}]")
+        nxt = f"[cwv{i}]"
+        chunks.append(f"{label}[cw{i}]overlay=0:0:"
+                      f"enable='between(t,{t0},{t0 + dur:.3f})'{nxt}")
+        label = nxt
+    return inputs, chunks, label
+
+
+def check_cutaways(items, effects):
+    """Dos planos de recurso a la vez, o uno sobre un retroceso, es un lío."""
+    windows = sorted((float(c["t"]), float(c["t"]) + float(c.get("dur", 3.0)))
+                     for c in items)
+    for (a_start, a_end), (b_start, b_end) in zip(windows, windows[1:]):
+        if b_start < a_end:
+            sys.exit(f"cutaways solapados: uno acaba en {a_end:.2f}s y el "
+                     f"siguiente empieza en {b_start}s.")
+    for start, end in windows:
+        for e in effects:
+            if e["type"] != "pullback":
+                continue
+            p_start, p_end = effect_span(e)
+            if start < p_end and p_start < end:
+                sys.exit(f"el cutaway de {start}s pisa el pullback de {e['t']}s: "
+                         f"el clip taparía el vídeo encogido y su rótulo.")
 
 
 def card_graph(cards, paths, start_index, base_label, height):
@@ -568,8 +627,8 @@ def audio_graph(plan, first_index, duration, lufs):
     return chunks, inputs
 
 
-def video_graph(args, platform, effects, plan):
-    """Frame -> motion -> polish -> look -> subtitles, ending at [styled]."""
+def video_graph(args, platform, effects, plan, cutaway_index):
+    """Frame -> motion -> polish -> look -> cutaways -> subtitles, at [styled]."""
     width, height, fps = platform["width"], platform["height"], platform["fps"]
 
     # Polish is its own labelled sub-graph because the sharpening mask needs a split.
@@ -588,15 +647,23 @@ def video_graph(args, platform, effects, plan):
         # can replace it wholesale (dark material hates the default vignette).
         look += "," + plan.get("grade", f"{GRADE},{FILM}")
     look += flash_graph(effects) + blur_graph(effects) + letterbox_graph(effects, height)
+    subtitles = "null"
     if args.subs:
         # fontsdir so libass finds the bundled fonts without installing them system-wide.
         # fontsdir apunta a las fuentes propias si existen, y si no a las de vendor:
         # libass sólo acepta un directorio, así que gana la biblioteca del usuario.
         user_fonts = assets_dir() / "fonts"
         fonts = user_fonts if user_fonts.is_dir() else FONTS
-        look += f",subtitles=filename='{ff_path(args.subs)}':fontsdir='{ff_path(fonts)}'"
-    chunks.append(f"[polished]{look.lstrip(',') or 'null'}[styled]")
-    return chunks
+        subtitles = f"subtitles=filename='{ff_path(args.subs)}':fontsdir='{ff_path(fonts)}'"
+
+    chunks.append(f"[polished]{look.lstrip(',') or 'null'}[graded]")
+    cutaways = plan.get("cutaways", [])
+    check_cutaways(cutaways, effects)
+    cutaway_inputs, cutaway_chunks, label = cutaway_graph(
+        cutaways, cutaway_index, "[graded]", width, height, fps)
+    chunks += cutaway_chunks
+    chunks.append(f"{label}{subtitles}[styled]")
+    return chunks, cutaway_inputs
 
 
 def resolve_card_paths(cards_dir, count):
@@ -641,11 +708,13 @@ def build(args, platform, segments, plan, source):
     width, height = platform["width"], platform["height"]
 
     graph = [cut_graph(segments)]
-    graph += video_graph(args, platform, effects, plan)
+    # Los cutaways se numeran primero porque se componen dentro de video_graph,
+    # antes que las cards: el orden de los índices sigue al de los -i.
+    video_chunks, cutaway_inputs = video_graph(args, platform, effects, plan, 1)
+    graph += video_chunks
 
-    # Overlay inputs are numbered after the source, in the order they are added.
     stickers, cards = plan.get("stickers", []), plan.get("cards", [])
-    next_input = 1
+    next_input = 1 + len(plan.get("cutaways", []))
 
     sticker_inputs, sticker_chunks, video_label = sticker_graph(
         stickers, next_input, width, height)
@@ -676,7 +745,7 @@ def build(args, platform, segments, plan, source):
     graph += audio_chunks
 
     return (["ffmpeg", "-y", "-hide_banner", "-i", str(source)]
-            + sticker_inputs + card_inputs + broll_inputs + music_input
+            + cutaway_inputs + sticker_inputs + card_inputs + broll_inputs + music_input
             + ["-filter_complex", ";".join(graph), "-map", video_label, "-map", "[aout]"]
             + encoder_flags(platform, args.output))
 

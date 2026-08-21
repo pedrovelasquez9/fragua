@@ -545,6 +545,47 @@ la voz sola por mucho que se atenúe—, por eso el efecto pasa por un
 (−13.1 dB con y sin efecto) y el pico sólo sube 1.4 dB, que es el mínimo de
 cualquier capa aditiva.
 
+## Planos de recurso
+
+Un `cutaway` es un clip de vídeo tuyo que **tapa la imagen mientras el audio
+original sigue corriendo**. Eso es lo que lo hace leerse como un cambio de
+cámara y no como un corte: la voz no se interrumpe, sólo cambia lo que se ve.
+
+```json
+"cutaways": [
+  {"t": 41.0, "dur": 3.6, "file": "clip 2.mp4", "start": 1.2,
+   "grade": "eq=brightness=-0.075:saturation=0.80"}
+]
+```
+
+`start` es desde dónde empieza a leerse el clip; si pides más metraje del que
+queda, el render aborta diciéndolo en vez de sacar negro.
+
+**Iguala el color, siempre.** Un clip de otra cámara casi nunca cae en el mismo
+brillo ni en la misma saturación, y el salto se lee como «otro vídeo» en vez de
+«otro plano». Mide los dos lados y escribe el ajuste en `grade`:
+
+```bash
+ffmpeg -hide_banner -nostats -ss 2 -i clip.mp4 -frames:v 1 \
+  -vf scale=1080:1920,signalstats,metadata=print -f null -
+```
+
+Medido en un caso real: la persona estaba en YAVG 58 y SATAVG 14, y los tres
+clips en 47/10, 86/19 y 93/34. Sin igualar, los tres cantaban.
+
+**Dónde ponerlos.** Donde la cara no aporte nada: un tramo explicativo largo,
+una enumeración, una idea abstracta. Nunca sobre el gancho ni sobre el remate —
+ahí la expresión es el contenido. Tres o cuatro segundos cada uno: menos no da
+tiempo a leerlos, más y se pierde a quien habla.
+
+No pueden solaparse entre sí ni caer sobre un `pullback` —taparían el vídeo
+encogido y su rótulo— y `render.py` aborta con los tiempos si ocurre.
+
+Van **después del color y antes de los subtítulos**: cada clip conserva su look
+y los subtítulos siguen corriendo por encima, porque la persona sigue hablando.
+
+`assets.py` los cataloga bajo `clips`, con su duración y su tamaño.
+
 ## Memoria de recomendaciones
 
 Las sugerencias sobre el contenido no sirven de nada si nadie lleva la cuenta de

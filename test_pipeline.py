@@ -78,6 +78,66 @@ def test_shot_shape():
     print(f"ok  plano fluido (mayor tirón {jerk:.3f}) y corte instantáneo")
 
 
+def test_cutaways():
+    """Un clip tapa la imagen, deja el audio y va por debajo de los subtítulos."""
+    sys.path.insert(0, str(SCRIPTS))
+    import common
+    from render import check_cutaways, cutaway_graph
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        library = tmp / "lib"
+        library.mkdir()
+        clip = library / "plano.mp4"
+        sh("ffmpeg", "-y", "-v", "error", "-f", "lavfi",
+           "-i", "testsrc=size=320x568:rate=30:duration=6", "-c:v", "libx264",
+           "-preset", "ultrafast", "-pix_fmt", "yuv420p", str(clip))
+
+        original = common.ASSETS_CONFIG
+        try:
+            common.ASSETS_CONFIG = tmp / "assets.json"
+            common.write_json(common.ASSETS_CONFIG, {"dir": library.as_posix()})
+
+            items = [{"t": 4.0, "dur": 3.0, "file": "plano.mp4", "start": 1.0,
+                      "grade": "eq=brightness=-0.05"}]
+            inputs, chunks, label = cutaway_graph(items, 1, "[graded]", 1080, 1920, 30)
+            graph = ";".join(chunks)
+
+            assert "-ss" in inputs and "1.000" in inputs, f"no recorta el origen: {inputs}"
+            assert "-t" in inputs and "3.000" in inputs, "no limita la duración"
+            assert "overlay=0:0" in graph, "el clip no va a pantalla completa"
+            assert "between(t,4.0,7.000)" in graph, f"ventana mal puesta: {graph}"
+            assert "eq=brightness=-0.05" in graph, "ignora el igualado de color"
+            assert "scale=1080:1920" in graph, "no se lleva al tamaño de salida"
+            assert ":a]" not in graph and "amix" not in graph, \
+                "el clip no debe aportar audio: el del vídeo original sigue corriendo"
+
+            # pedir más metraje del que queda tiene que fallar, no salir en negro
+            too_long = [{"t": 0.0, "dur": 9.0, "file": "plano.mp4", "start": 2.0}]
+            failed = False
+            try:
+                cutaway_graph(too_long, 1, "[graded]", 1080, 1920, 30)
+            except SystemExit as error:
+                failed = "quedan" in str(error)
+            assert failed, "acepta más duración de la que tiene el clip"
+        finally:
+            common.ASSETS_CONFIG = original
+
+    # dos a la vez, o uno sobre un retroceso, es un lío que hay que rechazar
+    for items, effects, motivo in (
+        ([{"t": 1.0, "dur": 3.0, "file": "a"}, {"t": 3.0, "dur": 2.0, "file": "b"}],
+         [], "solapados"),
+        ([{"t": 10.5, "dur": 2.0, "file": "a"}],
+         [{"t": 10.0, "type": "pullback", "dur": 3.0}], "sobre un pullback"),
+    ):
+        try:
+            check_cutaways(items, effects)
+            raise AssertionError(f"acepta cutaways {motivo}")
+        except SystemExit:
+            pass
+    print("ok  planos de recurso (tapan la imagen, no el audio)")
+
+
 def test_pullback_geometry():
     """El vídeo se encoge a lo pedido, y en reposo el encuadre es 1:1.
 
@@ -472,6 +532,7 @@ def main():
                                         ("in.mp4", "cuts.json", "words.json", "subs.ass", "out.mp4"))
 
         test_version_is_consistent()
+        test_cutaways()
         test_pullback_geometry()
         test_transitions_keep_colour()
         test_animated_cards_wiring()

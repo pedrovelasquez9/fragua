@@ -226,6 +226,19 @@ Nunca te tapa la cara ni ocupa la pantalla: sólo esquinas, con el tamaño topad
 al 40% del ancho y una imagen cada ocho segundos como máximo. El sonido de
 entrada, si se lo pones, cede ante tu voz para no competir con lo que dices.
 
+### Tus propios clips como planos de recurso
+
+Mete clips de vídeo en tu carpeta de assets y la edición puede cortar a ellos, a
+pantalla completa, mientras tu voz sigue sonando por debajo. Eso es lo que hace
+que se lea como una segunda cámara y no como una interrupción.
+
+Basta con decirlo: `usa los clips de mi carpeta de assets en algún momento`. El
+agente elige los tramos donde tu cara no aporta —una explicación larga, una
+enumeración, una idea abstracta— y nunca sobre el gancho ni sobre el remate.
+Además iguala el color de cada clip al tuyo, porque material de otra cámara casi
+nunca cae en el mismo brillo, y sin eso se lee como otro vídeo en vez de como
+otro plano.
+
 ### Cambios de plano y transiciones
 
 Donde cambia el tema, el vídeo se encoge sobre negro y en el hueco que se abre

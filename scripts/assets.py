@@ -33,6 +33,7 @@ DEFAULT_DIR = ROOT / "assets"
 
 AUDIO_EXT = {".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac"}
 IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
+VIDEO_EXT = {".mp4", ".mov", ".mkv", ".webm", ".m4v"}
 FONT_EXT = {".ttf", ".otf", ".ttc"}
 
 # Un audio por debajo de esto es un efecto puntual; por encima, música de fondo.
@@ -49,6 +50,19 @@ def probe_seconds(path):
         return round(float(result.stdout.strip()), 2)
     except (ValueError, OSError, subprocess.SubprocessError):
         return None
+
+
+def probe_frame(path):
+    """(width, height) of a video's first stream, or (None, None)."""
+    try:
+        result = subprocess.run(
+            ["ffprobe", "-v", "error", "-select_streams", "v:0",
+             "-show_entries", "stream=width,height", "-of", "csv=p=0", str(path)],
+            capture_output=True, text=True, timeout=30)
+        width, _, height = result.stdout.strip().partition(",")
+        return int(width), int(height)
+    except (ValueError, OSError, subprocess.SubprocessError):
+        return None, None
 
 
 def image_info(path):
@@ -132,6 +146,13 @@ def classify(path, root):
         return kind, {"width": width, "height": height, "alpha": alpha,
                       "keyword": keyword_from(path)}
 
+    if suffix in VIDEO_EXT:
+        # Planos de recurso: se usan como `cutaways` en plan.json, tapando la
+        # imagen mientras el audio original sigue corriendo. Su propio audio no
+        # se usa, así que aquí sólo importan duración y tamaño.
+        width, height = probe_frame(path)
+        return "clips", {"seconds": probe_seconds(path), "width": width, "height": height}
+
     if suffix in FONT_EXT:
         return "fonts", {"family": font_family(path)}
 
@@ -140,7 +161,8 @@ def classify(path, root):
 
 def index_directory(root):
     """Walk the library and describe everything usable in it."""
-    catalogue = {"music": [], "sfx": [], "stickers": [], "images": [], "fonts": []}
+    catalogue = {"music": [], "sfx": [], "clips": [], "stickers": [],
+                 "images": [], "fonts": []}
     for path in sorted(root.rglob("*")):
         if not path.is_file() or path.name.startswith("."):
             continue
@@ -174,6 +196,8 @@ def summarise(catalogue, root):
             detail = ""
             if "seconds" in entry and entry["seconds"]:
                 detail = f"{entry['seconds']}s"
+                if entry.get("width"):
+                    detail += f"  {entry['width']}x{entry['height']}"
             elif entry.get("width"):
                 detail = f"{entry['width']}x{entry['height']}"
                 detail += " con alpha" if entry.get("alpha") else ""

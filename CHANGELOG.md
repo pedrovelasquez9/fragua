@@ -8,6 +8,28 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.10.0 — 2026-08-21
+
+### Added
+- **Cutaways.** Video clips of your own now cut in over the picture at full
+  screen while the original audio carries on underneath — which is what makes
+  them read as a second camera rather than an interruption. They land after the
+  colour grade, so each clip keeps its own look, and before the captions, so the
+  words keep running over them.
+- Each cutaway takes a `grade` of its own for matching. Footage from another
+  camera rarely lands on the same brightness: measured on a real set of three,
+  the speaker sat at 58 brightness and 14 saturation while the clips came in at
+  47/10, 86/19 and 93/34. Unmatched, all three read as a different video.
+- The asset library catalogues video files under `clips`, with duration and
+  size, so the agent knows they are there.
+
+### Notes
+- Two cutaways at once, one landing on a `pullback`, or one asking for more
+  footage than the file holds are all refused with the timings rather than
+  rendered as something wrong.
+
+---
+
 ## 1.9.3 — 2026-08-19
 
 ### Fixed

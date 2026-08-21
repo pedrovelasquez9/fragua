@@ -222,6 +222,19 @@ It never covers your face and never fills the screen — corner only, capped at
 40% of the width, one every eight seconds at most. The entry sound, if you add
 one, ducks under your voice so it never competes with what you are saying.
 
+### Your own footage as cutaways
+
+Drop video clips into your assets folder and the edit can cut away to them —
+full screen, while your voice carries on underneath. That is what makes it read
+as a second camera rather than an interruption.
+
+Just say so: `use the clips in my assets folder at a few points`. The agent
+picks the moments where your face adds nothing — a long explanation, a list, an
+abstract idea — and never over your hook or your punchline. It also matches each
+clip's colour to yours, because footage from another camera rarely lands on the
+same brightness, and without that it reads as a different video rather than a
+different angle.
+
 ### Shot changes and transitions
 
 Where the subject changes, the video shrinks onto black and a headline animates

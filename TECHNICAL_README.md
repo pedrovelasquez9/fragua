@@ -254,6 +254,11 @@ del vídeo ya cortado, que es la que ves al reproducir el resultado.
     {"t": 0.0,  "type": "letterbox",  "dur": 2.50, "amount": 0.12}
   ],
 
+  "cutaways": [
+    {"t": 41.0, "dur": 3.6, "file": "clip 2.mp4", "start": 1.2,
+     "grade": "eq=brightness=-0.075:saturation=0.80"}
+  ],
+
   "cards": [
     {"t": 0.0,  "dur": 3.6, "y_frac": 0.07, "kind": "chip",
      "title": "El gancho en una línea"},
@@ -378,6 +383,24 @@ Los dos mueven el brillo **y la saturación a la vez**. Mover la luma sin tocar 
 croma deja píxeles casi negros conservando toda su amplitud de color: en vez de
 negro sale suciedad de color. El `whip_pan` desenfoca sólo la luma, sólo en
 horizontal y sólo en el tramo central del barrido, por lo mismo.
+
+### Planos de recurso
+
+| Clave | Para qué |
+|---|---|
+| `t`, `dur` | Cuándo tapa la imagen y cuánto, en la línea de salida |
+| `file` | Ruta relativa a la biblioteca de assets |
+| `start` | Desde dónde se lee el clip (0 por defecto) |
+| `grade` | Cadena de filtros para igualar su color al del vídeo |
+
+El clip se lleva a la resolución de salida con lanczos y un `unsharp` suave —el
+`polish` del vídeo principal queda antes en la cadena y no le llega— y se compone
+**después del color y antes de los subtítulos**: conserva su propio look y las
+palabras siguen corriendo por encima. **Su audio no se usa**: el del vídeo
+original sigue sonando, que es lo que lo hace leerse como otra cámara.
+
+`render.py` rechaza dos cutaways solapados, uno que caiga sobre un `pullback`, y
+uno que pida más metraje del que queda en el archivo.
 
 ### Cards
 
