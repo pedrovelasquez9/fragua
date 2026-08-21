@@ -232,6 +232,10 @@ Mete clips de vídeo en tu carpeta de assets y la edición puede cortar a ellos,
 pantalla completa, mientras tu voz sigue sonando por debajo. Eso es lo que hace
 que se lea como una segunda cámara y no como una interrupción.
 
+Entran y salen con un fundido, y caen en las pausas entre frases en vez de en
+mitad de una palabra: un plano de recurso que aparece mientras se pronuncia una
+sílaba se nota aunque sea el plano correcto.
+
 Basta con decirlo: `usa los clips de mi carpeta de assets en algún momento`. El
 agente elige los tramos donde tu cara no aporta —una explicación larga, una
 enumeración, una idea abstracta— y nunca sobre el gancho ni sobre el remate.

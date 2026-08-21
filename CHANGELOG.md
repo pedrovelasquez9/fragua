@@ -8,6 +8,30 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.11.0 — 2026-08-21
+
+### Added
+- Cutaways fade in and out instead of cutting hard, and the guidance now says to
+  land them in the real pauses between phrases — the gaps over a quarter of a
+  second in `words.json`. A cutaway that arrives mid-syllable is noticed even
+  when it is the right shot; the same shot arriving in the breath between two
+  sentences is not.
+- **`--no-polish`**: no denoise, no sharpening. Together with `--no-grade` it
+  leaves the recorded pixel untouched — the chain collapses to
+  `[prepolish]null[polished]` and the only things acting on the image are the
+  crop, the framing of the effects, and whatever is composited on top.
+
+### Notes
+- Without polish the cutaways are not sharpened either, so a clip of lower
+  resolution than the output arrives softer. That is the cost of touching
+  nothing.
+- Matching a cutaway's colour is still needed when filters are off: it is not a
+  look applied to the recording, it is what makes footage from another camera
+  belong to the same video. The reference is darker without a grade, so the
+  numbers have to be measured again rather than reused.
+
+---
+
 ## 1.10.0 — 2026-08-21
 
 ### Added

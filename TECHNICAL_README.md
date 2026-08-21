@@ -224,7 +224,14 @@ python scripts/render.py entrada.mp4 \
 | Opción | Para qué |
 |---|---|
 | `--preset` | `tiktok`, `reels`, `youtube_short` o `youtube_long` |
-| `--no-grade` | Salta el color, deja la imagen tal cual |
+| `--no-grade` | Salta el color cinematográfico |
+| `--no-polish` | Salta el denoise y el afilado enmascarado |
+
+Los dos juntos dejan el píxel de la grabación intacto: la cadena se queda en
+`[prepolish]null[polished]` y sobre la imagen sólo actúan el recorte, el
+encuadre de los efectos y lo que se compone encima. Los cutaways tampoco se
+afilan entonces, así que un clip de menos resolución que la salida entra más
+blando — es el precio de no tocar nada.
 | `--print-cmd` | Imprime el comando de ffmpeg antes de lanzarlo. Por aquí se empieza a depurar |
 
 Todo es opcional salvo `--cuts`: sin subtítulos, plan ni cards obtienes el corte

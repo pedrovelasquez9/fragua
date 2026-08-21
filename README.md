@@ -228,6 +228,10 @@ Drop video clips into your assets folder and the edit can cut away to them —
 full screen, while your voice carries on underneath. That is what makes it read
 as a second camera rather than an interruption.
 
+They fade in and out, and land in the pauses between phrases rather than
+mid-word — a cutaway that appears while a syllable is being spoken is noticed
+even when it is the right shot.
+
 Just say so: `use the clips in my assets folder at a few points`. The agent
 picks the moments where your face adds nothing — a long explanation, a list, an
 abstract idea — and never over your hook or your punchline. It also matches each
