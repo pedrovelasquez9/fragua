@@ -57,6 +57,17 @@ python scripts/analyze.py entrada.mp4 -o cuts.json
 
 Sale `cuts.json` con los segmentos que se conservan. Ajusta si hace falta:
 
+**Los finales de palabra se rescatan solos.** El corte se decide a
+`--threshold`, pero la cola de una consonante sigue sonando por debajo de ese
+nivel: si el segmento acaba ahí, se oye «có—» en vez de «código». Una segunda
+pasada a −42 dB dice dónde para el sonido de verdad y alarga cada final hasta
+ahí, sin llegar nunca a pisar el segmento siguiente. `analyze.py` te dice
+cuántos ha rescatado.
+
+Y el último segmento se queda además con 0.45 s de silencio del original,
+porque `render.py` cierra con un fundido de audio de 0.35 s: sin ese hueco, el
+fundido se come la última palabra.
+
 `--pad-in` (0.06) y `--pad-out` (0.22) son **asimétricos a propósito**: las colas
 de consonante y el decaimiento de la voz se prolongan más allá de donde el
 detector declara silencio, así que recortar el final de un segmento se oye mucho
@@ -380,6 +391,13 @@ para que no se cuele una transcripción del original.
 
 Repite estos dos comandos cada vez que toques `cuts.json`. Es la única parte del
 flujo que hay que rehacer, y en un vídeo ya recortado va más rápido que la primera.
+
+**Sobre una grabación de pantalla, encógelos y bájalos.** El sitio por defecto
+cae justo encima del contenido que se está enseñando, y dos textos superpuestos
+no se leen ninguno. `--fontsize 44 --margin-v 250 --max-chars 40` deja una línea
+compacta abajo; mide antes dónde acaba el contenido de la interfaz y dónde
+empieza la zona segura de la plataforma, porque el hueco limpio rara vez existe
+y hay que elegir el menos malo.
 
 Revisa la transcripción antes de renderizar: whisper confunde palabras poco
 frecuentes, nombres propios y muletillas personales. Corrígelas en `words.json`,
@@ -739,7 +757,7 @@ opacidad que le pongas; si la quieres visible, súbele también la luminosidad.
 | se ve pixelado | `crf` alto, o `hqdn3d` duplicado en `"grade"` |
 | pixelado en camiseta o zonas negras | el afilado entra en las sombras: sube `SHARPEN_FLOOR` |
 | medir artefactos da cifras absurdas | el recorte pilla la caja del subtítulo; mide por encima de `margin_v` |
-| el audio se corta sobre la última palabra | sube `--pad-out`, o alarga el último segmento a mano |
+| el audio se corta sobre la última palabra | no debería pasar: `analyze.py` alarga los finales solo. Si pasa, mira si el segmento lo editaste tú a mano |
 | subtítulos diminutos tras cambiar de fuente | `fontsize` no recalibrado; cada familia tiene otra altura de mayúscula |
 | la fuente sale fina pese a `bold: -1` | es variable; pide la instancia (`Roboto Black`), libass no sintetiza negrita |
 | no se ve la caja de fondo | es casi negra sobre fondo oscuro; sube luminosidad, no sólo opacidad |

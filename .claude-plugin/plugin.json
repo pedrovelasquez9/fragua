@@ -1,7 +1,7 @@
 {
   "name": "fragua",
   "description": "Edita vídeo vertical para TikTok, Reels y Shorts: quita silencios, quema subtítulos karaoke, añade cards gráficas y redacta el copy de publicación. Todo en local, sin API keys.",
-  "version": "1.11.0",
+  "version": "1.12.0",
   "author": {
     "name": "Pedro Plasencia - Programación en español",
     "url": "https://programacion-es.dev/redes"

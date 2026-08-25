@@ -139,6 +139,14 @@ def parse_args():
     parser.add_argument("--plan", default=None, help="plan.json, to know when cards hide captions")
     parser.add_argument("--max-chars", type=int, default=None,
                         help="override the preset's line length")
+    parser.add_argument("--fontsize", type=int, default=None,
+                        help="tamaño del subtítulo en px. Bájalo en grabaciones de "
+                             "pantalla: un subtítulo grande sobre una interfaz tapa "
+                             "justo lo que se está enseñando")
+    parser.add_argument("--margin-v", type=int, default=None,
+                        help="altura del subtítulo sobre el borde inferior, en px. "
+                             "Bájalo en grabaciones de pantalla: el sitio por defecto "
+                             "cae encima del contenido que se está enseñando")
     return parser.parse_args()
 
 
@@ -159,6 +167,13 @@ def main():
             "plan.json usa 'text', que ya no existe: los títulos son cards.\n"
             "Conviértelo a  {\"kind\": \"chip\", \"title\": \"...\", \"t\": .., \"dur\": ..}  en \"cards\".")
 
+    if args.margin_v is not None:
+        style["margin_v"] = args.margin_v
+    if args.fontsize is not None:
+        style["fontsize"] = args.fontsize
+        # El contorno se dimensiona con la fuente; si no, un texto pequeño queda
+        # con un borde desproporcionado que ocupa más que las letras.
+        style["outline"] = max(4, round(style["outline"] * args.fontsize / 56))
     geometry = {"center_x": platform["width"] // 2,
                 "caption_y": platform["height"] - style["margin_v"]}
 

@@ -8,6 +8,29 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.12.0 — 2026-08-25
+
+### Fixed
+- **Word tails were being clipped at every cut, not just the last one.** The cut
+  is decided at the silence threshold, but the tail of a consonant keeps
+  sounding below it — end the segment there and you hear «có—» instead of
+  «código». A second, more sensitive pass now finds where the sound actually
+  stops and extends each end to meet it, never past the next segment. On two
+  real recordings it rescued six and seven endings.
+- The render closes with a 0.35 s audio fade, and when the last segment ended
+  exactly where the voice did, that fade swallowed the final word. The last
+  segment now keeps enough of the original silence for the fade to land on
+  nothing.
+
+### Added
+- `subtitles.py` takes `--fontsize` and `--margin-v` to override the preset for
+  one render. Both exist for screen recordings, where the default position lands
+  on top of the interface being demonstrated and neither text can be read.
+  Lowering the size rescales the outline with it, so small captions do not end
+  up with a border wider than the letters.
+
+---
+
 ## 1.11.0 — 2026-08-21
 
 ### Added

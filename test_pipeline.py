@@ -469,6 +469,29 @@ def test_silence_at_the_head():
 
     # y con audio desde el primer fotograma no se pierde nada
     assert invert([(5.0, 6.0)], 10.0, 0.06, 0.22, 0.12)[0]["start"] == 0.0
+
+    # El fundido de salida del render dura 0.35 s. Si el último segmento acaba
+    # donde acaba la voz, se come la última palabra: hay que dejarle silencio.
+    from render import TAIL_FADE
+    cola = invert([(0.0, 3.87), (7.94, 9.5)], 10.0, 0.06, 0.22, 0.12)
+    holgura = cola[-1]["end"] - (7.94 + 0.22)
+    assert holgura >= TAIL_FADE, f"el fundido se comerá la última palabra: {holgura:.2f}s"
+    assert cola[-1]["end"] <= 10.0, "se sale del vídeo"
+
+    # Si la palabra sigue sonando por debajo del umbral de corte, el final se
+    # alarga hasta el silencio de verdad — pero nunca hasta pisar el siguiente.
+    from analyze import snap_ends
+    trozos = [{"start": 0.0, "end": 2.0, "speed": 1.0},
+              {"start": 5.0, "end": 8.0, "speed": 1.0}]
+    snap_ends(trozos, [(2.3, 4.9), (8.4, 9.9)], 10.0)
+    assert trozos[0]["end"] == 2.3, f"no rescató la cola: {trozos[0]}"
+    assert trozos[1]["end"] == 8.4, f"no rescató la última: {trozos[1]}"
+    assert trozos[0]["end"] <= trozos[1]["start"], "se solapa con el siguiente"
+
+    # y un final que ya cae en silencio se queda donde está
+    quieto = [{"start": 0.0, "end": 3.0, "speed": 1.0}]
+    snap_ends(quieto, [(2.5, 4.0)], 10.0)
+    assert quieto[0]["end"] == 3.0, "alarga un final que ya estaba bien"
     print("ok  silencio inicial (no fabrica un segmento mudo)")
 
 

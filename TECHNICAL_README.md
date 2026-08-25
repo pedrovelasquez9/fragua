@@ -152,6 +152,13 @@ Produce `cuts.json` con los segmentos que se conservan, en tiempo del original.
 | `--min-silence` | `0.35` | Silencio más corto que se recorta. `0.25` para ritmo agresivo |
 | `--pad-in` | `0.06` | Aire antes de que empiece la voz |
 | `--pad-out` | `0.22` | Aire después. **Más alto a propósito**: las colas de consonante se oyen si las cortas |
+
+Después de invertir los silencios, `analyze.py` hace una **segunda pasada a
+−42 dB** para saber dónde para el sonido de verdad y alarga hasta ahí cualquier
+final que cayera con la palabra todavía sonando, sin pisar el segmento
+siguiente. Imprime cuántos ha rescatado. Y al último le deja 0.45 s de silencio
+del original, que es donde tiene que caer el fundido de salida de `render.py`
+(0.35 s) para no comerse la última palabra.
 | `--min-keep` | `0.12` | Descarta segmentos más cortos que esto |
 
 ### Paso 2 · Transcribir para leer
@@ -508,6 +515,13 @@ Cuatro presets: `youtube_long` (1920×1080), `tiktok`, `reels` y `youtube_short`
 | `subtitle.outline` | Con `border_style` 3 es el **relleno interior**, no el grosor |
 | `subtitle.primary` / `secondary` | Color de palabra dicha / pendiente en el barrido karaoke |
 | `subtitle.margin_v` | Distancia al borde inferior. En vertical, 380–480 evita la UI de la app |
+
+`subtitles.py` acepta `--fontsize`, `--margin-v` y `--max-chars` para saltarse el
+preset sin tocarlo. Se usan sobre todo en grabaciones de pantalla, donde el sitio
+por defecto cae encima de lo que se está enseñando: `--fontsize 44 --margin-v 250
+--max-chars 40` deja una línea compacta abajo. Al bajar la fuente, el contorno se
+reescala con ella, porque si no un texto pequeño queda con un borde que ocupa más
+que las letras.
 | `card.accent` | Un solo color de acento gobierna texto, borde y cabecera de todas las cards |
 | `card.base_size` | Tamaño base del que derivan título, cuerpo y nodos |
 
@@ -577,7 +591,7 @@ de shell.
 | Se ve lavado | La curva no cierra el techo; baja el último punto a `1/0.96` |
 | La fuente sale fina pese a `bold: -1` | Es variable; pide la instancia (`Roboto Black`) |
 | No se ve la caja de fondo | Es casi negra sobre fondo oscuro: sube luminosidad, no solo opacidad |
-| El audio se corta sobre la última palabra | Sube `--pad-out` o alarga el último segmento a mano |
+| El audio se corta sobre la última palabra | No debería pasar: los finales se alargan solos. Si ocurre, revisa si editaste ese segmento a mano |
 
 Lo que no se arregla en post: si grabas a 30 fps con obturador lento, los gestos
 rápidos salen movidos en el original.

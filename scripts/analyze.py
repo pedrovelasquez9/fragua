@@ -13,6 +13,16 @@ from common import probe_duration, write_json
 
 SILENCE_PATTERN = re.compile(r"silence_(start|end): (-?[\d.]+)")
 
+# Sitio que se le deja al fundido de salida de render.py (TAIL_FADE, 0.35 s)
+# para que caiga sobre silencio y no sobre la última palabra.
+TAIL_ROOM = 0.45
+
+# El corte se decide a --threshold, pero la cola de una consonante sigue sonando
+# por debajo de ese nivel. Si el segmento acaba ahí, se oye «có—» en vez de
+# «código». Se busca el silencio real a este otro umbral y se alarga hasta él.
+TAIL_FLOOR_DB = -42
+TAIL_REACH = 0.6
+
 
 def detect_silences(video, threshold_db, min_silence):
     """Silent stretches as [(start, end), ...] in source time."""
@@ -50,6 +60,29 @@ def invert(silences, duration, pad_in, pad_out, min_keep):
         cursor = max(cursor, silence_end - pad_in)
     if duration - cursor >= min_keep:
         keep.append({"start": round(cursor, 3), "end": round(duration, 3), "speed": 1.0})
+
+    # El render cierra con un fundido de audio de 0.35 s. Si el último segmento
+    # acaba justo donde acaba la voz, ese fundido se come la última palabra: se
+    # oye «que tengas buen có—». Aquí se le deja silencio del original para que
+    # el fundido tenga dónde caer, sin alargar nada que se oiga.
+    if keep and keep[-1]["end"] < duration:
+        keep[-1]["end"] = round(min(duration, keep[-1]["end"] + TAIL_ROOM), 3)
+    return keep
+
+
+def snap_ends(keep, quiet, duration):
+    """Alarga el final de cada segmento hasta que el sonido ha parado de verdad.
+
+    `quiet` son los silencios detectados a un umbral más bajo que el del corte.
+    Si el final de un segmento cae antes de que empiece uno de esos silencios,
+    es que la palabra todavía está sonando y se está cortando por la mitad.
+    """
+    for index, segment in enumerate(keep):
+        ceiling = keep[index + 1]["start"] if index + 1 < len(keep) else duration
+        for quiet_start, _ in quiet:
+            if segment["end"] < quiet_start <= segment["end"] + TAIL_REACH:
+                segment["end"] = round(min(quiet_start, ceiling), 3)
+                break
     return keep
 
 
@@ -79,6 +112,16 @@ def main():
 
     if not segments:
         raise SystemExit("todo el vídeo se detectó como silencio — baja --threshold (p.ej. -40)")
+
+    # Segunda pasada, más sensible: dice dónde para el sonido de verdad, no dónde
+    # el detector de corte deja de considerarlo voz.
+    quiet = detect_silences(args.input, TAIL_FLOOR_DB, 0.08)
+    before = [s["end"] for s in segments]
+    segments = snap_ends(segments, quiet, duration)
+    rescued = sum(1 for old, s in zip(before, segments) if s["end"] > old + 0.005)
+    if rescued:
+        print(f"  {rescued} finales alargados hasta el silencio real "
+              f"(la palabra seguía sonando)")
 
     kept = sum(segment["end"] - segment["start"] for segment in segments)
     write_json(args.output, {
