@@ -292,22 +292,21 @@ off. Upload it to YouTube and the text becomes searchable.
 
 ### Long videos come back with thumbnails
 
-Not the images — the **prompts**. Three of them, one per title, ready to paste
-into an image generator, because the thumbnail is what decides whether the video
-gets opened at all; the title only confirms a decision the picture already made.
+Finished ones. Three, one per title, ready to upload. And with **your** face, not
+one that resembles it.
 
-They are three different ideas rather than three versions of one, so there is
-actually something to test: the problem, the before-and-after, and the concrete
-object the video is about.
+That last part is why it works. Hand your photo to an image generator and it does
+not paste it: it does identity transfer and returns someone similar, which on a
+personal channel is noticeable. Here the generator only makes the background,
+with no people in it, and your face is cut out of your own footage — identical,
+because it is a frame of you rather than an interpretation.
 
-Each prompt produces the **finished** thumbnail — your own face and the text
-included — so it goes straight to YouTube without opening an editor. They come
-with a still pulled from your own video for you to attach as the face reference,
-because an invented face on a personal channel reads as someone else's video.
+The headline is drawn here too, in the channel's typeface, so accents and ñ come
+out as letters instead of scribbles.
 
-The wording is chosen so the generated text survives: models still mangle «DÍA»
-and «AÑO», so the headline is picked from words that carry no accent and no ñ.
-That is a constraint on which words you use, not a limitation to work around.
+Cutting out needs `rembg`, which is not installed by default because its model is
+a gigabyte: `pip install rembg onnxruntime`. Without it you still get the
+backgrounds and the headlines, and you do the compositing yourself.
 
 ### Shot changes and transitions
 

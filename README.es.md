@@ -296,22 +296,21 @@ quitar. Súbelo a YouTube y lo que dices se vuelve buscable.
 
 ### Los vídeos largos vienen con miniaturas
 
-No las imágenes: los **prompts**. Tres, uno por cada título, listos para pegar en
-un generador, porque la miniatura es lo que decide si el vídeo se abre siquiera;
-el título sólo confirma la decisión que ya tomó la imagen.
+Terminadas, tres, una por cada título, listas para subir. Y con **tu cara**, no
+con una que se le parece.
 
-Son tres ideas distintas y no tres versiones de la misma, para que haya algo que
-testear de verdad: el problema, el antes y el después, y el objeto concreto del
-que va el vídeo.
+Eso último es el motivo de que funcione. Si le das tu foto a un generador de
+imagen, no la pega: hace transferencia de identidad y devuelve a alguien
+parecido. En un canal personal se nota. Aquí el generador hace sólo el fondo, sin
+personas, y la cara se recorta de tu propia grabación — sale idéntica porque es
+un fotograma tuyo, no una interpretación.
 
-Cada prompt produce la miniatura **terminada** —tu cara y el texto incluidos—,
-lista para subir a YouTube sin abrir un editor. Vienen con un fotograma sacado de
-tu propio vídeo para que lo adjuntes como referencia de la cara, porque una cara
-inventada en un canal personal se lee como el vídeo de otro.
+El rótulo también se dibuja aquí, con la tipografía del canal, así que las tildes
+y la ñ salen bien en vez de convertirse en garabatos.
 
-El rótulo se elige para que el texto generado aguante: los modelos siguen
-fallando en «DÍA» y en «AÑO», así que se busca un titular sin tildes y sin ñ. Es
-una restricción sobre qué palabras eliges, no algo que haya que rodear.
+Necesita `rembg` para recortar, que no viene instalado porque su modelo pesa un
+giga: `pip install rembg onnxruntime`. Sin él tendrás los fondos y los rótulos, y
+el montaje lo haces tú.
 
 ### Cambios de plano y transiciones
 

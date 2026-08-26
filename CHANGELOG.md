@@ -8,6 +8,39 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.16.0 — 2026-08-26
+
+Las dos versiones anteriores daban prompts de miniatura. Probados contra la
+realidad, no funcionan: **el generador cambia la cara**. No es cómo esté escrito
+el prompt —con una foto de referencia esos modelos hacen transferencia de
+identidad y devuelven a alguien *parecido*—, así que no hay redacción que lo
+arregle. Cambia el reparto del trabajo.
+
+### Added
+- **`thumbnail.py`**: la miniatura terminada, 1280×720, a partir del fondo
+  generado, la persona recortada de su propia grabación y el rótulo. La cara sale
+  idéntica porque **es un fotograma del vídeo**, no una interpretación.
+- El rótulo se parte en hasta tres líneas y se escala al mayor tamaño que quepa:
+  una miniatura se lee a 168×94 px o no se lee. Se apoya en un degradado lateral
+  y no en una caja, porque una caja negra detrás del texto se ve como una caja
+  negra. Lo dibuja Pillow con la tipografía del canal, así que las tildes y la ñ
+  salen como letras.
+- `--lift` sube la cara sobre el fondo. Este material se graba oscuro a propósito
+  —YAVG por debajo de 50 es lo normal con contraluz— y lo que en el vídeo es
+  ambiente, en una miniatura pequeña es una cara que no se distingue.
+
+### Changed
+- Los prompts de miniatura pasan a ser **prompts de fondo**: sin personas, sin
+  texto, y con el lado de la persona vacío. Lo que se entrega ya no es un prompt
+  sino la miniatura montada, con su comando.
+
+### Notes
+- El recorte necesita `rembg` (`pip install rembg onnxruntime`), opcional porque
+  su modelo pesa un giga, como Remotion. Sin él se entregan los fondos y los
+  rótulos y el montaje lo hace el usuario.
+
+---
+
 ## 1.15.1 — 2026-08-26
 
 ### Changed
