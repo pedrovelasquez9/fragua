@@ -290,6 +290,22 @@ Long videos also come with a subtitle file rather than captions burnt into the
 picture — on a wide screen those cover the code, and viewers cannot turn them
 off. Upload it to YouTube and the text becomes searchable.
 
+### Long videos come back with thumbnails
+
+Not the images — the **prompts**. Three of them, one per title, ready to paste
+into an image generator, because the thumbnail is what decides whether the video
+gets opened at all; the title only confirms a decision the picture already made.
+
+They are three different ideas rather than three versions of one, so there is
+actually something to test: the problem, the before-and-after, and the concrete
+object the video is about.
+
+Each prompt already carries the things that go wrong otherwise — no text in the
+generated image, because models still mangle accents and you want your own
+typography anyway; a free side to composite your real photo onto, because an
+invented face on a personal channel reads as someone else's video; and your own
+set's palette, taken from your footage rather than from the generator's taste.
+
 ### Shot changes and transitions
 
 Where the subject changes, the video shrinks onto black and a headline animates
