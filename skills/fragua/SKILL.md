@@ -32,9 +32,8 @@ renderiza nada hasta el final, así que iterar es gratis.
 
 ```
 vídeo → analyze.py    → cuts.json    (segmentos a conservar, vía silencedetect)
-      → transcribe.py → draft.json   (para leer y decidir el montaje)
-      → [editas cuts.json y escribes plan.json]
-      → transcribe.py --cuts cuts.json → words.json   (transcribe el audio YA cortado)
+      → transcribe.py --cuts cuts.json → words.json + digest.txt
+      → [lees digest.txt, editas cuts.json si hace falta y escribes plan.json]
       → assets.py --auto → reindexa la biblioteca (SIEMPRE, antes de plan.json)
       → cards.py      → cards/*.png  (las anotaciones, rasterizadas)
       → subtitles.py  → subs.ass     (karaoke, ya en la línea de tiempo final)
@@ -80,20 +79,36 @@ más que recortar el principio. Si una frase suena truncada, sube `--pad-out`.
   un ritmo agresivo tipo TikTok; súbelo a `0.6` para vídeo largo que respire.
 - `--min-keep 0.12` — descarta segmentos conservados más cortos que esto.
 
-### 2. Transcribir para leer
+### 2. Transcribir, una sola vez
 
 ```bash
-python scripts/transcribe.py entrada.mp4 -o draft.json --lang es
+python scripts/transcribe.py entrada.mp4 --cuts cuts.json -o words.json \
+       --digest digest.txt --lang es
 ```
 
-Esta pasada es **solo para que tú decidas el montaje**. Timestamps en tiempo del
-original. Tarda aproximadamente lo que dura el vídeo en CPU.
+`--cuts` monta el audio ya recortado y transcribe **eso**, así que los timestamps
+nacen en la línea de tiempo de salida: no hay nada que remapear y la sincronía no
+puede desviarse. El mismo `words.json` sirve para decidir el montaje y para los
+subtítulos; no hay una segunda pasada sobre el original.
 
-**Comprueba siempre que el último timestamp cabe en la duración del vídeo.**
-whisper.cpp deriva en audio largo, sobre todo con puerta de ruido agresiva: se
-ha visto un borrador situando palabras en el segundo 108 de un vídeo de 80. Si
-deriva, recorta el tramo que te interesa y transcríbelo suelto — en clips
-cortos no ocurre — y súmale el desplazamiento:
+`--digest` escribe además `digest.txt`, que es **lo que tienes que leer**. Es la
+transcripción frase a frase con los dos tiempos: el de salida, para `plan.json`,
+y el del original, para `cuts.json`. Medido en un vídeo de 17 minutos:
+`words.json` son 294 KB de andamiaje JSON y el digest son 21 KB con exactamente
+las mismas palabras.
+
+```
+# [salida | original]
+[0:20 | 0:23] Pero ¿por qué hago esto? Generalmente cuando tú entras al mundo…
+```
+
+Tarda aproximadamente lo que dura el vídeo cortado, en CPU.
+
+**Comprueba que el último timestamp cabe en la duración de salida.** whisper.cpp
+deriva en audio largo, sobre todo con puerta de ruido agresiva: se ha visto una
+transcripción situando palabras en el segundo 108 de un vídeo de 80. Si deriva,
+recorta el tramo que te interesa y transcríbelo suelto — en clips cortos no
+ocurre — y súmale el desplazamiento:
 
 ```bash
 ffmpeg -y -ss 58 -i entrada.mp4 -c copy cola.mp4
@@ -103,12 +118,18 @@ python scripts/transcribe.py cola.mp4 -o cola.json --lang es   # tiempos +58
 También puede **saltarse tramos enteros** donde repites tomas casi idénticas.
 Si un trozo de la transcripción falta, mira ahí: suele ser eso.
 
-Los subtítulos NO salen de aquí: se generan en el paso 4, después de cortar.
+**Si editas `cuts.json`, repite este comando.** Es la única parte del flujo que
+hay que rehacer, y sobre un vídeo ya recortado va más rápido que la primera vez.
 
 ### 3. Decidir la edición (esto lo haces tú)
 
-Lee `words.json`. Es la transcripción completa con tiempos: ahí está todo lo que
-necesitas para editar sin ver el vídeo.
+Lee `digest.txt`. Es la transcripción completa frase a frase: ahí está todo lo
+que necesitas para editar sin ver el vídeo. `words.json` es la misma información
+palabra a palabra, y sirve para `subtitles.py`, no para leerla tú.
+
+Los tiempos de `digest.txt` vienen en pares: el de la izquierda es el del montaje
+y va a `plan.json`; el de la derecha es el de la grabación y es el que hace falta
+para borrar un segmento de `cuts.json`.
 
 **Para un corto**, busca el fragmento con mayor densidad de gancho: una
 afirmación fuerte, una cifra concreta, una contradicción, una historia con
@@ -155,10 +176,11 @@ El look correcto depende del material, no de la plataforma, así que vive aquí 
 no en `presets.json`. Mide antes de decidir:
 
 ```bash
-ffmpeg -ss 30 -i entrada.mp4 -frames:v 1 -vf signalstats,metadata=print -f null -
+python scripts/measure.py entrada.mp4
 ```
 
-`YAVG` es el brillo medio (0-255) e `YHIGH` el percentil 90. **Por debajo de
+Formato, brillo, saturación y sonoridad en un bloque. `YAVG` es el brillo medio
+(0-255) e `YHIGH` el percentil 90. **Por debajo de
 YAVG 60 el grade por defecto hundirá el material**, así que levanta medios con
 `curves` en vez de aplicarlo.
 
@@ -188,10 +210,10 @@ nada que recuperar: subir `strength` cambia una mancha blanca por una gris, que
 se lee como fallo de render mientras que la blanca el ojo la interpreta como
 reflejo y la ignora. Por encima de 0.75 empeora.
 
-Comprueba antes si merece la pena. Mide la zona del reflejo y la piel:
+Comprueba antes si merece la pena. Mide el fotograma donde se ve el reflejo:
 
 ```bash
-ffmpeg -hide_banner -nostats -ss 30 -i entrada.mp4 -frames:v 1 -vf signalstats,metadata=print -f null -
+python scripts/measure.py entrada.mp4 --at 30
 ```
 
 Si el reflejo está saturado a 255 no hay nada debajo y esto no sirve de nada.
@@ -221,7 +243,7 @@ resultado limpio que ningún filtro iguala.
 **Cada efecto va sobre una frase concreta, no cada N segundos.** Repartirlos por
 reloj es exactamente lo que se ve como «aleatorio y brusco»: el espectador nota
 que el movimiento no responde a nada. Antes de colocar ninguno, busca en
-`words.json` los instantes que de verdad cargan el vídeo —la vuelta de tuerca,
+`digest.txt` los instantes que de verdad cargan el vídeo —la vuelta de tuerca,
 la cifra, la frase que el autor subraya con la voz, el «repito», el remate— y
 pon el efecto **en la primera palabra** de esa frase, no en medio.
 
@@ -361,14 +383,23 @@ remate deja los subtítulos y no pongas card: ahí las palabras exactas importan
 
 Ritmo: una cada 10-15 segundos como mucho, y **nunca sobre la cara**.
 
-`y_frac` es el borde superior. **No lo estimes de un fotograma: mídelo.** Una
-cara quieta engaña, porque al hablar se gesticula, se inclina y la barba baja.
-Saca seis fotogramas repartidos por la ventana de la card, busca en cada uno la
-fila más baja con piel en la banda central —rojo por encima del azul, que separa
-cara y manos de una camiseta negra y de un fondo frío— y quédate con la peor de
-las seis. Ese es el suelo real.
+`y_frac` es el borde superior. **No lo estimes de un fotograma: míralo.**
 
-Medido así en un plano medio vertical sale **0.66-0.68**, no 0.56: con 0.56 la
+```bash
+python scripts/measure.py entrada.mp4 --card 14.6 17.7
+```
+
+Sale una lámina con seis fotogramas de esa ventana y las guías de `y_frac`
+dibujadas encima. Ábrela y elige la primera línea que quede por debajo de la
+barbilla **en los seis**, no en el mejor: una cara quieta engaña, porque al
+hablar se gesticula, se inclina y la barba baja.
+
+Esto se mira, no se calcula. La detección automática de piel se probó y falla de
+una forma que no se ve venir: una mano que sube al borde inferior cuenta como
+cara, y la barba —que es justo lo que no hay que tapar— no es piel para ningún
+umbral de color.
+
+Medido así en un plano medio vertical sale **0.68-0.80**, no 0.56: con 0.56 la
 card se come la barba, que es el fallo que más se nota. Por abajo, no pases de
 **0.85**: TikTok e Instagram ponen ahí su propia interfaz.
 
@@ -381,17 +412,13 @@ acelerado) — útil para comprimir una parte aburrida sin cortarla.
 ### 4. Subtítulos — siempre después de cortar
 
 ```bash
-python scripts/transcribe.py entrada.mp4 --cuts cuts.json -o words.json --lang es
 python scripts/subtitles.py words.json -o subs.ass --preset tiktok --plan plan.json
 ```
 
-`--cuts` monta el audio ya recortado y transcribe **eso**, así que los timestamps
-nacen en la línea de tiempo de salida. No hay nada que remapear y la sincronía no
-puede desviarse. `subtitles.py` rechaza un `words.json` sin cortar, precisamente
-para que no se cuele una transcripción del original.
-
-Repite estos dos comandos cada vez que toques `cuts.json`. Es la única parte del
-flujo que hay que rehacer, y en un vídeo ya recortado va más rápido que la primera.
+`words.json` ya está en la línea de tiempo de salida, del paso 2. `subtitles.py`
+rechaza un `words.json` sin cortar, precisamente para que no se cuele una
+transcripción del original — si lo hace, es que has editado `cuts.json` y no has
+repetido el paso 2.
 
 **En vídeo largo horizontal, no los quemes.** Tapan el código y el espectador
 no puede quitarlos. Genera `--srt salida.srt` y que se suba a YouTube como
@@ -467,8 +494,8 @@ quien hace scrub ve dónde ha caído.
 ### 6. Copy de publicación — siempre, sin que lo pidan
 
 Un vídeo sin texto de publicación no está entregado. En cuanto el render
-termina, redacta el kit completo a partir de `words.json` (el del audio ya
-cortado, que es lo que de verdad se oye en el vídeo):
+termina, redacta el kit completo a partir de `digest.txt`, que es lo que
+de verdad se oye en el vídeo:
 
 - **YouTube**: un título principal + 2 alternativas para testear, descripción y
   **15 tags** separadas por coma
@@ -571,7 +598,7 @@ Si la biblioteca tiene una imagen llamada `youtube.png` y en algún momento el
 vídeo dice «YouTube», esa imagen aparece unos segundos en una esquina. Es la
 forma más barata de que un vídeo hablado deje de ser sólo una cara.
 
-**Cómo montarlo**, después de tener `words.json` del audio ya cortado:
+**Cómo montarlo**, después del paso 2:
 
 1. Lee `~/.fragua/assets.json`. Cada entrada de `images` **y de `stickers`**
    trae un campo `keyword` derivado del nombre del archivo: `claude-code.png` →
@@ -650,8 +677,7 @@ brillo ni en la misma saturación, y el salto se lee como «otro vídeo» en vez
 «otro plano». Mide los dos lados y escribe el ajuste en `grade`:
 
 ```bash
-ffmpeg -hide_banner -nostats -ss 2 -i clip.mp4 -frames:v 1 \
-  -vf scale=1080:1920,signalstats,metadata=print -f null -
+python scripts/measure.py entrada.mp4 --match clip1.mp4 clip2.mp4 clip3.mp4
 ```
 
 Medido en un caso real: la persona estaba en YAVG 58 y SATAVG 14, y los tres

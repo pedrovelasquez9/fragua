@@ -8,6 +8,43 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.14.0 — 2026-08-26
+
+Una edición gastaba mucho más contexto del necesario en trabajo mecánico. Lo
+mecánico se ha bajado a scripts; el criterio editorial —qué se corta, dónde va
+un efecto, qué merece una card— sigue siendo del agente, sin tocar.
+
+### Added
+- **`measure.py`**: formato, brillo, saturación y sonoridad de un vídeo en una
+  llamada y en unas pocas líneas. Antes eran unas quince invocaciones sueltas de
+  `ffprobe` y `ffmpeg`, cada una devolviendo su log entero. `--at` mide un
+  instante concreto y `--match` compara el color de un plano de recurso con el
+  del vídeo.
+- **`measure.py --card inicio fin`** monta una sola lámina con seis fotogramas de
+  la ventana de una card y las guías de `y_frac` dibujadas encima, en vez de seis
+  fotogramas sueltos que había que medir a ojo uno a uno. No decide nada: la
+  detección automática de piel se probó y falla de forma que no se ve venir —una
+  mano que sube al borde inferior cuenta como cara, y la barba, que es justo lo
+  que no hay que tapar, no es piel para ningún umbral de color— así que esto se
+  sigue mirando, que es el método que funciona.
+- **`transcribe.py --digest`** escribe la transcripción frase a frase con los dos
+  tiempos: el del montaje, que va a `plan.json`, y el de la grabación, que hace
+  falta para borrar un segmento de `cuts.json`. Medido sobre un vídeo de 17
+  minutos: `words.json` son 294 KB de andamiaje JSON y el digest 21 KB con
+  exactamente las mismas palabras.
+- `output_to_source()` en `common.py`, el inverso de `source_to_output()`.
+
+### Changed
+- **Se transcribe una vez, no dos.** El flujo hacía una pasada sobre el original
+  para leerla y otra sobre el audio ya cortado para los subtítulos. Con los dos
+  tiempos en el digest, la pasada sobre el cortado sirve para las dos cosas: se
+  ahorra una transcripción entera de whisper y una lectura completa del texto.
+- La documentación decía «lee `words.json`» en un punto del flujo en el que ese
+  fichero todavía no existía —lo que existía era `draft.json`—. Ya no hay dos
+  ficheros que confundir.
+
+---
+
 ## 1.13.1 — 2026-08-26
 
 ### Added

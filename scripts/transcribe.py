@@ -9,7 +9,13 @@ import json
 import tempfile
 from pathlib import Path
 
-from common import VENDOR, audio_cut_graph, read_json, run, write_json
+from common import (VENDOR, audio_cut_graph, output_to_source, read_json, run,
+                    write_json)
+
+# Un salto mayor que esto entre dos palabras es un cambio de frase: es donde se
+# corta el digest, que es lo que se lee para decidir el montaje.
+DIGEST_GAP = 0.7
+DIGEST_WRAP = 170
 
 
 def find_binary():
@@ -58,6 +64,38 @@ def tokens_to_words(payload):
     return [w for w in words if w["text"]]
 
 
+def timecode(seconds):
+    return f"{int(seconds) // 60}:{int(seconds) % 60:02d}"
+
+
+def digest(words, segments=None):
+    """Vista legible de la transcripción: una línea por frase, con su tiempo.
+
+    `words.json` de un vídeo de veinte minutos son trescientos kilobytes de
+    andamiaje JSON para leer lo mismo que cabe aquí en unas decenas de líneas.
+    Con `segments` cada línea lleva además el tiempo en la grabación original,
+    que es el que hace falta para tocar `cuts.json`.
+    """
+    lines, current = [], []
+    for index, word in enumerate(words):
+        current.append(word)
+        text = " ".join(w["text"] for w in current)
+        gap = (words[index + 1]["start"] - word["end"]
+               if index + 1 < len(words) else 999)
+        if gap >= DIGEST_GAP or (len(text) >= DIGEST_WRAP and text[-1] in ".?!"):
+            stamp = timecode(current[0]["start"])
+            if segments:
+                stamp += " | " + timecode(output_to_source(current[0]["start"], segments))
+            lines.append(f"[{stamp}] {text}")
+            current = []
+    if current:
+        stamp = timecode(current[0]["start"])
+        if segments:
+            stamp += " | " + timecode(output_to_source(current[0]["start"], segments))
+        lines.append(f"[{stamp}] " + " ".join(w["text"] for w in current))
+    return lines
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("input")
@@ -65,6 +103,9 @@ def parse_args():
     parser.add_argument("--lang", default="es")
     parser.add_argument("--model", default=None, help="path to a ggml-*.bin (default: any in vendor)")
     parser.add_argument("--threads", type=int, default=0, help="0 = whisper.cpp default")
+    parser.add_argument("--digest", default=None,
+                        help="además, una vista legible frase a frase: es la que se lee "
+                             "para decidir el montaje, no words.json")
     parser.add_argument("--cuts", default=None,
                         help="cuts.json: transcribe the cut audio, so timestamps are already "
                              "on the output timeline (use this for the subtitle pass)")
@@ -96,6 +137,15 @@ def main():
                              "timeline": "output" if args.cuts else "source",
                              "words": words})
     print(f"{len(words)} palabras ({'ya cortado' if args.cuts else 'original'}) -> {args.output}")
+
+    if args.digest:
+        segments = read_json(args.cuts)["segments"] if args.cuts else None
+        lines = digest(words, segments)
+        header = ("# [salida | original]  los dos tiempos: el primero para plan.json, "
+                  "el segundo para cuts.json" if segments else "# [tiempo del original]")
+        Path(args.digest).write_text(header + chr(10) + chr(10)
+                                     + chr(10).join(lines) + chr(10), encoding="utf-8")
+        print(f"{len(lines)} frases -> {args.digest}")
 
 
 if __name__ == "__main__":
