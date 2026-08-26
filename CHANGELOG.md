@@ -8,6 +8,25 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.15.0 — 2026-08-26
+
+### Added
+- **Un vídeo largo se entrega con tres prompts de miniatura**, uno por cada
+  título, listos para pegar en un generador de imagen. La miniatura es lo que
+  decide si el vídeo se abre; el título sólo confirma la decisión que ya tomó
+  la imagen, y hasta ahora el kit de publicación no la cubría.
+- Los tres son conceptos distintos y no tres versiones del mismo —el problema,
+  el antes y el después, y el objeto concreto del vídeo— porque tres variaciones
+  de la misma idea no dejan nada que testear.
+- Cada prompt lleva dentro lo que si no sale mal: sin texto en la imagen, porque
+  los modelos siguen destrozando las tildes y la ñ; un lado libre para componer
+  encima la foto real del autor, porque una cara inventada en un canal personal
+  se lee como el vídeo de otro; la paleta del set del autor sacada de su propia
+  grabación; un solo foco, que a 168×94 px dos objetos no se distinguen; y el
+  sujeto fuera de la esquina donde YouTube pinta la duración.
+
+---
+
 ## 1.14.2 — 2026-08-26
 
 ### Added

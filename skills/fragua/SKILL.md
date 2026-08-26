@@ -39,7 +39,7 @@ vídeo → analyze.py    → cuts.json    (segmentos a conservar, vía silencede
       → subtitles.py  → subs.ass     (karaoke, ya en la línea de tiempo final)
       → render.py     → salida.mp4   (un solo pase de ffmpeg desde el original)
       → chapters.py    → capítulos     (obligatorio en vídeo largo)
-      → [copy de publicación: título, descripción, tags y captions]
+      → [copy: título, descripción, tags, captions y 3 prompts de miniatura]
 
 `assets.py --auto` se ejecuta en **cada edición**, sin que nadie lo pida: así
 una imagen o una pista añadida esta mañana ya está disponible esta tarde. El
@@ -502,12 +502,44 @@ de verdad se oye en el vídeo:
   **15 tags** separadas por coma
 - **Instagram**: caption
 - **TikTok**: caption
+- **En vídeo largo, además: 3 prompts de miniatura** (ver más abajo)
 
 **El título y las 15 tags no son opcionales.** Van siempre, incluso si el
 usuario pide «sólo las descripciones» o «sólo el copy»: sin título no se puede
 publicar en YouTube y sin tags se pierde descubrimiento. Entrégalos igual.
 
 Máximo **5 hashtags** por red. En YouTube Shorts uno de ellos es `#Shorts`.
+
+**Miniaturas — obligatorias en vídeo largo**
+
+Un vídeo largo se entrega con **tres prompts de miniatura**, uno por cada título,
+listos para pegar en un generador de imagen. La miniatura decide si el vídeo se
+abre; el título sólo confirma la decisión que ya tomó la imagen.
+
+Los tres tienen que ser **conceptos distintos**, no variaciones del mismo: uno
+que muestre el problema, uno que muestre el antes y el después, y uno que ponga
+en primer plano el objeto concreto del que va el vídeo. Si los tres se parecen,
+no hay nada que testear.
+
+Reglas que van **dentro** de cada prompt, no como nota aparte:
+
+- **Sin texto en la imagen generada.** Los modelos siguen destrozando las tildes
+  y la ñ. El texto se pone después en el editor, donde además se controla la
+  tipografía del canal.
+- **Deja un lado libre** para componer encima la foto real del autor. No pidas
+  que genere su cara: un rostro inventado en un canal personal se nota, y lo que
+  vende ahí es que sea él.
+- **La paleta es la del set del autor**, no la del generador. Míralo en un
+  fotograma (`measure.py --card` sirve) y descríbela: si su fondo es oscuro con
+  contraluz azul, una miniatura clara y naranja se lee como de otro canal.
+- **Un solo foco.** La miniatura se ve a 168×94 px en el móvil: dos objetos
+  compitiendo no se distinguen ninguno. Pide un sujeto grande y el resto
+  desenfocado.
+- **16:9, 1280×720.** Y comprueba que el sujeto no cae en la esquina inferior
+  derecha, que es donde YouTube pinta la duración.
+
+Entrega junto a cada prompt **el texto corto que va encima** —tres o cuatro
+palabras, las que no genera el modelo— y de qué título es pareja.
 
 **Los tres objetivos, y qué implica cada uno**
 
