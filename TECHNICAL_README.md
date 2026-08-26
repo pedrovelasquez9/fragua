@@ -155,14 +155,13 @@ Tarda menos de un minuto. Si sale **`todo verde`**, la instalación está bien.
 
 ## Uso paso a paso
 
-El pipeline tiene seis pasos. Los ficheros intermedios son JSON legibles, así que
-puedes revisar y corregir entre uno y otro sin renderizar nada.
+El pipeline tiene seis pasos. Los ficheros intermedios son JSON legibles, así
+que puedes revisar y corregir entre uno y otro sin renderizar nada.
 
 ```
 vídeo → analyze.py    → cuts.json    segmentos a conservar
-      → transcribe.py → draft.json   para leer y decidir el montaje
-      → [editas cuts.json y escribes plan.json]
-      → transcribe.py --cuts → words.json   transcripción del audio YA cortado
+      → transcribe.py --cuts → words.json + digest.txt   el audio YA cortado
+      → [lees digest.txt, editas cuts.json y escribes plan.json]
       → cards.py      → cards/*.png  las anotaciones
       → subtitles.py  → subs.ass     el karaoke
       → render.py     → salida.mp4
@@ -191,25 +190,64 @@ del original, que es donde tiene que caer el fundido de salida de `render.py`
 (0.35 s) para no comerse la última palabra.
 | `--min-keep` | `0.12` | Descarta segmentos más cortos que esto |
 
-### Paso 2 · Transcribir para leer
+### Paso 2 · Transcribir, una sola vez
 
 ```bash
-python scripts/transcribe.py entrada.mp4 -o draft.json --lang es
+python scripts/transcribe.py entrada.mp4 --cuts cuts.json -o words.json \
+       --digest digest.txt --lang es
 ```
 
-Esta pasada es **solo para decidir el montaje**. Léela para localizar tomas
-repetidas, tropiezos y el gancho real del vídeo.
+**Este orden no es negociable.** `--cuts` monta el audio recortado y transcribe
+*eso*, así que los tiempos nacen ya en la línea de salida y no hay nada que
+remapear. `subtitles.py` rechaza un `words.json` sin cortar precisamente para
+que no se cuele uno del original.
 
-> **Comprueba que el último timestamp cabe en la duración del vídeo.** whisper
+`--digest` escribe además una vista frase a frase con los dos tiempos: el de
+salida, que va a `plan.json`, y el del original, que es el que hace falta para
+borrar un segmento de `cuts.json`. Es lo que se lee para decidir el montaje.
+Medido en un vídeo de 17 minutos, `words.json` son 294 KB y el digest 21 KB con
+las mismas palabras.
+
+```
+# [salida | original]
+[0:20 | 0:23] Pero ¿por qué hago esto? Generalmente cuando tú entras al mundo…
+```
+
+Repite el comando cada vez que toques `cuts.json`.
+
+> **Comprueba que el último timestamp cabe en la duración de salida.** whisper
 > deriva en audio largo con puerta de ruido agresiva. Si ves palabras más allá
 > del final, transcribe el tramo suelto (`ffmpeg -ss 60 -i entrada.mp4 -c copy
 > cola.mp4`) y súmale el desplazamiento.
 
-### Paso 3 · Decidir el montaje
+Revisa el resultado: whisper falla con jerga técnica, nombres propios y
+muletillas. `words.json` es texto plano, corrígelo ahí.
 
-Edita `cuts.json` a mano para quitar tomas malas: borra o recorta segmentos. Y
-escribe `plan.json` con el color, los efectos y las cards (ver la referencia más
-abajo).
+### Paso 3 · Medir
+
+```bash
+python scripts/measure.py entrada.mp4                    # formato, color, sonoridad
+python scripts/measure.py entrada.mp4 --at 30            # un instante concreto
+python scripts/measure.py entrada.mp4 --card 14.6 17.7   # dónde cabe una card
+python scripts/measure.py entrada.mp4 --match clip.mp4   # color de un plano de recurso
+```
+
+Todo lo que hay que medir antes de escribir `plan.json`, en una llamada y en
+unas pocas líneas. Antes eran quince invocaciones sueltas de `ffprobe` y de
+`ffmpeg`, cada una devolviendo su log entero.
+
+`--card` no decide nada: saca seis fotogramas de la ventana y les dibuja encima
+las guías de `y_frac`, para mirarlas. La detección automática de piel se probó y
+falla de forma que no se ve venir — una mano que sube al borde inferior cuenta
+como cara, y la barba, que es justo lo que no hay que tapar, no es piel para
+ningún umbral de color.
+
+### Paso 4 · Decidir el montaje
+
+Lee `digest.txt` para localizar tomas repetidas, tropiezos y el gancho real.
+Edita `cuts.json` a mano para quitar lo que sobre — con el tiempo de la derecha,
+que es el del original — y escribe `plan.json` con el color, los efectos y las
+cards (ver la referencia más abajo).
 
 Para pasar un tiempo del original a la línea de salida:
 
@@ -220,21 +258,7 @@ segments = read_json("cuts.json")["segments"]
 print(source_to_output(42.5, segments))   # None si cae en un hueco cortado
 ```
 
-### Paso 4 · Transcribir de nuevo, ya cortado
-
-```bash
-python scripts/transcribe.py entrada.mp4 --cuts cuts.json -o words.json --lang es
-```
-
-**Este orden no es negociable.** `--cuts` monta el audio recortado y transcribe
-*eso*, así que los tiempos nacen ya en la línea de salida y no hay nada que
-remapear. `subtitles.py` rechaza un `words.json` sin cortar precisamente para
-que no se cuele el del paso 2.
-
-Repite este paso cada vez que toques `cuts.json`.
-
-Revisa el resultado: whisper falla con jerga técnica, nombres propios y
-muletillas. `words.json` es texto plano, corrígelo ahí.
+`output_to_source()` hace lo contrario, que es lo que usa el digest.
 
 ### Paso 5 · Cards y subtítulos
 
@@ -523,8 +547,7 @@ Varía el `kind`: repetir el mismo en todas es lo que las hace parecer plantilla
 antes de decidir:
 
 ```bash
-ffmpeg -hide_banner -nostats -ss 30 -i entrada.mp4 -frames:v 1 \
-  -vf signalstats,metadata=print -f null -
+python scripts/measure.py entrada.mp4 --at 30
 ```
 
 `YAVG` es el brillo medio (0–255) e `YHIGH` el percentil 90. Por debajo de
@@ -666,7 +689,8 @@ fragua/
 │   ├── setup.ps1          descarga whisper.cpp, el modelo y las fuentes
 │   ├── common.py          rutas, JSON, ffmpeg y mapeo de la línea de tiempo
 │   ├── analyze.py         silencios → cuts.json
-│   ├── transcribe.py      whisper.cpp → words.json
+│   ├── transcribe.py      whisper.cpp → words.json + digest.txt
+│   ├── measure.py         formato, color, sonoridad y láminas de card
 │   ├── cards.py           plan.json → cards/*.png
 │   ├── subtitles.py       words.json → subs.ass
 │   └── render.py          todo junto → salida.mp4

@@ -16,7 +16,8 @@ ROOT = Path(__file__).resolve().parent
 SCRIPTS = ROOT / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
-from common import output_duration, probe_duration, source_to_output  # noqa: E402
+from common import (output_duration, output_to_source, probe_duration,  # noqa: E402
+                    source_to_output)
 
 
 def sh(*cmd):
@@ -615,6 +616,50 @@ def test_version_is_consistent():
     print(f"ok  versión {version} coherente (manifiestos y changelog)")
 
 
+def test_digest():
+    """El digest agrupa por frases y lleva los dos tiempos, ida y vuelta."""
+    from transcribe import digest
+
+    segments = [{"start": 2.0, "end": 5.0}, {"start": 9.0, "end": 12.0}]
+    # Dos frases en el primer segmento y una en el segundo, en tiempo de salida.
+    words = ([{"start": 0.0, "end": 0.4, "text": "hola"},
+              {"start": 0.4, "end": 0.9, "text": "qué"},
+              {"start": 0.9, "end": 1.3, "text": "tal."}]
+             + [{"start": 2.5, "end": 2.9, "text": "segunda"}]
+             + [{"start": 4.0, "end": 4.4, "text": "tercera"}])
+    lines = digest(words, segments)
+    assert len(lines) == 3, f"esperaba 3 frases, salieron {len(lines)}: {lines}"
+    assert lines[0].endswith("hola qué tal."), lines[0]
+
+    # 0.0 de salida es 2.0 del original; 4.0 de salida cae ya en el segundo
+    # segmento, en 9.0 + (4.0 - 3.0) = 10.0.
+    assert lines[0].startswith("[0:00 | 0:02]"), lines[0]
+    assert lines[2].startswith("[0:04 | 0:10]"), lines[2]
+
+    for when in (0.0, 1.5, 3.0, 4.9):
+        back = source_to_output(output_to_source(when, segments), segments)
+        assert abs(back - when) < 1e-6, f"ida y vuelta rompe en {when}: {back}"
+    print(f"ok  digest ({len(lines)} frases, los dos tiempos)")
+
+
+def test_measure(clip):
+    """measure.py mide de una vez, y --card deja una lámina con las guías."""
+    out = sh(sys.executable, SCRIPTS / "measure.py", clip)
+    assert "640x360" in out, out
+    assert "YAVG" in out and "sonoridad" in out, out
+
+    with tempfile.TemporaryDirectory() as tmp:
+        sheet = Path(tmp) / "card.png"
+        sh(sys.executable, SCRIPTS / "measure.py", clip,
+           "--card", "1.0", "2.0", "--sheet", sheet)
+        from PIL import Image
+        width, height = Image.open(sheet).size
+        # Seis fotogramas de 320 px en tres columnas y dos filas.
+        assert width == 320 * 3, f"lámina de {width} px de ancho"
+        assert height > 300, f"lámina de {height} px de alto"
+    print(f"ok  measure.py (formato, color, sonoridad y lámina de {width}px)")
+
+
 def main():
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
@@ -622,6 +667,7 @@ def main():
                                         ("in.mp4", "cuts.json", "words.json", "subs.ass", "out.mp4"))
 
         test_version_is_consistent()
+        test_digest()
         test_cutaways()
         test_pullback_geometry()
         test_chapters()
@@ -640,6 +686,7 @@ def main():
 
         make_clip(clip)
         assert abs(probe_duration(clip) - 6) < 0.3
+        test_measure(clip)
 
         sh(sys.executable, SCRIPTS / "analyze.py", clip, "-o", cuts, "--threshold", "-40")
         segments = json.loads(cuts.read_text(encoding="utf-8"))["segments"]
