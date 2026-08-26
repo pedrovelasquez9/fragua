@@ -304,11 +304,14 @@ Son tres ideas distintas y no tres versiones de la misma, para que haya algo que
 testear de verdad: el problema, el antes y el después, y el objeto concreto del
 que va el vídeo.
 
-Cada prompt lleva ya dentro lo que si no sale mal: nada de texto en la imagen
-generada, porque los modelos siguen destrozando las tildes y además querrás tu
-propia tipografía; un lado libre para componer encima tu foto real, porque una
-cara inventada en un canal personal se lee como el vídeo de otro; y la paleta de
-tu propio set, sacada de tu grabación y no del gusto del generador.
+Cada prompt produce la miniatura **terminada** —tu cara y el texto incluidos—,
+lista para subir a YouTube sin abrir un editor. Vienen con un fotograma sacado de
+tu propio vídeo para que lo adjuntes como referencia de la cara, porque una cara
+inventada en un canal personal se lee como el vídeo de otro.
+
+El rótulo se elige para que el texto generado aguante: los modelos siguen
+fallando en «DÍA» y en «AÑO», así que se busca un titular sin tildes y sin ñ. Es
+una restricción sobre qué palabras eliges, no algo que haya que rodear.
 
 ### Cambios de plano y transiciones
 
