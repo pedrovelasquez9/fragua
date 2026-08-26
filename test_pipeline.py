@@ -725,6 +725,34 @@ def test_subtitle_font_resolves():
     print(f"ok  la fuente de subtítulos existe ({', '.join(names)})")
 
 
+def test_false_starts():
+    """Un trozo corto aislado entre dos silencios largos se nombra.
+
+    Es la firma de un falso arranque —empiezas una palabra, te paras y
+    rearrancas— y es justo lo que no se ve en la transcripción del audio ya
+    cortado, porque whisper se salta las tomas casi idénticas. Medido sobre un
+    caso real: quedó un «sub—» suelto delante de «delegas ese trabajo».
+    """
+    from analyze import false_starts
+
+    # Los números son los del caso real que motivó esto.
+    segments = [
+        {"start": 108.80, "end": 111.62},   # "...en el repositorio"
+        {"start": 114.24, "end": 115.45},   # "sub—"  1.21s entre 2.62s y 1.70s
+        {"start": 117.20, "end": 120.34},   # "esto, delegas ese trabajo..."
+        {"start": 120.60, "end": 121.30},   # corto pero pegado: no es sospechoso
+    ]
+    found = false_starts(segments)
+    assert len(found) == 1, f"esperaba 1 sospechoso, salieron {len(found)}: {found}"
+    assert abs(found[0]["start"] - 114.24) < 1e-6, found[0]
+
+    # Sin huecos largos alrededor no hay sospecha, por corto que sea el trozo.
+    assert not false_starts([{"start": 0.0, "end": 1.0},
+                             {"start": 1.1, "end": 2.0},
+                             {"start": 2.1, "end": 3.0}])
+    print("ok  falsos arranques (corto y aislado, no corto a secas)")
+
+
 def main():
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
@@ -741,6 +769,7 @@ def main():
         test_transitions_keep_colour()
         test_animated_cards_wiring()
         test_silence_at_the_head()
+        test_false_starts()
         test_timeline_mapping()
         test_shot_shape()
         test_overlap_guard()
