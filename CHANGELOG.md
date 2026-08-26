@@ -8,6 +8,34 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.18.0 — 2026-08-26
+
+Editando un reel real salieron dos formas de estropear un montaje que la skill no
+cubría, y las dos venían de fiarse de la transcripción en vez de del audio.
+
+### Added
+- **`analyze.py` nombra los falsos arranques.** Un trozo corto de habla aislado
+  entre dos silencios largos es casi siempre alguien que empieza una palabra, se
+  para y rearranca. No se borra solo —a veces es un «sí» que hace falta— pero
+  sale con su segundo. Importa porque es justo lo que la transcripción del audio
+  ya cortado **no** enseña: whisper se salta las tomas casi idénticas, así que un
+  «sub—» suelto delante de «delegas ese trabajo» llegó al montaje sin que nada
+  lo delatara.
+
+### Changed
+- **Un corte hecho a mano tiene que caer en un silencio medido.** Queda escrito,
+  con el comando de `silencedetect` para medirlo. Los tiempos de `words.json`
+  marcan dónde whisper cree que empieza una palabra, no dónde hay pausa: medido,
+  un corte puesto en el segundo 158 sonaba truncado porque el hablante venía de
+  seguido desde 153.7 y la pausa buena estaba en 169.6.
+- Se documenta que la transcripción **miente en las dos direcciones**. Que omite
+  tomas repetidas ya estaba; que **inventa palabras donde no hay sonido**, no.
+  Medido: un «y para» que figuraba en `words.json` estaba por debajo de −42 dB.
+  Una palabra en la transcripción no demuestra que haya audio, y cortar contando
+  con ella deja huecos o clics.
+
+---
+
 ## 1.17.1 — 2026-08-26
 
 ### Changed

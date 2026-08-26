@@ -79,6 +79,21 @@ más que recortar el principio. Si una frase suena truncada, sube `--pad-out`.
   un ritmo agresivo tipo TikTok; súbelo a `0.6` para vídeo largo que respire.
 - `--min-keep 0.12` — descarta segmentos conservados más cortos que esto.
 
+**`analyze.py` avisa de los falsos arranques.** Un trozo corto de habla rodeado
+de silencio largo por los dos lados casi siempre es alguien que empieza una
+palabra, se para y rearranca. No se borra solo —a veces es un «sí» o un
+«exacto» que hace falta— pero sale nombrado con su segundo:
+
+```
+posible falso arranque en 114.24-115.45s (1.21s aislado)
+```
+
+**Ve a mirarlo al original, no a la transcripción.** Ese trozo es justo el que la
+transcripción del audio ya cortado **no** enseña: whisper se salta las tomas
+casi idénticas, así que el fallo llega al montaje sin que nada lo delate. Medido
+en un caso real: quedó un «sub—» suelto delante de «delegas ese trabajo en un
+subagente» y el digest no lo mencionaba.
+
 ### 2. Transcribir, una sola vez
 
 ```bash
@@ -139,6 +154,27 @@ y dice algo interesante en los tres primeros segundos.
 **Para vídeo largo**, quita divagaciones y falsos arranques que el detector de
 silencios no ve porque tienen audio: repeticiones, "a ver, déjame que", ramas que
 no llevan a ningún sitio. Borra esos segmentos de `cuts.json`.
+
+**Todo corte que hagas a mano tiene que caer en un silencio medido.** Mide antes
+de cortar, en el original y en el tramo que te interesa:
+
+```bash
+ffmpeg -hide_banner -nostats -nostdin -ss 145 -t 75 -i entrada.mp4 \
+  -af "silencedetect=noise=-42dB:d=0.30,ametadata=print" -f null -
+```
+
+Los tiempos de `words.json` **no sirven para esto**. Marcan dónde whisper cree
+que empieza una palabra, no dónde hay silencio, y el error se oye enseguida:
+medido en un caso real, un corte puesto en el segundo 158 sonaba truncado porque
+el hablante venía de seguido desde 153.7 y la pausa buena estaba en 169.6 —once
+segundos más allá—. Si el corte no cae en una pausa que hayas visto en el
+detector, no lo des por bueno.
+
+**Y la transcripción miente en las dos direcciones.** Ya sabes que se salta las
+tomas repetidas; también **inventa palabras donde no hay sonido**. Medido: un
+«y para» que figuraba en `words.json` estaba por debajo de −42 dB, es decir, no
+se oye. Que una palabra esté en la transcripción no demuestra que haya audio, y
+cortar contando con ella deja huecos o clics.
 
 Después escribe `plan.json`. Los tiempos van en la **línea de tiempo de salida**
 (la del vídeo ya cortado), que es la que ves al reproducir el resultado. Para
