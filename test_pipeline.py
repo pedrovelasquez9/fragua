@@ -7,6 +7,7 @@ subtitle timing and the cut-timeline remapping still get exercised.
 """
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -660,6 +661,47 @@ def test_measure(clip):
     print(f"ok  measure.py (formato, color, sonoridad y lámina de {width}px)")
 
 
+def test_subtitle_font_resolves():
+    """La fuente que pide el preset tiene que ser la que dibuja libass.
+
+    Esto salió a la luz mirando el log de un render: `Roboto Black` caía a
+    ArialMT. Roboto se vendoriza como fuente variable y libass no saca de ahí la
+    instancia Black —tampoco con bold=1—, así que todos los subtítulos salían en
+    Arial sin que nada avisara. Se comprueba el nombre, no el fichero, porque el
+    fallback es silencioso por diseño.
+    """
+    from common import FONTS, ff_path, load_presets
+
+    template = ("[Script Info]\nScriptType: v4.00+\nPlayResX: 1080\nPlayResY: 1920\n\n"
+                "[V4+ Styles]\n"
+                "Format: Name, Fontname, Fontsize, PrimaryColour, Bold, Alignment, Encoding\n"
+                "Style: K,{name},80,&H00FFFFFF,{bold},2,1\n\n"
+                "[Events]\nFormat: Layer, Start, End, Style, Text\n"
+                "Dialogue: 0,0:00:00.00,0:00:01.00,K,,Prueba\n")
+
+    presets = load_presets()
+    names = {p["subtitle"]["fontname"]: p["subtitle"].get("bold", 0)
+             for p in presets.values()
+             if isinstance(p, dict) and "subtitle" in p}
+
+    with tempfile.TemporaryDirectory() as tmp:
+        ass = Path(tmp) / "t.ass"
+        for name, bold in names.items():
+            ass.write_text(template.format(name=name, bold=bold), encoding="utf-8")
+            result = subprocess.run(
+                ["ffmpeg", "-v", "verbose", "-nostdin", "-f", "lavfi",
+                 "-i", "color=black:s=1080x1920:d=0.2",
+                 "-vf", f"subtitles=filename='{ff_path(ass)}':fontsdir='{ff_path(FONTS)}'",
+                 "-frames:v", "1", "-f", "null", "-"],
+                capture_output=True, text=True, encoding="utf-8", errors="replace")
+            hit = re.search(r"fontselect: \(([^,]+),[^)]*\) -> ([^,]+)", result.stderr)
+            assert hit, f"libass no dijo qué fuente eligió para {name!r}"
+            asked, got = hit.group(1).strip(), hit.group(2).strip()
+            assert got.lower().replace("-", " ").startswith(asked.split()[0].lower()), \
+                f"el preset pide {asked!r} y libass dibuja {got!r}"
+    print(f"ok  la fuente de subtítulos existe ({', '.join(names)})")
+
+
 def main():
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
@@ -667,6 +709,7 @@ def main():
                                         ("in.mp4", "cuts.json", "words.json", "subs.ass", "out.mp4"))
 
         test_version_is_consistent()
+        test_subtitle_font_resolves()
         test_digest()
         test_cutaways()
         test_pullback_geometry()
