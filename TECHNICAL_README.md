@@ -471,32 +471,6 @@ original sigue sonando, que es lo que lo hace leerse como otra cámara.
 `render.py` rechaza dos cutaways solapados, uno que caiga sobre un `pullback`, y
 uno que pida más metraje del que queda en el archivo.
 
-### Miniaturas
-
-```bash
-python scripts/thumbnail.py fondo.png --face cara.png        --text "REPO QUE NO CONOCES" --side right -o miniatura.png
-```
-
-1280×720 con el fondo generado, la persona recortada de su propia grabación y el
-rótulo. La cara no se genera: con una foto de referencia los modelos hacen
-transferencia de identidad y devuelven a alguien parecido, que en un canal
-personal se nota. El fondo lo hace el generador —sin personas y sin texto—, el
-recorte sale del vídeo y aquí se juntan.
-
-| Opción | Por defecto | Para qué |
-|---|---|---|
-| `--side` | `right` | Lado de la persona; el rótulo va al contrario |
-| `--font` | `Anton` | Cualquiera de `vendor/fonts` |
-| `--lift` | `1.28` | Brillo de la cara sobre el fondo. Este material se graba oscuro y a 168 px la cara desaparece |
-
-El rótulo se parte en hasta tres líneas y se escala al mayor tamaño que quepa:
-una miniatura se lee a 168×94 px o no se lee. El fondo se oscurece y el texto se
-apoya en un degradado lateral, no en una caja — una caja negra detrás del rótulo
-se ve como una caja negra.
-
-El recorte usa `rembg` (`pip install rembg onnxruntime`), que es opcional porque
-su modelo pesa un giga. Si la imagen de la cara ya trae alfa, no hace falta.
-
 ### Capítulos
 
 ```json
@@ -717,7 +691,6 @@ fragua/
 │   ├── analyze.py         silencios → cuts.json
 │   ├── transcribe.py      whisper.cpp → words.json + digest.txt
 │   ├── measure.py         formato, color, sonoridad y láminas de card
-│   ├── thumbnail.py       fondo + recorte real + rótulo → miniatura
 │   ├── cards.py           plan.json → cards/*.png
 │   ├── subtitles.py       words.json → subs.ass
 │   └── render.py          todo junto → salida.mp4
