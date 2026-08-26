@@ -5,6 +5,7 @@
 #   ...install.ps1 -Target opencode        # solo OpenCode
 #   ...install.ps1 -Project               # en la carpeta actual, no global
 #   ...install.ps1 -Model ggml-medium      # modelo más pequeño y rápido
+#   ...install.ps1 -Version v1.12.0        # una versión concreta, para volver atrás
 #
 # La carpeta de destino se llama SIEMPRE 'fragua': OpenCode valida que el
 # nombre coincida con el campo 'name' del frontmatter y rechaza la skill si no.
@@ -12,15 +13,37 @@
 param(
     [ValidateSet("both", "claude", "opencode")] [string]$Target = "both",
     [switch]$Project,
-    [string]$Model = "ggml-large-v3-turbo"
+    [string]$Model = "ggml-large-v3-turbo",
+    [string]$Version = ""
 )
 
 $ErrorActionPreference = "Stop"
 $source = $PSScriptRoot
 $SkillName = "fragua"
 
-if (-not (Test-Path (Join-Path $source "skillsragua\SKILL.md"))) {
-    throw "no encuentro skillsragua\SKILL.md — ejecuta este script desde la carpeta de Fragua"
+# Instalar una versión concreta es sacar ese tag antes de copiar nada. Se exige
+# el árbol limpio: copiar cambios locales bajo una etiqueta que no los tiene
+# dejaría al usuario creyendo que está en la versión que pidió.
+if ($Version) {
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) { Write-Host "-Version necesita git"; exit 1 }
+    $ErrorActionPreference = "Continue"
+    git -C $source rev-parse $Version *> $null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "no existe la versión '$Version'. Disponibles:"
+        Write-Host ((git -C $source tag) -join " ")
+        exit 1
+    }
+    if (git -C $source status --porcelain) {
+        Write-Host "hay cambios sin guardar en el repo: guárdalos antes de cambiar de versión"
+        exit 1
+    }
+    git -C $source checkout -q $Version
+    $ErrorActionPreference = "Stop"
+    Write-Host "instalando $Version"
+}
+
+if (-not (Test-Path (Join-Path $source "skills\$SkillName\SKILL.md"))) {
+    throw "no encuentro skills\$SkillName\SKILL.md — ejecuta este script desde la carpeta de Fragua"
 }
 
 # --- destinos ---------------------------------------------------------------
@@ -49,7 +72,7 @@ foreach ($destination in $targets) {
     # Claude Code carga las skills desde skills\<nombre>\, pero OpenCode y la
     # instalación suelta esperan SKILL.md en la raíz del destino. Aplanamos la
     # skill principal; assets y setup son comandos de Claude y no aplican aquí.
-    Copy-Item (Join-Path $source "skillsragua\SKILL.md") `
+    Copy-Item (Join-Path $source "skills\$SkillName\SKILL.md") `
               -Destination (Join-Path $destination "SKILL.md") -Force
 
     if ($null -eq $primary) {

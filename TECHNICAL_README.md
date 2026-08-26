@@ -103,6 +103,36 @@ binario para estas plataformas: necesitas `git`, `cmake` y un compilador.
 `transcribe.py` busca el binario como `whisper-cli`, `whisper-cli.exe`, `main` o
 `main.exe` en cualquier subcarpeta de `vendor/`, así que la ruta exacta da igual.
 
+### Instalar una versión concreta
+
+Cada versión del CHANGELOG tiene su tag, así que se puede volver a cualquiera:
+
+```bash
+./install.sh --version v1.12.0
+```
+```powershell
+powershell -ExecutionPolicy Bypass -File install.ps1 -Version v1.12.0
+```
+
+El flag hace `git checkout` de la etiqueta antes de copiar nada, y exige el árbol
+limpio: copiar cambios locales bajo una etiqueta que no los tiene dejaría al
+usuario creyendo que está en la versión que pidió. Si el tag no existe, imprime
+los que sí.
+
+En Claude Code el camino es otro, porque el plugin no se copia sino que se
+registra: `claude plugin marketplace add` acepta una **ruta local**, así que se
+clona el repositorio en la etiqueta y se registra esa carpeta.
+
+```bash
+git clone --branch v1.12.0 https://github.com/pedrovelasquez9/fragua fragua-1.12.0
+claude plugin marketplace add ./fragua-1.12.0
+claude plugin install fragua@fragua
+```
+
+`claude plugin details fragua` confirma la versión que ha quedado instalada.
+Para volver a la última, `claude plugin marketplace add pedrovelasquez9/fragua`
+y reinstalar.
+
 > **No copies `vendor/` entre máquinas.** Son 1.5 GB y se regenera con el setup.
 
 ---
