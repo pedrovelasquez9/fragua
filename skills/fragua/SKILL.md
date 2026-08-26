@@ -532,19 +532,31 @@ en su editor. Cada una lleva tres bloques, y los tres son obligatorios.
   se lee como de otro canal.
 - **16:9, 1280×720**, un solo motivo y el resto desenfocado.
 
-**2 · La foto.** De dónde sale y dónde va, en números sobre 1280×720:
+**2 · La foto.** Qué foto hace falta y dónde va. **No des un fotograma ni un
+segundo del vídeo**: el autor decide si la saca del material, si se la hace a
+propósito o si usa otra que ya tiene. Lo que necesita es el encargo:
 
-- **El fotograma**, con su segundo exacto del vídeo original. Elígelo mirando:
-  `measure.py --card` sobre un tramo hablado da una lámina de seis. El bueno
-  tiene los ojos visibles y algo de gesto.
+- **Qué expresión**, y por qué esa. Tiene que responder al concepto del fondo:
+  desconcierto ante el problema, certeza ante la solución, señalar hacia el
+  elemento gráfico. Una expresión neutra en una miniatura es una miniatura que no
+  se abre.
+- **Qué encuadre**: de pecho para arriba, de hombros, plano medio. Y **hacia
+  dónde mira**: a cámara si el gancho es él, hacia el lado del gráfico si el
+  gancho es lo que se cuenta.
+- **Qué hacen las manos.** Un gesto ocupa espacio y dirige la mirada; sin manos
+  la silueta es un óvalo. Di cuál, o di que no salga ninguna.
+- **La luz tiene que coincidir con la del fondo.** Es lo que decide si el montaje
+  se lee como una imagen o como un recorte pegado: si el fondo generado tiene el
+  contraluz a la izquierda, la foto necesita el suyo por el mismo lado. Dilo con
+  la dirección concreta, y recuérdale que su propio set ya da esa luz.
 - **Recortada del fondo**, no pegada en rectángulo.
-- **Lado, alto y anclaje**: p. ej. «derecha, alto 92% del cuadro, pegada al borde
-  inferior, margen 25 px al lado derecho». Anclada abajo siempre: una persona
-  flotando se ve como un recorte.
+- **Lado, alto y anclaje** en números sobre 1280×720: p. ej. «derecha, alto 92%
+  del cuadro, pegada al borde inferior, margen 25 px». Anclada abajo siempre: una
+  persona flotando se ve como un recorte.
 - **Súbele el brillo.** Este material se graba oscuro a propósito —YAVG por
-  debajo de 50 con contraluz es lo normal— y lo que en el vídeo es ambiente, a
-  168×94 px es una cara que no se distingue. Da el número medido y sugiere el
-  ajuste.
+  debajo de 50 con contraluz es lo normal, y `measure.py` te lo dice— y lo que en
+  el vídeo es ambiente, a 168×94 px es una cara que no se distingue. Da el número
+  medido y sugiere el ajuste.
 
 **3 · El rótulo.** Texto, tipografía, color y posición:
 
