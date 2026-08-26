@@ -8,6 +8,32 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.13.0 — 2026-08-25
+
+### Added
+- **Chapters, and they are now required on anything long.** `chapters.py` reads
+  them from `plan.json` and prints the block YouTube expects. The timings live on
+  the output timeline like everything else in the plan, so they are right by
+  construction — writing them against the raw recording is the classic mistake,
+  and on a twenty-minute video the drift runs to minutes.
+- The three rules YouTube enforces silently are checked before you paste
+  anything: first chapter at 0:00, at least three, none under ten seconds. Miss
+  one and YouTube shows no chapters at all without saying why. A chapter landing
+  past the end of the edit is reported too, since that is the signature of
+  uncut timings.
+- `subtitles.py --srt` writes a plain subtitle track. On a wide long video that
+  is what belongs: burnt captions cover the code and cannot be switched off,
+  while an uploaded track is toggleable and gets indexed by YouTube.
+
+### Fixed
+- A cut with a couple of hundred segments could not be rendered on Windows: the
+  filtergraph blew past the 32 KB command-line limit before ffmpeg started. It
+  now goes to ffmpeg in a file, so the ceiling stops existing instead of being
+  dodged with a segment threshold. Measured on a 17-minute edit with 277
+  segments.
+
+---
+
 ## 1.12.0 — 2026-08-25
 
 ### Fixed

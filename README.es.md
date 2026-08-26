@@ -243,6 +243,21 @@ Además iguala el color de cada clip al tuyo, porque material de otra cámara ca
 nunca cae en el mismo brillo, y sin eso se lee como otro vídeo en vez de como
 otro plano.
 
+### Los vídeos largos vienen con capítulos
+
+A partir de unos cinco minutos, la edición te devuelve los capítulos de YouTube
+listos para pegar en la descripción. **Los tiempos son los del montaje, no los
+de la grabación** — que es justo la gracia, porque al quitar silencios todo se
+mueve y una lista escrita sobre el material en bruto se desfasa minutos.
+
+Vienen comprobados contra lo que YouTube exige de verdad: el primero en 0:00, un
+mínimo de tres, y ninguno de menos de diez segundos. Si falta alguna de esas
+condiciones, YouTube no muestra ningún capítulo y no te dice por qué.
+
+Los vídeos largos vienen además con un fichero de subtítulos en vez de con el
+texto quemado en la imagen: en horizontal ese texto tapa el código y no se puede
+quitar. Súbelo a YouTube y lo que dices se vuelve buscable.
+
 ### Cambios de plano y transiciones
 
 Donde cambia el tema, el vídeo se encoge sobre negro y en el hueco que se abre

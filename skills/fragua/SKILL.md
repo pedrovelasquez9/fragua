@@ -39,6 +39,7 @@ vídeo → analyze.py    → cuts.json    (segmentos a conservar, vía silencede
       → cards.py      → cards/*.png  (las anotaciones, rasterizadas)
       → subtitles.py  → subs.ass     (karaoke, ya en la línea de tiempo final)
       → render.py     → salida.mp4   (un solo pase de ffmpeg desde el original)
+      → chapters.py    → capítulos     (obligatorio en vídeo largo)
       → [copy de publicación: título, descripción, tags y captions]
 
 `assets.py --auto` se ejecuta en **cada edición**, sin que nadie lo pida: así
@@ -392,6 +393,11 @@ para que no se cuele una transcripción del original.
 Repite estos dos comandos cada vez que toques `cuts.json`. Es la única parte del
 flujo que hay que rehacer, y en un vídeo ya recortado va más rápido que la primera.
 
+**En vídeo largo horizontal, no los quemes.** Tapan el código y el espectador
+no puede quitarlos. Genera `--srt salida.srt` y que se suba a YouTube como
+pista: se activa y se desactiva, y además YouTube **indexa** ese texto, así que
+el vídeo aparece en búsquedas por lo que se dice dentro.
+
 **Sobre una grabación de pantalla, encógelos y bájalos.** El sitio por defecto
 cae justo encima del contenido que se está enseñando, y dos textos superpuestos
 no se leen ninguno. `--fontsize 44 --margin-v 250 --max-chars 40` deja una línea
@@ -424,6 +430,39 @@ pertenezca al mismo vídeo. Y sin grade la referencia es más oscura, así que l
 números cambian: mídelos de nuevo contra el original, no reutilices los de una
 edición con color. `--print-cmd` imprime el
 comando de ffmpeg, que es por donde empezar cuando algo sale raro.
+
+### 5 bis. Capítulos — obligatorios en vídeo largo
+
+Un vídeo de más de cinco minutos se entrega **con capítulos**. No son un extra:
+en YouTube son navegación, son retención y salen en el buscador como enlaces
+propios.
+
+```json
+"chapters": [
+  {"t": 0.0,   "title": "Por qué esto casi nadie lo explica"},
+  {"t": 80.9,  "title": "El proyecto: Immich, clonado y sin abrir"},
+  {"t": 175.3, "title": "Prompt 1 · El mapa de la infraestructura"}
+]
+```
+
+```bash
+python scripts/chapters.py plan.json --cuts cuts.json
+```
+
+**Los tiempos van en la línea de salida**, la del vídeo ya cortado, igual que
+los efectos y las cards. Este es el error que hay que impedir: escribirlos
+mirando la grabación original deja **todos** corridos por lo que quitó el
+detector de silencios, y en un vídeo de veinte minutos el desfase llega a varios
+minutos. Si has editado `cuts.json` a mano después de escribir los capítulos,
+vuelve a pasar el script: los tiempos han cambiado.
+
+`chapters.py` comprueba lo que YouTube exige y que, si falta, hace que descarte
+la lista entera **sin decir nada**: el primero en 0:00, un mínimo de tres, y
+ninguno de menos de diez segundos. También avisa si alguno cae más allá del
+final del montaje, que es la firma de haber usado tiempos sin cortar.
+
+Que un capítulo coincida con un rótulo en pantalla no es obligatorio, pero ayuda:
+quien hace scrub ve dónde ha caído.
 
 ### 6. Copy de publicación — siempre, sin que lo pidan
 

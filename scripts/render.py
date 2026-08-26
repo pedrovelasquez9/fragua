@@ -763,14 +763,15 @@ def build(args, platform, segments, plan, source):
 
     return (["ffmpeg", "-y", "-hide_banner", "-i", str(source)]
             + cutaway_inputs + sticker_inputs + card_inputs + broll_inputs + music_input
-            + ["-filter_complex", ";".join(graph), "-map", video_label, "-map", "[aout]"]
+            + ["-filter_complex_script", graph_file(";".join(graph)),
+               "-map", video_label, "-map", "[aout]"]
             + encoder_flags(platform, args.output))
 
 
 def cut_only(source, segments, fps, destination):
     """First of the two passes used when a cut has too many segments for one graph."""
     return ["ffmpeg", "-y", "-hide_banner", "-i", str(source),
-            "-filter_complex", cut_graph(segments),
+            "-filter_complex_script", graph_file(cut_graph(segments)),
             "-map", "[vc]", "-map", "[ac]", "-c:v", "libx264", "-preset", "veryfast",
             "-crf", "14", "-pix_fmt", "yuv420p", "-r", str(fps),
             "-c:a", "pcm_s16le", str(destination)]
@@ -791,6 +792,21 @@ def parse_args():
     parser.add_argument("--print-cmd", action="store_true",
                         help="print the ffmpeg command before running it")
     return parser.parse_args()
+
+
+def graph_file(graph):
+    """Write the filtergraph to a file and return its path.
+
+    Windows caps a command line at 32 KB and a cut with a couple of hundred
+    segments blows straight past it — the trim/atrim pairs alone are most of the
+    graph. `-filter_complex_script` takes the same string from a file, so the
+    limit stops existing instead of being worked around with a segment ceiling.
+    """
+    handle = tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False,
+                                         encoding="utf-8")
+    handle.write(graph)
+    handle.close()
+    return handle.name
 
 
 def run_render(command, print_command):

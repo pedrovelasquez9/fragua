@@ -197,6 +197,66 @@ def test_pullback_geometry():
     print("ok  retroceso de plano (1:1 en reposo, encoge a lo pedido)")
 
 
+def test_chapters():
+    """Los capitulos salen de la linea de salida, no de la grabacion original.
+
+    Ese es el fallo que se paga caro: escribirlos mirando el vídeo sin cortar
+    deja todos corridos por lo que quitó el detector de silencios. Y YouTube
+    descarta la lista entera, sin avisar, si le falta alguno de sus requisitos.
+    """
+    sys.path.insert(0, str(SCRIPTS))
+    from chapters import check, timestamp
+
+    assert timestamp(0) == "0:00"
+    assert timestamp(247) == "4:07"
+    assert timestamp(3753) == "1:02:33", timestamp(3753)
+
+    bien = [{"t": 0.0, "title": "Uno"}, {"t": 60.0, "title": "Dos"},
+            {"t": 120.0, "title": "Tres"}]
+    assert len(check(bien, 200.0)) == 3
+
+    def falla(capitulos, duracion, porque):
+        try:
+            check(capitulos, duracion)
+        except SystemExit:
+            return
+        raise AssertionError(f"acepta capitulos {porque}")
+
+    falla(bien[:2], 200.0, "por debajo del minimo de YouTube")
+    falla([{"t": 5.0, "title": "Uno"}] + bien[1:], 200.0, "que no arrancan en 0:00")
+    falla([{"t": 0.0, "title": "Uno"}, {"t": 4.0, "title": "Dos"},
+           {"t": 60.0, "title": "Tres"}], 200.0, "de menos de 10 s")
+    falla([{"t": 0.0, "title": "Uno"}, {"t": 120.0, "title": "Dos"},
+           {"t": 60.0, "title": "Tres"}], 200.0, "desordenados")
+    # Y el que delata el error de verdad: tiempos de la grabacion sin cortar.
+    falla(bien, 100.0, "que se salen del video montado")
+    print("ok  capitulos de YouTube (tiempos del montaje, no de la grabacion)")
+
+
+def test_srt_output():
+    """El .srt para YouTube: tiempos con coma, bloques numerados, sin karaoke."""
+    sys.path.insert(0, str(SCRIPTS))
+    from subtitles import NEWLINE, srt_document, srt_time
+
+    assert srt_time(3671.5) == "01:01:11,500", srt_time(3671.5)
+    assert srt_time(0) == "00:00:00,000"
+
+    doc = srt_document([
+        [{"start": 1.0, "end": 1.4, "text": "Hola"},
+         {"start": 1.4, "end": 2.2, "text": "mundo."}],
+        [{"start": 3.0, "end": 3.9, "text": "Segunda."}],
+    ])
+    bloques = doc.strip().split(NEWLINE * 2)
+    assert len(bloques) == 2, doc
+    cabecera = bloques[0].splitlines()
+    assert cabecera[0] == "1"
+    assert cabecera[1] == "00:00:01,000 --> 00:00:02,200"
+    assert cabecera[2] == "Hola mundo."
+    # Un srt es texto plano: si se cuela una marca de karaoke, YouTube la pinta.
+    assert "{" not in doc and chr(92) + "k" not in doc
+    print("ok  subtitulos en .srt para subir a YouTube")
+
+
 def test_transitions_keep_colour():
     """Un fundido tiene que llevarse el color con él, y el barrido no comérselo.
 
@@ -564,6 +624,8 @@ def main():
         test_version_is_consistent()
         test_cutaways()
         test_pullback_geometry()
+        test_chapters()
+        test_srt_output()
         test_transitions_keep_colour()
         test_animated_cards_wiring()
         test_silence_at_the_head()

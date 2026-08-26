@@ -40,6 +40,8 @@ SENTENCE_ENDERS = ".!?…"
 # Floor for words whisper.cpp timestamps as instantaneous.
 MIN_WORD = 0.08
 
+NEWLINE = chr(10)
+
 
 def ass_time(seconds):
     """Seconds as the H:MM:SS.cc that ASS expects."""
@@ -110,6 +112,28 @@ def caption_event(line, style, geometry):
     return f"Dialogue: 0,{ass_time(start)},{ass_time(end)},Caption,,0,0,0,,{''.join(parts)}"
 
 
+def srt_time(seconds):
+    """Seconds as the HH:MM:SS,mmm that SRT expects."""
+    seconds = max(0.0, seconds)
+    hours, remainder = divmod(seconds, 3600)
+    minutes, secs = divmod(remainder, 60)
+    return f"{int(hours):02d}:{int(minutes):02d}:{secs:06.3f}".replace(".", ",")
+
+
+def srt_document(lines):
+    """Plain SRT, for uploading to YouTube instead of burning the text in.
+
+    En horizontal y en vídeo largo, quemarlos tapa el código y el espectador no
+    puede quitarlos. Subido como pista, además, YouTube lo indexa.
+    """
+    blocks = []
+    for index, line in enumerate(lines, 1):
+        text = " ".join(word["text"].strip() for word in line)
+        start, end = srt_time(line[0]["start"]), srt_time(line[-1]["end"])
+        blocks.append(NEWLINE.join([str(index), f"{start} --> {end}", text, ""]))
+    return NEWLINE.join(blocks)
+
+
 def build_styles(platform):
     """Only captions live here. Titles are cards of kind 'chip', drawn by cards.py:
     a title set as ASS text over the frame is what reads as a slide heading."""
@@ -139,6 +163,8 @@ def parse_args():
     parser.add_argument("--plan", default=None, help="plan.json, to know when cards hide captions")
     parser.add_argument("--max-chars", type=int, default=None,
                         help="override the preset's line length")
+    parser.add_argument("--srt", default=None,
+                        help="escribe también un .srt para subir a YouTube")
     parser.add_argument("--fontsize", type=int, default=None,
                         help="tamaño del subtítulo en px. Bájalo en grabaciones de "
                              "pantalla: un subtítulo grande sobre una interfaz tapa "
@@ -189,6 +215,11 @@ def main():
     with open(args.output, "w", encoding="utf-8-sig") as handle:
         handle.write(header)
         handle.write("\n".join(events) + "\n")
+
+    if args.srt:
+        with open(args.srt, "w", encoding="utf-8") as handle:
+            handle.write(srt_document(lines))
+        print(f"{len(lines)} líneas -> {args.srt}")
 
     blocking = len(blocked_windows(cards))
     print(f"{len(lines)} subtítulos · {len(cards)} cards, {blocking} los ocultan -> {args.output}")

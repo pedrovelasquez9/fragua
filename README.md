@@ -239,6 +239,21 @@ clip's colour to yours, because footage from another camera rarely lands on the
 same brightness, and without that it reads as a different video rather than a
 different angle.
 
+### Long videos get chapters
+
+Anything over about five minutes comes back with YouTube chapters, ready to
+paste into the description. **The timings are the edit's, not the recording's** —
+which is the whole point, because silence removal moves everything and a chapter
+list written against the raw footage drifts by minutes.
+
+They are checked against what YouTube actually requires before you get them:
+first one at 0:00, at least three, none shorter than ten seconds. Miss any of
+those and YouTube quietly shows no chapters at all.
+
+Long videos also come with a subtitle file rather than captions burnt into the
+picture — on a wide screen those cover the code, and viewers cannot turn them
+off. Upload it to YouTube and the text becomes searchable.
+
 ### Shot changes and transitions
 
 Where the subject changes, the video shrinks onto black and a headline animates

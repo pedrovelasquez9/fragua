@@ -417,6 +417,27 @@ original sigue sonando, que es lo que lo hace leerse como otra cámara.
 `render.py` rechaza dos cutaways solapados, uno que caiga sobre un `pullback`, y
 uno que pida más metraje del que queda en el archivo.
 
+### Capítulos
+
+```json
+"chapters": [{"t": 0.0, "title": "..."}, {"t": 80.9, "title": "..."}]
+```
+
+```bash
+python scripts/chapters.py plan.json --cuts cuts.json
+```
+
+Imprime los capítulos en el formato que YouTube reconoce en la descripción.
+Los `t` viven en la línea de salida como todo lo demás de `plan.json`, así que
+son correctos por construcción: el error clásico es escribirlos mirando la
+grabación sin cortar y que queden todos corridos por lo que quitó el detector de
+silencios.
+
+Se validan los tres requisitos que YouTube no perdona y que, incumplidos, hacen
+que descarte la lista sin avisar: primero en 0:00, mínimo tres, y ninguno de
+menos de diez segundos. Y se avisa si alguno se sale del montaje, que delata
+tiempos de la grabación original.
+
 ### Cards
 
 | `kind` | Forma | Para qué |
@@ -515,6 +536,11 @@ Cuatro presets: `youtube_long` (1920×1080), `tiktok`, `reels` y `youtube_short`
 | `subtitle.outline` | Con `border_style` 3 es el **relleno interior**, no el grosor |
 | `subtitle.primary` / `secondary` | Color de palabra dicha / pendiente en el barrido karaoke |
 | `subtitle.margin_v` | Distancia al borde inferior. En vertical, 380–480 evita la UI de la app |
+
+`--srt fichero.srt` escribe además una pista de subtítulos en texto plano, para
+subir a YouTube en vez de quemarlos. Es lo que corresponde en horizontal y en
+vídeo largo: quemados tapan el código y no se pueden desactivar, y como pista
+YouTube los indexa.
 
 `subtitles.py` acepta `--fontsize`, `--margin-v` y `--max-chars` para saltarse el
 preset sin tocarlo. Se usan sobre todo en grabaciones de pantalla, donde el sitio
