@@ -725,6 +725,44 @@ def test_subtitle_font_resolves():
     print(f"ok  la fuente de subtítulos existe ({', '.join(names)})")
 
 
+def test_thumbnail():
+    """La miniatura sale del fondo + el recorte real + el rótulo.
+
+    Se le pasa una imagen que ya trae alfa para que la prueba no dependa de
+    rembg, que es opcional porque su modelo pesa un giga.
+    """
+    from PIL import Image
+    import thumbnail
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        background, face, out = tmp / "bg.png", tmp / "face.png", tmp / "mini.png"
+
+        Image.new("RGB", (1600, 900), (30, 20, 70)).save(background)
+        # Un "sujeto": un rectángulo opaco centrado sobre alfa vacío.
+        person = Image.new("RGBA", (600, 800), (0, 0, 0, 0))
+        person.paste(Image.new("RGBA", (240, 500), (200, 170, 150, 255)), (180, 150))
+        person.save(face)
+
+        sh(sys.executable, SCRIPTS / "thumbnail.py", background,
+           "--face", face, "--text", "REPO QUE NO CONOCES", "-o", out)
+
+        result = Image.open(out)
+        assert result.size == (thumbnail.WIDTH, thumbnail.HEIGHT), result.size
+
+        # El sujeto va a la derecha y toca el borde inferior; el rótulo, a la
+        # izquierda. Si el recorte no se hubiera ajustado al alfa, el sujeto
+        # quedaría flotando y la mitad inferior derecha seguiría siendo fondo.
+        pixels = result.convert("RGB")
+        floor = pixels.getpixel((int(thumbnail.WIDTH * 0.78), thumbnail.HEIGHT - 5))
+        assert max(floor) > 90, f"el sujeto no llega al suelo: {floor}"
+
+        # Blanco puro del rótulo en la banda izquierda.
+        left = pixels.crop((0, 0, thumbnail.WIDTH // 2, thumbnail.HEIGHT))
+        assert left.getextrema()[0][1] > 240, "no encuentro el rótulo en la banda libre"
+    print("ok  miniatura (fondo, recorte real y rótulo legible)")
+
+
 def main():
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
@@ -748,6 +786,7 @@ def main():
         test_polish_spares_shadows()
         test_assets_library()
         test_assets_autorefresh()
+        test_thumbnail()
         test_broll_stays_in_a_corner()
 
         make_clip(clip)

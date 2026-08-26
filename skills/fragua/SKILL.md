@@ -39,7 +39,7 @@ vídeo → analyze.py    → cuts.json    (segmentos a conservar, vía silencede
       → subtitles.py  → subs.ass     (karaoke, ya en la línea de tiempo final)
       → render.py     → salida.mp4   (un solo pase de ffmpeg desde el original)
       → chapters.py    → capítulos     (obligatorio en vídeo largo)
-      → [copy: título, descripción, tags, captions y 3 prompts de miniatura]
+      → [copy: título, descripción, tags, captions y 3 miniaturas]
 
 `assets.py --auto` se ejecuta en **cada edición**, sin que nadie lo pida: así
 una imagen o una pista añadida esta mañana ya está disponible esta tarde. El
@@ -502,7 +502,7 @@ de verdad se oye en el vídeo:
   **15 tags** separadas por coma
 - **Instagram**: caption
 - **TikTok**: caption
-- **En vídeo largo, además: 3 prompts de miniatura** (ver más abajo)
+- **En vídeo largo, además: 3 miniaturas terminadas** (ver más abajo)
 
 **El título y las 15 tags no son opcionales.** Van siempre, incluso si el
 usuario pide «sólo las descripciones» o «sólo el copy»: sin título no se puede
@@ -512,55 +512,55 @@ Máximo **5 hashtags** por red. En YouTube Shorts uno de ellos es `#Shorts`.
 
 **Miniaturas — obligatorias en vídeo largo**
 
-Un vídeo largo se entrega con **tres prompts de miniatura**, uno por cada título.
-La miniatura decide si el vídeo se abre; el título sólo confirma la decisión que
-ya tomó la imagen.
+Un vídeo largo se entrega con **tres miniaturas terminadas**, una por cada
+título. La miniatura decide si el vídeo se abre; el título sólo confirma la
+decisión que ya tomó la imagen.
 
-Cada prompt tiene que producir la **miniatura terminada**: la cara real del autor
-y el texto incluidos, para pegar en YouTube sin abrir un editor. Se escribe como
-instrucción sobre una **foto de referencia adjunta**, no como descripción de una
-escena, y se le entrega al usuario junto con el fotograma que tiene que adjuntar.
-
-**El fotograma de referencia lo sacas del propio vídeo.** `measure.py --card`
-sobre un tramo donde hable a cámara da una lámina de seis para elegir; el bueno
-tiene la cara despejada, los ojos visibles y algo de gesto. Expórtalo a resolución
-nativa y entrégalo con los prompts:
+**La cara no la genera el modelo.** Con una foto de referencia, los generadores
+hacen transferencia de identidad: devuelven a alguien *parecido*, y en un canal
+personal eso se nota y resta. Reescribir el prompt no lo arregla, porque no es
+un problema de redacción sino de lo que hace la herramienta. Así que el reparto
+es otro: **el generador hace el fondo sin personas** y `thumbnail.py` compone
+encima la cara recortada del propio vídeo y el rótulo.
 
 ```bash
-python scripts/measure.py entrada.mp4 --card 90 100     # mirar y elegir
-ffmpeg -y -ss 95 -i entrada.mp4 -frames:v 1 referencia.png
+python scripts/measure.py entrada.mp4 --card 90 100      # elegir el fotograma
+ffmpeg -y -ss 95 -i entrada.mp4 -frames:v 1 cara.png
+python scripts/thumbnail.py fondo1.png --face cara.png \
+       --text "REPO QUE NO CONOCES" --side right -o miniatura1.png
 ```
 
-Los tres tienen que ser **conceptos distintos**, no variaciones del mismo: uno
-que muestre el problema, uno que muestre el antes y el después, y uno que ponga
-en primer plano el objeto concreto del vídeo. Si los tres se parecen, no hay nada
-que testear.
+La cara sale idéntica porque **es un píxel del vídeo**, no una interpretación.
+El recorte lo hace `rembg`, que es opcional (su modelo pesa un giga) y se instala
+con `pip install rembg onnxruntime`. Si no está, dilo y entrega los fondos y los
+rótulos para que el usuario decida.
 
-Reglas que van **dentro** de cada prompt, no como nota aparte:
+Al usuario le entregas, por cada una: **el prompt del fondo, el rótulo y el
+comando ya montado** con sus rutas. Nada que él tenga que editar.
 
-- **Manda preservar la cara de la foto adjunta**, con los rasgos nombrados —barba,
-  gafas, pelo, tono de piel—. Sin eso el modelo inventa una cara parecida, y en
-  un canal personal un rostro que no es el tuyo se lee como el vídeo de otro.
-- **Elige el texto sin tildes y sin ñ.** Es la regla que hace viable el texto
-  generado: los modelos siguen fallando en «DÍA» y en «AÑO», pero escriben
-  «REPO QUE NO CONOCES» limpio. Es una restricción sobre qué palabras eliges, no
-  una limitación que haya que rodear — y si el rótulo bueno lleva tilde, busca
-  otro rótulo, no lo escribas mal.
-- **Escribe el texto entrecomillado y en mayúsculas dentro del prompt**, di dónde
-  va y de qué color, y **prohíbe cualquier otro texto**: sin esa prohibición el
-  modelo rellena el fondo de letras inventadas.
-- **Tres o cuatro palabras.** La miniatura se ve a 168×94 px en el móvil.
+**Los tres fondos, conceptos distintos** — no variaciones del mismo: uno que
+muestre el problema, uno el antes y el después, y uno el objeto concreto del
+vídeo. Si los tres se parecen, no hay nada que testear.
+
+Reglas que van **dentro** de cada prompt de fondo:
+
+- **Sin personas, sin caras, sin manos.** El sitio de la persona lo ocupa el
+  recorte después; si el fondo trae gente, se pisan.
+- **Sin texto de ningún tipo**, ni siquiera decorativo: el rótulo lo dibuja
+  `thumbnail.py` con la tipografía del canal, y un modelo escribiendo dentro del
+  fondo sólo puede estorbar.
+- **Deja vacío el lado donde irá la persona** y despejado el lado del rótulo. Un
+  fondo con el foco en el centro no sirve para ninguna de las dos cosas.
 - **La paleta es la del set del autor**, no la del generador. Míralo en un
-  fotograma: si su fondo es oscuro con contraluz azul, una miniatura clara y
-  naranja se lee como de otro canal.
-- **Un solo foco**, el resto desenfocado. Dos objetos compitiendo no se distingue
-  ninguno a ese tamaño.
-- **16:9, 1280×720**, y el sujeto fuera de la esquina inferior derecha, que es
-  donde YouTube pinta la duración.
+  fotograma: si su fondo es oscuro con contraluz azul, un fondo claro y naranja
+  se lee como de otro canal.
+- **16:9, 1280×720**, un solo motivo y el resto desenfocado. La miniatura se ve
+  a 168×94 px en el móvil.
 
-Avisa de lo que no controlas: el parecido depende del generador y a veces hace
-falta repetir. Si tras dos o tres intentos la cara no sale, dilo — es más honesto
-que entregar un prompt que no cumple lo que promete.
+Del **rótulo**: tres o cuatro palabras, en mayúsculas. Aquí lo dibuja Pillow, así
+que las tildes salen bien — pero si alguna vez el texto tiene que viajar dentro
+de un prompt de imagen, elígelo sin tildes y sin ñ, que es donde fallan los
+modelos.
 
 **Los tres objetivos, y qué implica cada uno**
 
