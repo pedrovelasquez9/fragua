@@ -81,6 +81,7 @@ Editar no necesita comando: basta con pedirlo.
 | `--target claude` / `--target opencode` | Instala solo para un agente (por defecto, ambos) |
 | `--project` | Instala en la carpeta actual en vez de en todo el sistema |
 | `--model ggml-medium` | Modelo más pequeño: 1,4 GB menos de descarga, más rápido y con algún fallo más |
+| `--version v1.12.0` | Instala esa versión exacta en vez de la última |
 
 En Windows las mismas opciones van con sintaxis de PowerShell: `-Target`,
 `-Project`, `-Model`.
@@ -97,6 +98,41 @@ git pull && ./install.sh                 # OpenCode
 
 > No copies la carpeta `vendor/` entre máquinas. Son 1,5 GB que el setup vuelve
 > a generar en cada ordenador.
+
+### Volver a una versión anterior
+
+Cada versión publicada tiene su etiqueta, así que cualquiera se puede instalar
+tal cual salió. Sirve cuando una actualización cambia algo que te gustaba, o
+cuando quieres reproducir una edición que hiciste hace meses.
+
+En **OpenCode**, el instalador acepta la etiqueta:
+
+```bash
+./install.sh --version v1.12.0
+```
+```powershell
+powershell -ExecutionPolicy Bypass -File install.ps1 -Version v1.12.0
+```
+
+En **Claude Code**, un marketplace también puede ser una carpeta de tu disco,
+así que clonas la versión que quieras y apuntas ahí el gestor de plugins:
+
+```bash
+git clone --branch v1.12.0 https://github.com/pedrovelasquez9/fragua fragua-1.12.0
+```
+
+Y dentro de Claude Code:
+
+```
+/plugin marketplace add ./fragua-1.12.0
+/plugin install fragua@fragua
+```
+
+Para volver a la versión actual, apunta el marketplace otra vez al repositorio
+— `/plugin marketplace add pedrovelasquez9/fragua` — y reinstala.
+
+Los números de versión están en [CHANGELOG.md](CHANGELOG.md), y `git tag` los
+lista todos si ya tienes el repositorio clonado.
 
 ### ¿Qué versión tengo?
 

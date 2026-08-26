@@ -8,6 +8,28 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.13.1 — 2026-08-26
+
+### Added
+- **Install a specific version.** `./install.sh --version v1.12.0` (or
+  `-Version` on PowerShell) checks out that tag before copying anything, so any
+  released version can be reinstalled exactly as it shipped. It refuses to run
+  on a dirty tree: copying local changes under a tag that does not have them
+  would leave you believing you are on the version you asked for. If the tag
+  does not exist it prints the ones that do.
+- Documented the rollback path for Claude Code, which is different because the
+  plugin is registered rather than copied: `plugin marketplace add` accepts a
+  local folder, so cloning the repository at a tag and registering that folder
+  pins the version. Verified end to end on v1.11.0.
+
+### Fixed
+- `install.ps1` could not install anything. A `\f` inside the literal
+  `skills\fragua\SKILL.md` had been turned into a form feed, so the path never
+  matched and the script died on its own sanity check. It now builds the path
+  from `$SkillName`, which cannot break the same way.
+
+---
+
 ## 1.13.0 — 2026-08-25
 
 ### Added
