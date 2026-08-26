@@ -8,6 +8,31 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.17.0 — 2026-08-26
+
+### Changed
+- **La miniatura se entrega como ficha, no montada.** 1.16.0 la componía con un
+  script; el montaje es una decisión de diseño y es del autor, no del plugin.
+  Ahora cada una de las tres llega en tres bloques: el **prompt del fondo** para
+  pegar en el generador, **dónde va la foto** —lado, alto y anclaje en píxeles
+  sobre 1280×720, y cuánto subirle el brillo— y el **rótulo** con su fuente de
+  `vendor/fonts`, su relleno, su contorno y su posición.
+- La fuente que se indica es la del propio vídeo, para que la miniatura y los
+  subtítulos se lean como el mismo canal.
+
+### Removed
+- `thumbnail.py` y su comprobación. Con él se va la dependencia opcional `rembg`,
+  que pesaba un giga.
+
+### Notes
+- Lo que sí se queda, porque sigue siendo cierto y sigue costando tiempo
+  descubrirlo: **no le pidas al generador que use tu cara**. Con una foto de
+  referencia hace transferencia de identidad y devuelve a alguien parecido. No es
+  un problema de redacción del prompt, así que no hay prompt que lo arregle: el
+  fondo va sin personas y la foto se compone después.
+
+---
+
 ## 1.16.0 — 2026-08-26
 
 Las dos versiones anteriores daban prompts de miniatura. Probados contra la

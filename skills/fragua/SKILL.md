@@ -39,7 +39,7 @@ vídeo → analyze.py    → cuts.json    (segmentos a conservar, vía silencede
       → subtitles.py  → subs.ass     (karaoke, ya en la línea de tiempo final)
       → render.py     → salida.mp4   (un solo pase de ffmpeg desde el original)
       → chapters.py    → capítulos     (obligatorio en vídeo largo)
-      → [copy: título, descripción, tags, captions y 3 miniaturas]
+      → [copy: título, descripción, tags, captions y 3 fichas de miniatura]
 
 `assets.py --auto` se ejecuta en **cada edición**, sin que nadie lo pida: así
 una imagen o una pista añadida esta mañana ya está disponible esta tarde. El
@@ -502,7 +502,7 @@ de verdad se oye en el vídeo:
   **15 tags** separadas por coma
 - **Instagram**: caption
 - **TikTok**: caption
-- **En vídeo largo, además: 3 miniaturas terminadas** (ver más abajo)
+- **En vídeo largo, además: 3 fichas de miniatura** (ver más abajo)
 
 **El título y las 15 tags no son opcionales.** Van siempre, incluso si el
 usuario pide «sólo las descripciones» o «sólo el copy»: sin título no se puede
@@ -512,55 +512,65 @@ Máximo **5 hashtags** por red. En YouTube Shorts uno de ellos es `#Shorts`.
 
 **Miniaturas — obligatorias en vídeo largo**
 
-Un vídeo largo se entrega con **tres miniaturas terminadas**, una por cada
-título. La miniatura decide si el vídeo se abre; el título sólo confirma la
-decisión que ya tomó la imagen.
+Un vídeo largo se entrega con **tres fichas de miniatura**, una por cada título.
+La miniatura decide si el vídeo se abre; el título sólo confirma la decisión que
+ya tomó la imagen.
 
-**La cara no la genera el modelo.** Con una foto de referencia, los generadores
-hacen transferencia de identidad: devuelven a alguien *parecido*, y en un canal
-personal eso se nota y resta. Reescribir el prompt no lo arregla, porque no es
-un problema de redacción sino de lo que hace la herramienta. Así que el reparto
-es otro: **el generador hace el fondo sin personas** y `thumbnail.py` compone
-encima la cara recortada del propio vídeo y el rótulo.
+No entregues la imagen montada: entrega **la ficha con la que el autor la monta**
+en su editor. Cada una lleva tres bloques, y los tres son obligatorios.
 
-```bash
-python scripts/measure.py entrada.mp4 --card 90 100      # elegir el fotograma
-ffmpeg -y -ss 95 -i entrada.mp4 -frames:v 1 cara.png
-python scripts/thumbnail.py fondo1.png --face cara.png \
-       --text "REPO QUE NO CONOCES" --side right -o miniatura1.png
-```
+**1 · Prompt del fondo.** En inglés, para pegar tal cual en el generador.
 
-La cara sale idéntica porque **es un píxel del vídeo**, no una interpretación.
-El recorte lo hace `rembg`, que es opcional (su modelo pesa un giga) y se instala
-con `pip install rembg onnxruntime`. Si no está, dilo y entrega los fondos y los
-rótulos para que el usuario decida.
+- **Sin personas, sin caras, sin manos.** Ese sitio lo ocupa la foto del autor;
+  si el fondo trae gente, se pisan.
+- **Sin texto de ningún tipo**, ni decorativo. El rótulo se pone después con la
+  tipografía del canal, y un modelo escribiendo dentro del fondo sólo estorba.
+- **Un lado vacío** para la persona y el contrario despejado para el rótulo. Un
+  fondo con el foco en el centro no sirve para ninguna de las dos cosas.
+- **La paleta es la del set del autor**, no la del generador. Míralo en un
+  fotograma: si su fondo es oscuro con contraluz azul, un fondo claro y naranja
+  se lee como de otro canal.
+- **16:9, 1280×720**, un solo motivo y el resto desenfocado.
 
-Al usuario le entregas, por cada una: **el prompt del fondo, el rótulo y el
-comando ya montado** con sus rutas. Nada que él tenga que editar.
+**2 · La foto.** De dónde sale y dónde va, en números sobre 1280×720:
+
+- **El fotograma**, con su segundo exacto del vídeo original. Elígelo mirando:
+  `measure.py --card` sobre un tramo hablado da una lámina de seis. El bueno
+  tiene los ojos visibles y algo de gesto.
+- **Recortada del fondo**, no pegada en rectángulo.
+- **Lado, alto y anclaje**: p. ej. «derecha, alto 92% del cuadro, pegada al borde
+  inferior, margen 25 px al lado derecho». Anclada abajo siempre: una persona
+  flotando se ve como un recorte.
+- **Súbele el brillo.** Este material se graba oscuro a propósito —YAVG por
+  debajo de 50 con contraluz es lo normal— y lo que en el vídeo es ambiente, a
+  168×94 px es una cara que no se distingue. Da el número medido y sugiere el
+  ajuste.
+
+**3 · El rótulo.** Texto, tipografía, color y posición:
+
+- **Texto**: tres o cuatro palabras en mayúsculas, y **cuál de los tres títulos
+  es su pareja**.
+- **Fuente**: una de `vendor/fonts` con su ruta —`Anton-Regular.ttf` para el
+  rótulo, `Poppins-ExtraBold.ttf` si se quiere algo menos condensado— para que la
+  miniatura y los subtítulos sean el mismo canal.
+- **Color**: relleno y contorno. Blanco puro `#FFFFFF` con contorno `#08080C` de
+  un 6% del alto de la fuente es lo legible por defecto; si el fondo de ese lado
+  es claro, invierte.
+- **Posición y tamaño**: lado, alineación vertical y cuánto del ancho ocupa.
+  Parte en dos o tres líneas si hace falta y llénalas: **una miniatura se lee a
+  168×94 px o no se lee**, y una frase entera en una sola línea a ese tamaño no
+  se lee. Un degradado lateral oscuro debajo agarra el texto mejor que una caja,
+  que se ve como una caja.
 
 **Los tres fondos, conceptos distintos** — no variaciones del mismo: uno que
 muestre el problema, uno el antes y el después, y uno el objeto concreto del
 vídeo. Si los tres se parecen, no hay nada que testear.
 
-Reglas que van **dentro** de cada prompt de fondo:
-
-- **Sin personas, sin caras, sin manos.** El sitio de la persona lo ocupa el
-  recorte después; si el fondo trae gente, se pisan.
-- **Sin texto de ningún tipo**, ni siquiera decorativo: el rótulo lo dibuja
-  `thumbnail.py` con la tipografía del canal, y un modelo escribiendo dentro del
-  fondo sólo puede estorbar.
-- **Deja vacío el lado donde irá la persona** y despejado el lado del rótulo. Un
-  fondo con el foco en el centro no sirve para ninguna de las dos cosas.
-- **La paleta es la del set del autor**, no la del generador. Míralo en un
-  fotograma: si su fondo es oscuro con contraluz azul, un fondo claro y naranja
-  se lee como de otro canal.
-- **16:9, 1280×720**, un solo motivo y el resto desenfocado. La miniatura se ve
-  a 168×94 px en el móvil.
-
-Del **rótulo**: tres o cuatro palabras, en mayúsculas. Aquí lo dibuja Pillow, así
-que las tildes salen bien — pero si alguna vez el texto tiene que viajar dentro
-de un prompt de imagen, elígelo sin tildes y sin ñ, que es donde fallan los
-modelos.
+Y dilo claro si el autor pregunta: **no le pidas al generador que use su cara.**
+Con una foto de referencia esos modelos hacen transferencia de identidad y
+devuelven a alguien parecido, que en un canal personal se nota y resta. No es un
+problema de cómo esté escrito el prompt, así que no hay redacción que lo arregle:
+la foto se compone después.
 
 **Los tres objetivos, y qué implica cada uno**
 

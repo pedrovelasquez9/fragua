@@ -292,21 +292,19 @@ off. Upload it to YouTube and the text becomes searchable.
 
 ### Long videos come back with thumbnails
 
-Finished ones. Three, one per title, ready to upload. And with **your** face, not
-one that resembles it.
+The spec to build them, three of them, one per title: the **background prompt**
+ready to paste into your generator, **where your photo goes** — side, size and
+anchor, in pixels on a 1280×720 frame — and the **headline** with its font, its
+colour and its place.
 
-That last part is why it works. Hand your photo to an image generator and it does
-not paste it: it does identity transfer and returns someone similar, which on a
-personal channel is noticeable. Here the generator only makes the background,
-with no people in it, and your face is cut out of your own footage — identical,
-because it is a frame of you rather than an interpretation.
+Do not ask the generator to use your face. Hand it your photo and it will not
+paste it: it does identity transfer and returns someone similar, which on a
+personal channel is noticeable. That is why the background prompt asks for no
+people and leaves that side empty — you composite your own photo on top, so the
+face is genuinely yours.
 
-The headline is drawn here too, in the channel's typeface, so accents and ñ come
-out as letters instead of scribbles.
-
-Cutting out needs `rembg`, which is not installed by default because its model is
-a gigabyte: `pip install rembg onnxruntime`. Without it you still get the
-backgrounds and the headlines, and you do the compositing yourself.
+The font it names is the one already in the video, so the thumbnail and the
+captions read as the same channel.
 
 ### Shot changes and transitions
 
