@@ -160,6 +160,22 @@ def source_to_output(timestamp, segments):
     return None
 
 
+def output_to_source(timestamp, segments):
+    """Mapa inverso de source_to_output: de la línea de salida a la grabación.
+
+    Hace falta para editar `cuts.json`, que vive en tiempo del original, a partir
+    de una transcripción que ya está cortada.
+    """
+    elapsed = 0.0
+    for segment in segments:
+        speed = segment.get("speed", 1.0)
+        span = (segment["end"] - segment["start"]) / speed
+        if timestamp <= elapsed + span:
+            return segment["start"] + (timestamp - elapsed) * speed
+        elapsed += span
+    return segments[-1]["end"] if segments else timestamp
+
+
 def output_duration(segments):
     """Length of the cut timeline in seconds."""
     return sum((s["end"] - s["start"]) / s.get("speed", 1.0) for s in segments)

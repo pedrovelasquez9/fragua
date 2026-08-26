@@ -21,6 +21,8 @@ cuts.json
 words.json
 draft.json
 plan.json
+digest.txt
+card-check.png
 *.output.json
 
 # Catálogo y ruta de la biblioteca de assets: son de esta máquina.
