@@ -294,6 +294,22 @@ Los vídeos largos vienen además con un fichero de subtítulos en vez de con el
 texto quemado en la imagen: en horizontal ese texto tapa el código y no se puede
 quitar. Súbelo a YouTube y lo que dices se vuelve buscable.
 
+### Los vídeos largos vienen con miniaturas
+
+No las imágenes: los **prompts**. Tres, uno por cada título, listos para pegar en
+un generador, porque la miniatura es lo que decide si el vídeo se abre siquiera;
+el título sólo confirma la decisión que ya tomó la imagen.
+
+Son tres ideas distintas y no tres versiones de la misma, para que haya algo que
+testear de verdad: el problema, el antes y el después, y el objeto concreto del
+que va el vídeo.
+
+Cada prompt lleva ya dentro lo que si no sale mal: nada de texto en la imagen
+generada, porque los modelos siguen destrozando las tildes y además querrás tu
+propia tipografía; un lado libre para componer encima tu foto real, porque una
+cara inventada en un canal personal se lee como el vídeo de otro; y la paleta de
+tu propio set, sacada de tu grabación y no del gusto del generador.
+
 ### Cambios de plano y transiciones
 
 Donde cambia el tema, el vídeo se encoge sobre negro y en el hueco que se abre
