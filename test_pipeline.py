@@ -612,9 +612,32 @@ def test_version_is_consistent():
         f"marketplace.json dice {market['plugins'][0]['version']}, plugin.json dice {version}")
 
     changelog = (root / "CHANGELOG.md").read_text(encoding="utf-8")
-    latest = next(line for line in changelog.splitlines() if line.startswith("## "))
-    assert latest.split()[1] == version, f"el changelog empieza en {latest!r}, no en {version}"
-    print(f"ok  versión {version} coherente (manifiestos y changelog)")
+    entries = re.findall(r"^## (\d+\.\d+\.\d+) — (\S+)$", changelog, re.M)
+    assert entries, "el changelog no tiene ninguna entrada con el formato '## x.y.z — fecha'"
+
+    listed = [v for v, _ in entries]
+    assert listed[0] == version, f"el changelog empieza en {listed[0]}, no en {version}"
+
+    order = sorted(listed, key=lambda v: tuple(int(n) for n in v.split(".")), reverse=True)
+    assert listed == order, "las entradas del changelog no van de la más nueva a la más vieja"
+
+    undated = [v for v, date in entries if not re.fullmatch(r"20\d\d-\d\d-\d\d", date)]
+    assert not undated, f"entradas sin fecha ISO: {undated}"
+
+    # Una versión etiquetada sin entrada es la que se pierde: pasó con 1.11.0,
+    # que se llegó a etiquetar sin subir la versión ni cerrar la documentación.
+    # `git tag` no está en un clon descargado como zip, así que se salta.
+    tags = subprocess.run(["git", "-C", str(root), "tag"],
+                          capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if tags.returncode == 0 and tags.stdout.strip():
+        published = {line.strip().lstrip("v") for line in tags.stdout.splitlines() if line.strip()}
+        missing = sorted(published - set(listed),
+                         key=lambda v: tuple(int(n) for n in v.split(".")))
+        assert not missing, f"publicadas sin entrada en el changelog: {missing}"
+        print(f"ok  versión {version} coherente ({len(listed)} entradas, "
+              f"{len(published)} publicadas)")
+    else:
+        print(f"ok  versión {version} coherente ({len(listed)} entradas, sin git)")
 
 
 def test_digest():

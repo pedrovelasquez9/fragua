@@ -857,8 +857,19 @@ nueva a más antigua.
 
 Al añadir una funcionalidad, sube la versión en **los dos** manifiestos y abre
 una entrada nueva en el changelog escrita para quien usa la skill, no para quien
-la programa: qué puede hacer ahora que antes no. `test_pipeline.py` comprueba
-que los tres números coinciden.
+la programa: qué puede hacer ahora que antes no.
+
+El trabajo va en rama —`feature/…` o `fix/…` desde `develop`, `release/x.y.z`
+hacia `main`— con commits en formato *conventional commits*, y **cada versión que
+llega a `main` lleva su tag `vx.y.z`**. El tag no es ceremonia: es lo que permite
+`install.sh --version` y volver a una versión concreta, así que una versión sin
+tag es una versión a la que nadie puede volver.
+
+`test_pipeline.py` comprueba las cuatro cosas que se desincronizan solas: que los
+dos manifiestos y la entrada más reciente del changelog dicen el mismo número,
+que las entradas van de la más nueva a la más vieja con fecha ISO, y que **ninguna
+versión etiquetada se ha quedado sin entrada** — que es el fallo que de verdad
+ocurrió, con 1.11.0.
 
 ## Instalación como skill
 
