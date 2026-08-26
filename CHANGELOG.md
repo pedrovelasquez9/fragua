@@ -8,6 +8,25 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.15.1 — 2026-08-26
+
+### Changed
+- **Los prompts de miniatura entregan la imagen terminada.** 1.15.0 los escribió
+  para un flujo con edición posterior: sin texto y con un hueco libre para
+  componer la foto encima. Eso no es un entregable, es media tarea. Ahora cada
+  prompt se escribe como instrucción sobre una **foto de referencia adjunta** y
+  produce la miniatura completa —cara real y rótulo incluidos— para subirla a
+  YouTube sin abrir un editor.
+- **El rótulo se elige sin tildes y sin ñ.** Es lo que hace viable el texto
+  generado: los modelos siguen fallando en «DÍA» y en «AÑO», pero escriben
+  «REPO QUE NO CONOCES» limpio. Es una restricción sobre qué palabras se eligen,
+  no una limitación que haya que rodear; si el rótulo bueno lleva tilde, se busca
+  otro rótulo en vez de escribirlo mal.
+- El fotograma de referencia se saca del propio vídeo y se entrega con los
+  prompts. `measure.py --card` sobre un tramo hablado da la lámina para elegirlo.
+
+---
+
 ## 1.15.0 — 2026-08-26
 
 ### Added
