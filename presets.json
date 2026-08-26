@@ -9,7 +9,7 @@
     "audio_bitrate": "192k",
     "lufs": -14,
     "subtitle": {
-      "fontname": "Roboto Black",
+      "fontname": "Poppins ExtraBold",
       "fontsize": 35,
       "primary": "&H004CB6D6",
       "secondary": "&H00FFFFFF",
@@ -43,7 +43,7 @@
     "audio_bitrate": "192k",
     "lufs": -14,
     "subtitle": {
-      "fontname": "Roboto Black",
+      "fontname": "Poppins ExtraBold",
       "fontsize": 56,
       "primary": "&H004CB6D6",
       "secondary": "&H00FFFFFF",
@@ -77,7 +77,7 @@
     "audio_bitrate": "192k",
     "lufs": -14,
     "subtitle": {
-      "fontname": "Roboto Black",
+      "fontname": "Poppins ExtraBold",
       "fontsize": 56,
       "primary": "&H004CB6D6",
       "secondary": "&H00FFFFFF",
@@ -111,7 +111,7 @@
     "audio_bitrate": "192k",
     "lufs": -14,
     "subtitle": {
-      "fontname": "Roboto Black",
+      "fontname": "Poppins ExtraBold",
       "fontsize": 56,
       "primary": "&H004CB6D6",
       "secondary": "&H00FFFFFF",

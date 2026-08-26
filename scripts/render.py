@@ -683,14 +683,23 @@ def video_graph(args, platform, effects, plan, cutaway_index):
     return chunks, cutaway_inputs
 
 
-def resolve_card_paths(cards_dir, count):
+def resolve_card_paths(cards_dir, count, plan_path=None):
     """cardNN.mov (animated) or cardNN.png (still), in plan order.
 
     The .mov wins when both exist, so re-running cards.py --animated upgrades an
     edit without touching plan.json. The index is the contract with cards.py.
+
+    Sin `--cards` se busca en `cards/` junto al plan. Antes se devolvía la lista
+    vacía y el vídeo salía sin las cards que el plan pedía, sin un aviso: el
+    mismo comando de render que documenta la skill no llevaba `--cards`, así que
+    el fallo silencioso era el caso normal, no el raro.
     """
-    if not cards_dir or not count:
+    if not count:
         return []
+    if not cards_dir:
+        if plan_path is None:
+            sys.exit(f"el plan pide {count} cards y no sé dónde están: usa --cards")
+        cards_dir = Path(plan_path).resolve().parent / "cards"
     paths = []
     for index in range(count):
         stem = Path(cards_dir) / f"card{index:02d}"
@@ -739,7 +748,8 @@ def build(args, platform, segments, plan, source):
     next_input += len(stickers)
 
     card_inputs, card_chunks, video_label = card_graph(
-        cards, resolve_card_paths(args.cards, len(cards)), next_input, video_label, height)
+        cards, resolve_card_paths(args.cards, len(cards), args.plan),
+        next_input, video_label, height)
     graph += card_chunks
     next_input += len(cards)
 
@@ -784,7 +794,9 @@ def parse_args():
     parser.add_argument("--preset", default="tiktok")
     parser.add_argument("--subs", default=None, help="subs.ass from subtitles.py")
     parser.add_argument("--plan", default=None, help="plan.json: grade, effects, cards, music")
-    parser.add_argument("--cards", default=None, help="carpeta con los PNG de cards.py")
+    parser.add_argument("--cards", default=None,
+                        help="carpeta con los PNG de cards.py "
+                             "(por defecto, cards/ junto a plan.json)")
     parser.add_argument("-o", "--output", default="output.mp4")
     parser.add_argument("--no-grade", action="store_true", help="skip the cinematic look")
     parser.add_argument("--no-polish", action="store_true",

@@ -74,8 +74,10 @@ else
 fi
 
 # --- fonts (OFL, redistributable) -------------------------------------------
-# Roboto ships variable-only. libass resolves named instances, so presets.json
-# asks for the family name "Roboto Black" — it will NOT synthesise bold.
+# Roboto ships variable-only, y libass NO saca de ahí la instancia Black: pide
+# "Roboto Black" y te da Arial (medido con libass 0.17.5, ni con bold=1 cambia).
+# Por eso los subtítulos usan "Poppins ExtraBold", que va vendorizada estática.
+# Roboto se sigue descargando porque las cards la usan por fichero, no por nombre.
 fetch_font() {
     [ -f "$FONTS/$1" ] && return 0
     echo "descargando $1..."
