@@ -300,11 +300,14 @@ They are three different ideas rather than three versions of one, so there is
 actually something to test: the problem, the before-and-after, and the concrete
 object the video is about.
 
-Each prompt already carries the things that go wrong otherwise — no text in the
-generated image, because models still mangle accents and you want your own
-typography anyway; a free side to composite your real photo onto, because an
-invented face on a personal channel reads as someone else's video; and your own
-set's palette, taken from your footage rather than from the generator's taste.
+Each prompt produces the **finished** thumbnail — your own face and the text
+included — so it goes straight to YouTube without opening an editor. They come
+with a still pulled from your own video for you to attach as the face reference,
+because an invented face on a personal channel reads as someone else's video.
+
+The wording is chosen so the generated text survives: models still mangle «DÍA»
+and «AÑO», so the headline is picked from words that carry no accent and no ñ.
+That is a constraint on which words you use, not a limitation to work around.
 
 ### Shot changes and transitions
 
