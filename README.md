@@ -293,9 +293,13 @@ off. Upload it to YouTube and the text becomes searchable.
 ### Long videos come back with thumbnails
 
 The spec to build them, three of them, one per title: the **background prompt**
-ready to paste into your generator, **where your photo goes** — side, size and
-anchor, in pixels on a 1280×720 frame — and the **headline** with its font, its
-colour and its place.
+ready to paste into your generator, **what photo of you it needs** — expression,
+framing, hands, the direction of the light — and where it goes in pixels on a
+1280×720 frame, and the **headline** with its font, its colour and its place.
+
+It does not hand you a frame from the video: it tells you what the thumbnail
+needs, and you decide whether to pull it from the footage, shoot it on purpose or
+use one you already have.
 
 Do not ask the generator to use your face. Hand it your photo and it will not
 paste it: it does identity transfer and returns someone similar, which on a

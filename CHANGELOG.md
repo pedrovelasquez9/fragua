@@ -8,6 +8,20 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.17.1 — 2026-08-26
+
+### Changed
+- **La ficha encarga la foto, no la señala.** 1.17.0 daba un segundo del vídeo
+  del que sacar el fotograma, que es decidir por el autor: puede preferir
+  hacérsela a propósito o usar una que ya tiene. Ahora describe **qué foto hace
+  falta** —expresión y por qué esa, encuadre, hacia dónde mira, qué hacen las
+  manos— y de dónde sacarla es cosa suya.
+- Se añade la que decide si el montaje cuela: **la luz de la foto tiene que venir
+  del mismo lado que la del fondo**. Es lo que separa una imagen de un recorte
+  pegado, y no se ve venir hasta que ya está montado.
+
+---
+
 ## 1.17.0 — 2026-08-26
 
 ### Changed
