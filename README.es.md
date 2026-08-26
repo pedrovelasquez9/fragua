@@ -297,8 +297,12 @@ quitar. Súbelo a YouTube y lo que dices se vuelve buscable.
 ### Los vídeos largos vienen con miniaturas
 
 La ficha para montarlas, tres, una por cada título: el **prompt del fondo** listo
-para pegar en tu generador, **dónde va tu foto** —lado, tamaño y anclaje, en
-píxeles sobre 1280×720— y el **rótulo** con su fuente, su color y su sitio.
+para pegar en tu generador, **qué foto tuya hace falta** —expresión, encuadre,
+manos, dirección de la luz— y dónde va, en píxeles sobre 1280×720, y el **rótulo**
+con su fuente, su color y su sitio.
+
+No te da un fotograma del vídeo: te dice qué foto necesita la miniatura y decides
+tú si la sacas del material, te la haces a propósito o usas otra que ya tienes.
 
 No le pidas al generador que use tu cara. Le das tu foto y no la pega: hace
 transferencia de identidad y devuelve a alguien parecido, y en un canal personal
