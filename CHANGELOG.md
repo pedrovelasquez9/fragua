@@ -8,6 +8,33 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.14.1 — 2026-08-26
+
+Los dos fallos de esta versión salieron editando un vídeo real con 1.14.0, no
+leyendo el código: uno estaba en el log del render y el otro en el resultado.
+
+### Fixed
+- **Los subtítulos salían en Arial.** Los presets pedían `Roboto Black`, pero
+  Roboto se vendoriza como fuente variable y libass no saca de ahí la instancia
+  Black: resolvía a ArialMT sin decir nada. Medido con libass 0.17.5, tampoco
+  cambia con `bold=1`. Los presets pasan a `Poppins ExtraBold`, que ya venía
+  descargada como estática y sí resuelve. Un comentario del setup afirmaba lo
+  contrario desde el principio; nunca se había comprobado.
+- **`render.py` se comía las cards sin avisar.** Sin `--cards` devolvía la lista
+  vacía y el vídeo salía sin las cards que `plan.json` pedía — y el comando de
+  render que documentaba la skill **no llevaba `--cards`**, así que el fallo
+  silencioso era el caso normal. Ahora, si el plan pide cards, se buscan en
+  `cards/` junto al plan, y si falta alguna se aborta con el fichero que falta.
+- El comando de render de la skill lleva `--cards` explícito, como el del
+  README técnico, que sí lo tenía.
+
+### Added
+- Comprobación de que la fuente que pide cada preset es la que libass acaba
+  dibujando. El fallback de fuente es silencioso por diseño, así que sin esto
+  vuelve a pasar desapercibido.
+
+---
+
 ## 1.14.0 — 2026-08-26
 
 Una edición gastaba mucho más contexto del necesario en trabajo mecánico. Lo

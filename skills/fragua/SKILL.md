@@ -439,7 +439,8 @@ que es texto plano.
 ### 5. Renderizar
 
 ```bash
-python scripts/render.py entrada.mp4 --cuts cuts.json --subs subs.ass --plan plan.json --preset tiktok -o corto.mp4
+python scripts/render.py entrada.mp4 --cuts cuts.json --subs subs.ass \
+       --plan plan.json --cards cards/ --preset tiktok -o corto.mp4
 ```
 
 Un solo pase de ffmpeg desde el original: sin pérdida por recodificaciones

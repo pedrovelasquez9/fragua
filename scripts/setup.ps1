@@ -67,8 +67,10 @@ if (Test-Path $bin) {
 # faces read as generic; these are what short-form editors actually use.
 $fonts = Join-Path $vendor "fonts"
 New-Item -ItemType Directory -Force -Path $fonts | Out-Null
-# Roboto ships variable-only. libass resolves named instances, so ask for the
-# family name "Roboto Black" in presets.json — it will NOT synthesise bold.
+# Roboto ships variable-only, y libass NO saca de ahí la instancia Black: pide
+# "Roboto Black" y te da Arial (medido con libass 0.17.5, ni con bold=1 cambia).
+# Por eso los subtítulos usan "Poppins ExtraBold", que va vendorizada estática.
+# Roboto se sigue descargando porque las cards la usan por fichero, no por nombre.
 $want = @{
     "Roboto-Variable.ttf"   = "https://github.com/google/fonts/raw/main/ofl/roboto/Roboto%5Bwdth%2Cwght%5D.ttf"
     "Anton-Regular.ttf"     = "https://github.com/google/fonts/raw/main/ofl/anton/Anton-Regular.ttf"
