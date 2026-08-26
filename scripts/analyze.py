@@ -23,6 +23,14 @@ TAIL_ROOM = 0.45
 TAIL_FLOOR_DB = -42
 TAIL_REACH = 0.6
 
+# Un trozo corto de habla rodeado de silencio largo por los dos lados casi
+# siempre es un falso arranque: se empieza una palabra, se para y se rearranca.
+# No se borra solo —a veces es un «sí» o un «exacto» que hace falta— pero se
+# avisa, porque es justo lo que la transcripción del audio ya cortado NO enseña:
+# whisper se salta las tomas casi idénticas.
+SUSPECT_KEEP = 1.6
+SUSPECT_GAP = 1.0
+
 
 def detect_silences(video, threshold_db, min_silence):
     """Silent stretches as [(start, end), ...] in source time."""
@@ -103,6 +111,20 @@ def parse_args():
     return parser.parse_args()
 
 
+def false_starts(segments):
+    """Segmentos cortos y aislados: los sospechosos de ser un falso arranque."""
+    found = []
+    for index, segment in enumerate(segments):
+        if segment["end"] - segment["start"] > SUSPECT_KEEP:
+            continue
+        before = segment["start"] - segments[index - 1]["end"] if index else 999
+        after = (segments[index + 1]["start"] - segment["end"]
+                 if index + 1 < len(segments) else 999)
+        if before >= SUSPECT_GAP and after >= SUSPECT_GAP:
+            found.append(segment)
+    return found
+
+
 def main():
     args = parse_args()
 
@@ -122,6 +144,12 @@ def main():
     if rescued:
         print(f"  {rescued} finales alargados hasta el silencio real "
               f"(la palabra seguía sonando)")
+
+    suspects = false_starts(segments)
+    for segment in suspects:
+        print(f"  posible falso arranque en {segment['start']:.2f}-{segment['end']:.2f}s "
+              f"({segment['end'] - segment['start']:.2f}s aislado): escúchalo antes de dar "
+              f"el corte por bueno")
 
     kept = sum(segment["end"] - segment["start"] for segment in segments)
     write_json(args.output, {

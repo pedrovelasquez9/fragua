@@ -190,6 +190,21 @@ del original, que es donde tiene que caer el fundido de salida de `render.py`
 (0.35 s) para no comerse la última palabra.
 | `--min-keep` | `0.12` | Descarta segmentos más cortos que esto |
 
+También nombra los **falsos arranques**: un trozo corto de habla aislado entre
+dos silencios largos es casi siempre alguien que empieza una palabra, se para y
+rearranca. No se borra solo, se avisa con su segundo — y hay que ir a mirarlo al
+original, porque es justo lo que la transcripción del audio ya cortado no enseña.
+
+Cualquier corte hecho a mano sobre `cuts.json` debe caer en un silencio medido,
+no en un límite de `words.json`: los tiempos de whisper marcan dónde cree que
+empieza una palabra, no dónde hay pausa, y además inventa palabras en tramos que
+están por debajo del umbral audible.
+
+```bash
+ffmpeg -hide_banner -nostats -nostdin -ss 145 -t 75 -i entrada.mp4 \
+  -af "silencedetect=noise=-42dB:d=0.30,ametadata=print" -f null -
+```
+
 ### Paso 2 · Transcribir, una sola vez
 
 ```bash
