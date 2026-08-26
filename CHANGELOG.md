@@ -8,6 +8,21 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.14.2 — 2026-08-26
+
+### Added
+- El changelog se comprueba entero, no sólo su primera línea: entradas ordenadas
+  de la más nueva a la más vieja, cada una con fecha ISO, y **ninguna versión
+  etiquetada sin entrada**. Ese último es el fallo que ocurrió de verdad: 1.11.0
+  llegó a etiquetarse sin subir la versión ni cerrar la documentación, y nada
+  avisó. En un clon sin `git` la comprobación se salta en vez de fallar.
+- Queda escrito en la skill lo que hasta ahora sólo era costumbre: el trabajo va
+  en rama con git flow y conventional commits, y cada versión que llega a `main`
+  lleva su tag. Sin tag no hay `install.sh --version`, así que una versión sin
+  etiquetar es una a la que nadie puede volver.
+
+---
+
 ## 1.14.1 — 2026-08-26
 
 Los dos fallos de esta versión salieron editando un vídeo real con 1.14.0, no
