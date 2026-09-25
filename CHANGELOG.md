@@ -8,6 +8,16 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.26.1 — 2026-09-26
+
+### Fixed
+- **Un sticker que aterriza pegado arriba se salía del cuadro al botar.** El
+  bote de `bounce` y `drop` sube hasta un 11 % del alto; con el sticker en el 7 %
+  de arriba, medio viaje iba cortado por el borde. Ahora el bote se topa para
+  que el elemento no pase del borde superior.
+
+---
+
 ## 1.26.0 — 2026-09-26
 
 ### Added
