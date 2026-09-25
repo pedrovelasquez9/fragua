@@ -356,6 +356,17 @@ autor**. El plugin no trae ninguna: las eliges tú, como la música.
 
 Necesita lo mismo que las cards animadas: Node y `/fragua:setup`.
 
+### Etiquetas de sección, logos y sellos
+
+Tres gráficos más, de los que usan los reels que mejor funcionan:
+
+- **Etiqueta de sección** arriba a la izquierda — *«02 · COMMITS CON UN SOLO
+  FIN»* — que se queda mientras dura esa parte.
+- **Fila de logos** de las herramientas de las que hablas, entrando uno a uno,
+  con un visto verde o uno destacado.
+- **Sello rojo** en diagonal para un veredicto — *«NO SIRVE»* —, que cae de
+  golpe con un fallo de señal.
+
 ### Subtítulos con la palabra clave de color
 
 En TikTok, Reels y Shorts los subtítulos salen en frases cortas, en mayúsculas,

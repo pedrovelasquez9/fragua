@@ -544,6 +544,18 @@ colorea la más larga que no sea relleno. Los colores rotan entre los de
 bloque `impact` de cada preset; `--fontsize` y `--margin-v` los sobrescriben.
 `--style karaoke` vuelve al estilo anterior.
 
+### Cards: section, logos y stamp
+
+| `kind` | Claves | Animada |
+|---|---|---|
+| `section` | `number`, `title` | el número desliza, el título se escribe letra a letra |
+| `logos` | `items: [{file, label, check}]`, `highlight`, `shape` (`circle`/`square`), `title` | saltan de uno en uno; el visto llega después |
+| `stamp` | `title`, `angle` (−8 por defecto) | cae de 1.9× a su tamaño con un glitch rojo y cian |
+
+En la versión animada, las imágenes de `logos` viajan dentro de las props como
+data URL: Remotion no ve el disco del usuario. Los tres están en
+`ALONGSIDE_CAPTIONS` y no ocultan los subtítulos.
+
 ### Iconos de marca
 
 ```bash

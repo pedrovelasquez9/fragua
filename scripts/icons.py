@@ -26,6 +26,7 @@ from common import ASSETS_CONFIG, assets_dir  # noqa: E402
 INDICE = "https://cdn.jsdelivr.net/npm/simple-icons@latest/_data/simple-icons.json"
 ICONO = "https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/{slug}.svg"
 CACHE = ASSETS_CONFIG.parent / "simple-icons.json"
+CACHE_VERSION = 2
 
 TAMANO = 512
 PLATE_PAD = 0.22          # margen del plato alrededor del icono
@@ -42,24 +43,51 @@ MINIMO = 4                # longitud mínima de palabra para buscarla
 
 
 def slugify(texto):
+    """Para cruzar con el texto: quita todo lo que no es letra o número."""
     return re.sub(r"[^a-z0-9]", "", texto.lower())
+
+
+# El nombre del fichero en Simple Icons no es el título sin símbolos: cambia cada
+# símbolo por su nombre. Con la versión ingenua «C++» y «C» caían los dos en `c`
+# —el segundo pisaba al primero— y «.NET» buscaba `net`.
+SIMBOLOS = {"+": "plus", ".": "dot", "&": "and", "đ": "d", "ħ": "h", "ı": "i",
+            "ĸ": "k", "ŀ": "l", "ł": "l", "ß": "ss", "ŧ": "t", "ø": "o"}
+
+
+def slug_oficial(titulo):
+    """El nombre que usa Simple Icons para el fichero de cada marca."""
+    import unicodedata
+
+    texto = "".join(SIMBOLOS.get(c, c) for c in titulo.lower())
+    texto = unicodedata.normalize("NFD", texto)
+    texto = "".join(c for c in texto if not unicodedata.combining(c))
+    return re.sub(r"[^a-z0-9]", "", texto)
 
 
 def catalogo(refrescar=False):
     """El índice de Simple Icons, cacheado junto a la config de la biblioteca."""
     if CACHE.exists() and not refrescar:
-        return json.loads(CACHE.read_text(encoding="utf-8"))
+        guardado = json.loads(CACHE.read_text(encoding="utf-8"))
+        # Una caché de antes de 1.23 tiene los nombres mal hechos (C++ pisaba a
+        # C): se rehace en vez de seguir sirviendo la tabla equivocada.
+        if guardado.get("_version") == CACHE_VERSION:
+            return guardado
     print("descargando el índice de Simple Icons…")
     with urllib.request.urlopen(INDICE, timeout=60) as respuesta:
         crudo = json.loads(respuesta.read().decode("utf-8"))
     iconos = crudo["icons"] if isinstance(crudo, dict) else crudo
     tabla = {}
     for icono in iconos:
-        destino = {"slug": slugify(icono["title"]), "hex": icono.get("hex", "FFFFFF"),
-                   "title": icono["title"]}
+        destino = {"slug": icono.get("slug") or slug_oficial(icono["title"]),
+                   "hex": icono.get("hex", "FFFFFF"), "title": icono["title"]}
+        # El nombre oficial manda y nunca se pisa; el ingenuo y los alias sólo
+        # rellenan huecos, para que «nodejs» encuentre Node.js sin que «C++»
+        # se quede con el sitio de «C».
         tabla[destino["slug"]] = destino
+        tabla.setdefault(slugify(icono["title"]), destino)
         for alias in (icono.get("aliases") or {}).get("aka", []):
             tabla.setdefault(slugify(alias), destino)
+    tabla["_version"] = CACHE_VERSION
     CACHE.parent.mkdir(parents=True, exist_ok=True)
     CACHE.write_text(json.dumps(tabla, ensure_ascii=False), encoding="utf-8")
     print(f"  {len(tabla)} nombres -> {CACHE}")
@@ -146,16 +174,29 @@ def rasteriza(svg, lado, plato):
     return fondo
 
 
+def clave(palabra, tabla):
+    """Qué entrada de la tabla es esta palabra: primero su nombre oficial.
+
+    «c++» simplificada a lo bruto es «c», que es otra marca. Por su nombre
+    oficial es «cplusplus», que es la buena.
+    """
+    for candidata in (slug_oficial(palabra), slugify(palabra)):
+        if candidata in tabla:
+            return candidata
+    return slugify(palabra)
+
+
 def palabras_del_texto(ruta, tabla):
     """Los nombres de la tabla que aparecen en el texto, sin repetir."""
     texto = Path(ruta).read_text(encoding="utf-8")
     vistas, salida = set(), []
     for bruto in re.findall(r"[A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9.+#-]{3,}", texto):
-        clave = slugify(bruto)
-        if (len(clave) >= MINIMO and clave not in RUIDO
-                and clave in tabla and clave not in vistas):
-            vistas.add(clave)
-            salida.append((bruto.strip(".,").lower(), clave))
+        limpio = bruto.strip(".,").lower()
+        encontrada = clave(limpio, tabla)
+        if (len(slugify(limpio)) >= MINIMO and encontrada not in RUIDO
+                and encontrada in tabla and encontrada not in vistas):
+            vistas.add(encontrada)
+            salida.append((limpio, encontrada))
     return salida
 
 
@@ -182,14 +223,14 @@ def main():
     if args.texto:
         encontrados = palabras_del_texto(args.texto, tabla)
     else:
-        encontrados = [(w.lower(), slugify(w)) for w in args.words]
+        encontrados = [(w.lower(), clave(w, tabla)) for w in args.words]
 
     destino = Path(args.outdir) if args.outdir else assets_dir() / "images"
     destino.mkdir(parents=True, exist_ok=True)
 
     hechos, fallos = 0, []
-    for palabra, clave in encontrados:
-        icono = tabla.get(clave)
+    for palabra, nombre in encontrados:
+        icono = tabla.get(nombre)
         if not icono:
             fallos.append(palabra)
             continue
