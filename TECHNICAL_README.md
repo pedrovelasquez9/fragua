@@ -417,6 +417,7 @@ la rama más corta.
 | `cut_in` | `dur` (2.4) | 0.10–0.16 | El salto: cambia de plano en un fotograma, sin rampa |
 | `shake` | `dur` | 4–14 px | Un remate, un dato que golpea |
 | `whip_pan` | `dur` | — | Transición entre dos ideas distintas |
+| `wipe` | `dur` (0.36) + `from` | — | Barrido de color. En `t: 0` abre el gancho; `t` es el centro, cuando tapa el cuadro |
 | `dip` | `dur` | −0.4 a −0.7 | Bajón a negro, un golpe seco sin rótulo |
 | `flash` | `dur` | 0.3–0.6 | Un corte duro, un cambio de bloque |
 | `letterbox` | `dur` | 0.08–0.15 | Momento dramático. Ojo si la cara va alta en el encuadre |
@@ -476,6 +477,8 @@ horizontal y sólo en el tramo central del barrido, por lo mismo.
 | `start` | Desde dónde se lee el clip (0 por defecto) |
 | `grade` | Cadena de filtros para igualar su color al del vídeo |
 | `fade` | Fundido de entrada y salida en segundos (0.35; 0 = corte seco) |
+| `transition` | `"wipe"`: entra y sale en seco con un barrido de color en cada corte |
+| `wipe_from`, `wipe_color` | Lado desde el que cruza el barrido y su color (`left`, `#FF8A3D`) |
 
 El clip se lleva a la resolución de salida con lanczos y un `unsharp` suave —el
 `polish` del vídeo principal queda antes en la cadena y no le llega— y se compone
@@ -485,6 +488,11 @@ original sigue sonando, que es lo que lo hace leerse como otra cámara.
 
 `render.py` rechaza dos cutaways solapados, uno que caiga sobre un `pullback`, y
 uno que pida más metraje del que queda en el archivo.
+
+El barrido (`wipe_graph` en `render.py`) son dos `color` que cruzan con
+`overlay`: uno oscuro (`#14161F`) delante y el de color 0.07 s detrás, así que
+lo que se ve es color con un filo oscuro. Va **encima de todo**, subtítulos y
+cards incluidos: si algo asomara por encima, el corte se vería.
 
 ### Cards: compare, checklist y code
 
@@ -573,6 +581,25 @@ ni cambiar el tamaño de un overlay fotograma a fotograma, y así la curva es
 exactamente la medida. Las cards animadas usan las mismas constantes en
 `Card.tsx`, y `test_motion_matches_remotion` falla si se separan.
 
+Con `"motion"` un sticker llega viajando (`path_clip` en `motion.py`):
+
+| `motion` | Trayectoria | Viaje |
+|---|---|---|
+| `pop` | nace en su sitio (por defecto) | 0.25 s |
+| `bounce` | desde fuera por el lado contrario, tres botes que menguan y una vuelta rodando | 0.95 s |
+| `drop` | cae acelerando desde arriba y rebota dos veces | 0.85 s |
+| `slide` | desde el lado más cercano con el resorte de entrada, pasándose un poco | 0.5 s |
+
+El clip ocupa el cuadro entero —el viaje lo cruza— y se superpone en `0:0`; la
+posición del plan se evalúa en Python (`plan_number`, admite `W*0.7`). La estela
+son 25 puntos del tramo recorrido, más gruesa y opaca hacia el elemento; se
+recoge en 0.3 s tras aterrizar. `"trail": false` la quita.
+
+La fila de `logos` salta desde abajo con un resorte más flojo (`JUMP`, rigidez
+180 y amortiguamiento 11) para que rebote al llegar. No puede caer desde arriba:
+el borde superior del lienzo de la card la cortaría. `"enter": "pop"` la deja
+como antes.
+
 ### Iconos de marca
 
 ```bash
@@ -623,7 +650,7 @@ tiempos de la grabación original.
 
 | `kind` | Forma | Para qué |
 |---|---|---|
-| `chip` | Píldora compacta de una línea | Títulos y rótulos |
+| `chip` | Píldora compacta de una línea; con `→` o `->`, cadena de nodos | Títulos, rótulos y procesos cortos |
 | `panel` | Cabecera de acento + párrafo | Una idea con desarrollo |
 | `bullets` | Cabecera + lista con viñetas | Enumerar lo que se dice de corrido |
 | `flow` | Nodo raíz + espina con nodos conectados | Estructura o dependencia |

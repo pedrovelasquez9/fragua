@@ -363,6 +363,14 @@ and settling back**, breathing while it stays, and snapping away when it leaves.
 Nothing fades in softly or sits frozen, which is what makes a graphic look pasted
 on rather than animated.
 
+Stickers can also **travel in** — bouncing across from the far side, dropping
+from the top, or sliding in from the nearest edge — with an orange trail behind
+them that the eye follows, and the row of logos jumps up one by one. The video
+opens with a **colour wipe**, and if you switch between camera and screen
+recording, every switch is hidden under one. A title written as a chain —
+*Problem → fix → code* — appears node by node, each arrow drawing towards the
+next step.
+
 ### How it edits by default
 
 Without being asked, every reel comes out like this:
