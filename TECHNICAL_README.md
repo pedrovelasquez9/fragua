@@ -503,6 +503,31 @@ y si falta en `cards.py`, el mismo plan da cards distintas según se animen o no
 falta, avisa y sale en Roboto. La letra se encoge hasta que quepa la línea más
 larga y el interlineado la sigue, en vez de partir el comando.
 
+### Stickers Lottie
+
+```bash
+python scripts/lottie.py plan.json --preset tiktok
+```
+
+Un sticker con `file` en `.json` es una Lottie. Antes de `render.py`, cada una se
+renderiza con `@remotion/lottie` a `lottie/lottieNN.mov` junto al plan (ProRes
+4444, el mismo `remotion.config.ts` que las cards) al tamaño final del sticker,
+con el alto sacado de la proporción `w`/`h` del propio fichero. `render.py` la
+superpone sin bucle y sin el pop de los stickers fijos, con fundido.
+
+| Clave del sticker | Por defecto | Para qué |
+|---|---|---|
+| `loop` | `true` | `false` para las que cuentan algo una sola vez |
+| `speed` | `1.0` | Velocidad de reproducción |
+
+`assets.py` las cataloga en `lottie` sólo si el `.json` trae las claves de una
+Lottie (`v`, `fr`, `ip`, `op`, `w`, `h`, `layers`): un fichero de configuración
+en la misma carpeta no se confunde con una animación.
+
+Las gratuitas de LottieFiles son *Lottie Simple License*: comercial, sin
+atribución, pero sin permiso para recopilarlas en un servicio parecido. Por eso
+el plugin no trae ninguna.
+
 ### Iconos de marca
 
 ```bash
@@ -749,6 +774,7 @@ fragua/
 │   ├── transcribe.py      whisper.cpp → words.json + digest.txt
 │   ├── measure.py         formato, color, sonoridad y láminas de card
 │   ├── icons.py           Simple Icons → PNG por palabra clave
+│   ├── lottie.py          stickers Lottie → clips con alfa
 │   ├── cards.py           plan.json → cards/*.png
 │   ├── subtitles.py       words.json → subs.ass
 │   └── render.py          todo junto → salida.mp4

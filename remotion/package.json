@@ -6,6 +6,8 @@
   "license": "MIT",
   "dependencies": {
     "@remotion/cli": "4.0.*",
+    "@remotion/lottie": "4.0.*",
+    "lottie-web": "5.*",
     "react": "19.*",
     "react-dom": "19.*",
     "remotion": "4.0.*"
