@@ -344,6 +344,19 @@ Nada de esto lo eliges tú por su nombre. El agente lee tu transcripción, busca
 las frases que pesan y pone el movimiento en su primera palabra — nunca
 repartido por reloj, que es lo que hace que una edición parezca aleatoria.
 
+### Comparativas, listas que se cumplen y comandos
+
+Además de las de siempre, tres cards pensadas para vídeo técnico:
+
+- **Comparativa** — dos o tres columnas lado a lado, para cuando el vídeo
+  contrapone cosas: MCP frente a skill, antes frente a después.
+- **Checklist** — pasos con casilla que se van marcando solos, uno tras otro.
+- **Terminal** — el comando en una ventana de terminal, tecleándose con su
+  cursor, en letra monoespaciada.
+
+Se piden igual que las demás: `pon una comparativa entre MCP y skill` o
+`enseña el comando de instalación en una terminal`.
+
 ### Cards animadas
 
 Las cards pueden dibujarse con movimiento en vez de quietas: las viñetas entran

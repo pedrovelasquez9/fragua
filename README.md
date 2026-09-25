@@ -343,6 +343,19 @@ You never choose any of this by name. The agent reads your transcript, finds the
 lines that carry weight, and puts the movement on the first word of the phrase —
 never spaced evenly by the clock, which is what makes an edit feel random.
 
+### Comparisons, checklists and commands
+
+On top of the usual ones, three cards built for technical videos:
+
+- **Comparison** — two or three columns side by side, for when the video sets
+  things against each other: MCP versus skill, before versus after.
+- **Checklist** — steps with boxes that tick themselves, one after another.
+- **Terminal** — the command in a terminal window, typing itself out with its
+  cursor, in a monospaced face.
+
+Ask for them like any other: `put a comparison between MCP and skill` or
+`show the install command in a terminal`.
+
 ### Animated cards
 
 Cards can be drawn as motion instead of a still: the bullets arrive one at a

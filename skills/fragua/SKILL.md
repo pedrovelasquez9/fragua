@@ -399,6 +399,35 @@ defecto y cae a las estáticas sólo si no hay Node.**
 | `bullets` | cabecera + lista con viñetas | enumerar lo que se dice de corrido |
 | `flow` | nodo raíz + espina con nodos conectados | estructura o relación entre partes |
 | `stat` | cifra grande + etiqueta | un dato que merece pantalla |
+| `compare` | dos o tres columnas enfrentadas | **X frente a Y**: MCP y skill, antes y después |
+| `checklist` | casillas que se marcan hasta `done` | pasos que se van cumpliendo |
+| `code` | ventana de terminal en monoespaciada | un comando que el espectador va a teclear |
+
+```json
+{"kind": "compare", "title": "¿Cuál uso?",
+ "columns": [{"title": "MCP",   "items": ["Acceso a herramientas"]},
+             {"title": "Skill", "items": ["Cómo se hace"]}]}
+{"kind": "checklist", "title": "Antes de tocar código",
+ "items": ["Infraestructura", "Capas", "Flujo", "Qué se inventó"], "done": 3}
+{"kind": "code", "title": "terminal",
+ "lines": ["claude plugin install fragua@fragua"], "prompt": "$"}
+```
+
+**Los tres ganan de verdad animados**, y por eso existen: la comparación llega
+columna a columna en el orden en que se construye; las casillas **se marcan
+solas** una tras otra, que es una lista que se cumple y no una que se lee; y el
+comando **se teclea**, con cursor, y cada `$` aparece sólo al acabar la línea
+anterior, como en una terminal real.
+
+`compare` es para cuando el vídeo contrapone cosas. Una lista de viñetas lo
+cuenta en serie y obliga a recordar la primera mientras se lee la segunda; dos
+columnas lo ponen lado a lado. Si el vídeo dice «no eliges uno, se combinan»,
+esta es la card.
+
+`code` **no parte las líneas**: un comando partido deja de poder copiarse de la
+pantalla y se lee como dos órdenes. Si no cabe, encoge la letra. Aun así, más de
+unos 70 caracteres ya no se lee en un móvil — acórtalo en el plan antes de
+confiar en el encogido.
 
 **Los títulos son cards de kind `chip`**, no texto ASS sobre el fotograma: un
 rótulo suelto encima del vídeo se lee como encabezado de diapositiva. El `chip`

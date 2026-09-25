@@ -486,6 +486,23 @@ original sigue sonando, que es lo que lo hace leerse como otra cámara.
 `render.py` rechaza dos cutaways solapados, uno que caiga sobre un `pullback`, y
 uno que pida más metraje del que queda en el archivo.
 
+### Cards: compare, checklist y code
+
+Tres tipos añadidos a los seis de siempre, y los tres existen **igual en la
+versión fija (Pillow) que en la animada (Remotion)**. Una prueba lo exige: si un
+tipo falta en `Card.tsx`, cae en `?? PanelCard` y sale como un panel sin avisar,
+y si falta en `cards.py`, el mismo plan da cards distintas según se animen o no.
+
+| `kind` | Claves | Animada |
+|---|---|---|
+| `compare` | `title`, `columns: [{title, items}]` (2-3) | columnas en orden, puntos detrás |
+| `checklist` | `title`, `items`, `done` (por defecto todas) | las casillas se marcan una a una |
+| `code` | `title`, `lines`, `prompt` (`$` por defecto) | se teclea; cada prompt al acabar la línea anterior |
+
+`code` usa **JetBrains Mono** (OFL), que el setup descarga con las demás. Si
+falta, avisa y sale en Roboto. La letra se encoge hasta que quepa la línea más
+larga y el interlineado la sigue, en vez de partir el comando.
+
 ### Iconos de marca
 
 ```bash

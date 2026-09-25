@@ -91,6 +91,9 @@ fetch_font "Poppins-ExtraBold.ttf" "$GF/poppins/Poppins-ExtraBold.ttf"
 fetch_font "OFL-Roboto.txt"        "$RAW/roboto/OFL.txt"
 fetch_font "OFL-Anton.txt"         "$RAW/anton/OFL.txt"
 fetch_font "OFL-Poppins.txt"       "$RAW/poppins/OFL.txt"
+# Monoespaciada para las cards de código.
+fetch_font "JetBrainsMono-Variable.ttf" "$GF/jetbrainsmono/JetBrainsMono%5Bwght%5D.ttf"
+fetch_font "OFL-JetBrainsMono.txt"      "$RAW/jetbrainsmono/OFL.txt"
 
 # --- cards animadas (opcional) ----------------------------------------------
 # Remotion arrastra Node y su propio Chrome, así que no se instala solo. Si Node
@@ -111,7 +114,7 @@ fi
 # --- verify -----------------------------------------------------------------
 cli="$(find "$VENDOR" -name whisper-cli -o -name main | head -1)"
 [ -n "$cli" ] || { echo "no encuentro el ejecutable en $VENDOR"; exit 1; }
-for f in Roboto-Variable.ttf Anton-Regular.ttf Poppins-ExtraBold.ttf; do
+for f in Roboto-Variable.ttf Anton-Regular.ttf Poppins-ExtraBold.ttf JetBrainsMono-Variable.ttf; do
     [ -f "$FONTS/$f" ] || { echo "falta la fuente $f"; exit 1; }
 done
 
