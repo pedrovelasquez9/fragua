@@ -12,6 +12,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
+
+from PIL import Image
 from pathlib import Path
 
 from common import (FONTS, ROOT, assets_dir, atempo_chain, ff_path, output_duration,
@@ -101,6 +103,15 @@ SFX_MAX_GAIN = -3
 TAIL_FADE = 0.35
 
 CARD_FADE = 0.28
+
+# Un sticker que aparece con corte seco es el tell más barato de una edición, y
+# hasta ahora era lo que hacía: `enable=between()` y nada más, mientras las cards
+# de al lado ya entraban con fundido y desplazamiento. Entra creciendo desde
+# STICKER_POP por debajo de su tamaño, porque en un elemento pequeño el «pop» se
+# lee mejor que el deslizamiento que usan las cards, que son anchas.
+STICKER_FADE = 0.24
+STICKER_POP = 0.18        # cuánto más pequeño entra, en fracción de su tamaño
+STICKER_POP_IN = 0.36     # lo que tarda en llegar a tamaño natural
 
 # zoom_punch defaults: push in over SHOT_RAMP, stay SHOT_HOLD, pull back out.
 # Casi un segundo de recorrido: un plano que tarda un tercio de segundo se lee
@@ -383,18 +394,51 @@ def letterbox_graph(effects, height):
     return "".join(bars)
 
 
-def sticker_graph(stickers, start_index, width, height):
-    """Returns (extra_inputs, filter_chunks). Each sticker is its own overlay."""
+def sticker_graph(stickers, start_index, width, height, fps):
+    """Returns (extra_inputs, filter_chunks). Each sticker is its own overlay.
+
+    Cada sticker se repite en bucle durante su duración para que `fade` y
+    `zoompan` tengan línea de tiempo sobre la que trabajar, igual que las cards
+    fijas. zoompan no sabe alejarse por debajo de 1, así que el crecimiento se
+    hace rellenando antes con transparencia y encuadrando dentro — el mismo
+    truco del pullback, y medido: el alfa sobrevive al zoompan.
+    """
     inputs, chunks, label = [], [], "[styled]"
     for i, s in enumerate(stickers):
         path = asset_path(s["file"], "sticker")
         idx = start_index + i
-        inputs += ["-i", str(path)]
         t0, dur = float(s["t"]), float(s.get("dur", 2))
         w = int(width * s.get("scale", 0.2))
+        pop = float(s.get("pop", STICKER_POP))
+        fade = min(STICKER_FADE, dur / 3)
+        # Sin -framerate, un PNG en bucle entra a 25 fps y zoompan lo reescala:
+        # el sticker acaba durando dur*25/fps y el fundido de salida se pierde.
+        inputs += ["-loop", "1", "-framerate", f"{fps:g}",
+                   "-t", f"{dur:.3f}", "-i", str(path)]
+
+        entrada = ""
+        if pop > 0:
+            # `s=` de zoompan no admite expresiones, así que el lienzo se mide
+            # aquí: el sticker se escala a lo ancho y el alto sale de su propia
+            # proporción. El lienzo crece un `pop` por los cuatro lados; a z=1 se
+            # ve entero —y el icono, pequeño— y en z=1+pop queda a tamaño natural.
+            with Image.open(path) as art:
+                h = max(2, round(art.height * w / art.width) // 2 * 2)
+            pad_w = round(w * (1 + pop)) // 2 * 2
+            pad_h = round(h * (1 + pop)) // 2 * 2
+            frames = max(1, round(STICKER_POP_IN * fps))
+            u = f"min(1,on/{frames})"
+            entrada = (f"pad={pad_w}:{pad_h}:(ow-iw)/2:(oh-ih)/2:0x00000000,"
+                       f"zoompan=z='1+{pop:.4f}*{smooth(u)}':d=1:fps={fps:g}:"
+                       f"s={pad_w}x{pad_h},format=rgba,")
+
+        chunks.append(
+            f"[{idx}:v]format=rgba,scale={w}:-1,{entrada}"
+            f"fade=t=in:st=0:d={fade:.2f}:alpha=1,"
+            f"fade=t=out:st={dur - fade:.3f}:d={fade:.2f}:alpha=1,"
+            f"setpts=PTS+{t0:.3f}/TB[s{i}]")
         nxt = f"[ov{i}]"
-        chunks.append(f"[{idx}:v]scale={w}:-1[s{i}]")
-        chunks.append(f"{label}[s{i}]overlay=x={s.get('x', f'W*0.7')}:y={s.get('y', f'H*0.15')}"
+        chunks.append(f"{label}[s{i}]overlay=x={s.get('x', 'W*0.7')}:y={s.get('y', 'H*0.15')}"
                       f":enable='between(t,{t0},{t0 + dur})'{nxt}")
         label = nxt
     return inputs, chunks, label
@@ -731,7 +775,7 @@ def build(args, platform, segments, plan, source):
     """The whole render as a single ffmpeg command."""
     effects = plan.get("effects", [])
     check_overlaps(effects)
-    width, height = platform["width"], platform["height"]
+    width, height, fps = platform["width"], platform["height"], platform["fps"]
 
     graph = [cut_graph(segments)]
     # Los cutaways se numeran primero porque se componen dentro de video_graph,
@@ -743,7 +787,7 @@ def build(args, platform, segments, plan, source):
     next_input = 1 + len(plan.get("cutaways", []))
 
     sticker_inputs, sticker_chunks, video_label = sticker_graph(
-        stickers, next_input, width, height)
+        stickers, next_input, width, height, fps)
     graph += sticker_chunks
     next_input += len(stickers)
 
