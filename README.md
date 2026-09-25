@@ -245,6 +245,23 @@ everything else works the same.
 > copyright claims on YouTube. Use CC0 sources such as Pixabay, Mixkit or
 > Freesound instead.
 
+### The logos arrive on their own
+
+Ask for the icons of whatever the video talks about and it fetches them:
+
+```
+grab the icons for the tools I mention
+```
+
+They come from Simple Icons — 3,300 logos under CC0 — in each brand's official
+colour, saved under the word itself, so they plug straight into the feature
+below: say "docker" and the Docker logo appears.
+
+With one correction that matters: a dark logo on a dark shot is invisible.
+GitHub is almost black and vanished completely, so monochrome brands come out
+white, the way their own brand guidelines do it. The rest keep their exact
+colour.
+
 ### Images that appear when you mention something
 
 Drop an image named after a word into your assets folder — `youtube.png`,
