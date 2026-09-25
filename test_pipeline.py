@@ -1079,6 +1079,44 @@ def test_wipe():
     print("ok  barrido (tapa el corte; entrada y salida de pantalla)")
 
 
+def test_trajectories():
+    """Los elementos que viajan salen de fuera, llegan a su sitio y la estela va detrás."""
+    from motion import STYLES, travel_point, travel_start
+    from render import plan_number, sticker_graph
+
+    target, size = (700.0, 600.0), (200, 200)
+    for style in ("bounce", "drop", "slide"):
+        start = travel_start(style, target, size, 1080)
+        x0, y0, _ = travel_point(style, 0.0, start, target, 1920)
+        x1, y1, turn = travel_point(style, 1.0, start, target, 1920)
+        fuera = x0 < 0 or x0 > 1080 or y0 < 0
+        assert fuera, f"{style} empieza dentro del cuadro: {(x0, y0)}"
+        assert abs(x1 - target[0]) < 2 and abs(y1 - target[1]) < 2, f"{style} no llega: {(x1, y1)}"
+        assert abs(turn % 360) < 1 or abs(turn % 360 - 360) < 1, f"{style} acaba girado {turn}"
+
+    # El rebote cruza desde el lado contrario, el deslizamiento entra por el cercano.
+    assert travel_start("bounce", target, size, 1080)[0] < 0
+    assert travel_start("slide", target, size, 1080)[0] > 1080
+
+    assert plan_number("W*0.5", 1080, 1920) == 540 and plan_number(300, 1080, 1920) == 300
+    assert set(STYLES) >= {"pop", "bounce", "drop", "slide"}
+
+    from PIL import Image
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        png = tmp / "i.png"
+        Image.new("RGBA", (100, 100), (240, 80, 50, 255)).save(png)
+        inputs, chunks, _ = sticker_graph(
+            [{"file": str(png), "t": 1.0, "dur": 1.5, "scale": 0.2, "x": "W*0.6",
+              "y": "H*0.3", "motion": "bounce"}], 1, 1080, 1920, 30, tmp / "plan.json")
+        assert "overlay=x=0:y=0" in ";".join(chunks), "el viaje va dentro del clip, a cuadro completo"
+        clip = [a for a in inputs if str(a).endswith(".mov")][0]
+        info = sh("ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+                  "stream=width,height", "-of", "csv=p=0", clip)
+        assert info.strip() == "1080,1920", info
+    print("ok  trayectorias (salen de fuera, llegan a su sitio, estela detrás)")
+
+
 def main():
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
@@ -1110,6 +1148,7 @@ def main():
         test_motion_matches_remotion()
         test_sticker_clip()
         test_wipe()
+        test_trajectories()
         test_icon_words(tmp)
         test_timeline_mapping()
         test_shot_shape()

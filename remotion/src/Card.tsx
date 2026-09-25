@@ -487,23 +487,42 @@ const Section: React.FC<CardProps> = ({ base, width, spec }) => {
 
 type LogoItem = { src?: string; label?: string; check?: boolean };
 
+// Resorte del salto: más flojo que POP para que al llegar rebote de verdad, que
+// es lo que se ve como «juguetón» en vez de «correcto».
+const JUMP = { stiffness: 180, damping: 11, mass: 1 };
+
 const Logo: React.FC<{
   i: number; item: LogoItem; side: number; big: boolean; square: boolean;
-  theme: Theme; base: number;
-}> = ({ i, item, side, big, square, theme, base }) => {
+  theme: Theme; base: number; jump: boolean;
+}> = ({ i, item, side, big, square, theme, base, jump }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   // Salta con rebote, y el visto llega después de que el logo esté puesto:
   // aprobar algo que todavía no ha aparecido se lee como un error.
   // El primero salta casi en su cue: la fila no tiene panel que llegue antes,
   // así que esperar ITEMS la dejaba 0.4 s por detrás de la palabra.
-  const pop = spring({ frame: frame - HEADING - i * 5, fps, config: POP });
-  const tick = spring({ frame: frame - HEADING - 12 - i * 5, fps, config: POP });
+  const pop = spring({ frame: frame - HEADING - i * 5, fps, config: jump ? JUMP : POP });
+  const tick = spring({ frame: frame - HEADING - 14 - i * 5, fps, config: POP });
   const s = big ? side * 1.14 : side;
   const radius = square ? s / 4 : s / 2;
+  // Salta desde abajo —ahí la card tiene sitio; arriba el lienzo lo cortaría—
+  // girando, y deja una estela que se recoge a medida que llega.
+  const rise = jump ? (1 - pop) * side * 1.9 : 0;
+  const spin = jump ? (1 - pop) * -18 : 0;
+  const streak = jump ? Math.max(0, 1 - pop) : 0;
+  const shown = jump ? Math.min(1, pop * 4) : 1;
   return (
     <div style={{ width: side, display: "flex", flexDirection: "column", alignItems: "center" }}>
-      <div style={{ position: "relative", width: s, height: s, transform: `scale(${pop})` }}>
+      <div style={{ position: "relative", width: s, height: s, opacity: shown,
+                    transform: jump ? `translateY(${rise}px) rotate(${spin}deg)`
+                                    : `scale(${pop})` }}>
+        {streak > 0.02 ? (
+          <div style={{
+            position: "absolute", left: s / 2 - s * 0.06, top: s * 0.7, width: s * 0.12,
+            height: side * 1.9 * streak, borderRadius: s,
+            background: `linear-gradient(to bottom, ${alpha(SECTION_NUMBER, 230)}, ${alpha(SECTION_NUMBER, 0)})`,
+          }} />
+        ) : null}
         <div style={{
           position: "absolute", inset: 0, borderRadius: radius, boxSizing: "border-box",
           background: "rgba(22,24,32,0.94)",
@@ -530,7 +549,10 @@ const Logo: React.FC<{
       </div>
       {item.label ? (
         <div style={{ marginTop: base * 0.3, fontSize: base * 0.44, fontWeight: 700,
-                      color: theme.fg, opacity: pop }}>{item.label}</div>
+                      // El nombre aparece cuando el logo llega, no esperándolo.
+                      color: theme.fg, opacity: Math.min(1, Math.max(0, (pop - 0.6) * 2.5)) }}>
+          {item.label}
+        </div>
       ) : null}
     </div>
   );
@@ -555,7 +577,7 @@ const Logos: React.FC<CardProps> = ({ theme, base, width, spec }) => {
       <div style={{ display: "flex", gap: base * 0.35, alignItems: "center" }}>
         {items.map((item, i) => (
           <Logo key={i} i={i} item={item} side={side} big={i === highlight}
-                square={square} theme={theme} base={base} />
+                square={square} theme={theme} base={base} jump={spec.enter !== "pop"} />
         ))}
       </div>
     </div>
