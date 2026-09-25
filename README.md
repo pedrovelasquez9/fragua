@@ -355,6 +355,16 @@ the author**. The plugin ships none: you pick your own, like the music.
 
 It needs the same as animated cards: Node and `/fragua:setup`.
 
+### Captions with the key word in colour
+
+On TikTok, Reels and Shorts the captions come as short phrases, uppercase, with
+no box behind them and **one word highlighted in colour** in each phrase — the
+one that carries the meaning. It reads at a glance even with the sound off,
+which is how most people see it while scrolling.
+
+If you prefer the old style, where the line lights up word by word, ask for it:
+`use karaoke captions`.
+
 ### Comparisons, checklists and commands
 
 On top of the usual ones, three cards built for technical videos:

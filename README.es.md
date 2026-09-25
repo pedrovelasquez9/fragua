@@ -356,6 +356,16 @@ autor**. El plugin no trae ninguna: las eliges tú, como la música.
 
 Necesita lo mismo que las cards animadas: Node y `/fragua:setup`.
 
+### Subtítulos con la palabra clave de color
+
+En TikTok, Reels y Shorts los subtítulos salen en frases cortas, en mayúsculas,
+sin caja detrás, y con **una palabra resaltada en color** en cada frase: la que
+carga el sentido. Se entiende de un vistazo aunque el vídeo esté sin sonido, que
+es como lo ve casi todo el mundo al pasar.
+
+Si prefieres el estilo anterior, en el que la línea se va iluminando palabra a
+palabra, pídelo: `usa los subtítulos de karaoke`.
+
 ### Comparativas, listas que se cumplen y comandos
 
 Además de las de siempre, tres cards pensadas para vídeo técnico:

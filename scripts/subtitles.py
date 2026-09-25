@@ -112,6 +112,127 @@ def caption_event(line, style, geometry):
     return f"Dialogue: 0,{ass_time(start)},{ass_time(end)},Caption,,0,0,0,,{''.join(parts)}"
 
 
+# --- modo «impacto» ----------------------------------------------------------
+# El estilo de los reels que funcionan: frases cortas enteras en mayúsculas, sin
+# caja detrás, y UNA palabra de color por frase. El karaoke subraya todas las
+# palabras por igual a medida que suenan; esto subraya la que importa, que es lo
+# que hace que se lea de un vistazo sin oír el audio.
+
+IMPACT_STYLE = ("Style: Impact,{fontname},{fontsize},{primary},{primary},&H00000000,"
+                "{shadow_colour},0,0,0,0,100,100,{spacing},0,1,{outline},{shadow},"
+                "{alignment},{margin_h},{margin_h},{margin_v},1")
+
+# Relleno que nunca es la palabra clave de una frase. Sólo se usa cuando el plan
+# no dice cuál es: la elección buena es editorial y la hace quien edita.
+STOPWORDS = set("""
+que para como pero porque este esta esto estos estas todo toda todos todas cuando
+donde desde hasta entre sobre también tienes tiene tienen puedes puede pueden hacer
+están estás estoy eres somos ser estar haber había hay muy más menos mucho poco
+algo nada cada otro otra otros otras mismo misma ellos ellas nosotros usted ustedes
+luego antes después entonces ahora aquí allí así bueno vale sólo solo siempre nunca
+porque cómo qué cuál quién este vamos voy vas
+""".split())
+
+
+def chunks_for_impact(words, max_words, max_chars, blocked, max_gap=0.6):
+    """Frases de pocas palabras, cortadas en pausas y finales de oración."""
+    chunks, current = [], []
+
+    def flush():
+        nonlocal current
+        if current:
+            chunks.append(current)
+            current = []
+
+    for word in words:
+        if any(start <= word["start"] < end for start, end in blocked):
+            flush()
+            continue
+        width = sum(len(w["text"]) + 1 for w in current) + len(word["text"])
+        if current and (len(current) >= max_words or width > max_chars
+                        or word["start"] - current[-1]["end"] > max_gap):
+            flush()
+        current.append(word)
+        text = sum(len(w["text"]) + 1 for w in current)
+        # La coma es donde se respira: partir ahí deja «NÚMERO UNO,» / «UN BRANCH
+        # POR FEATURE.» en vez de «NÚMERO UNO, UN BRANCH POR» / «FEATURE.».
+        if word["text"][-1] in SENTENCE_ENDERS or (
+                word["text"][-1] == "," and len(current) >= 2 and text >= 9):
+            flush()
+    flush()
+    return chunks
+
+
+def lines_for_impact(texts, line_chars):
+    """Reparte las palabras en líneas cortas y parecidas: dos o tres, no una larga."""
+    lines, current = [], ""
+    for text in texts:
+        candidate = f"{current} {text}".strip()
+        if current and len(candidate) > line_chars:
+            lines.append(current)
+            current = text
+        else:
+            current = candidate
+    if current:
+        lines.append(current)
+    # Una última línea de una sola palabra corta queda colgando: se sube.
+    if len(lines) > 1 and len(lines[-1]) <= 3 and len(lines[-2]) + len(lines[-1]) < line_chars + 4:
+        last = lines.pop()
+        lines[-1] = f"{lines[-1]} {last}"
+    return lines
+
+
+def _bare(text):
+    return "".join(ch for ch in text.lower() if ch.isalnum())
+
+
+def emphasis_index(chunk, keywords):
+    """Qué palabra de la frase va de color.
+
+    Si el plan dice cuáles son las palabras clave, manda el plan. Si no, la más
+    larga que no sea relleno: casi siempre es el sustantivo o el verbo que carga
+    la frase, y una elección razonable es mejor que ninguna.
+    """
+    wanted = {_bare(k) for k in keywords}
+    for index, word in enumerate(chunk):
+        if _bare(word["text"]) in wanted:
+            return index
+    candidates = [(len(_bare(w["text"])), i) for i, w in enumerate(chunk)
+                  if _bare(w["text"]) not in STOPWORDS and len(_bare(w["text"])) >= 4]
+    return max(candidates)[1] if candidates else None
+
+
+def impact_event(chunk, style, geometry, colour, keywords):
+    """Una frase entera, en mayúsculas, con su palabra clave de color."""
+    start, end = chunk[0]["start"], chunk[-1]["end"]
+    key = emphasis_index(chunk, keywords)
+    texts = []
+    for index, word in enumerate(chunk):
+        text = escape(word["text"].upper())
+        if index == key:
+            text = f"{{\\c{colour}&}}{text}{{\\c{style['primary']}&}}"
+        texts.append(text)
+
+    # Las líneas se miden sin las etiquetas de color, que no ocupan sitio.
+    plain = [w["text"].upper() for w in chunk]
+    layout = lines_for_impact(plain, style["line_chars"])
+    out, cursor = [], 0
+    for line in layout:
+        count = len(line.split())
+        out.append(" ".join(texts[cursor:cursor + count]))
+        cursor += count
+
+    blur = f"\\blur{style['blur']}" if style.get("blur") else ""
+    x, y = geometry["center_x"], geometry["caption_y"]
+    # Entra con un golpe de escala corto y sin deslizarse: el texto grande que
+    # sube desde abajo se lee como un rótulo de televisión, no como un reel.
+    head = (f"{{\\an{style['alignment']}\\pos({x},{y}){blur}\\fad(60,60)"
+            f"\\fscx86\\fscy86\\t(0,120,1,\\fscx104\\fscy104)"
+            f"\\t(120,200,1,\\fscx100\\fscy100)}}")
+    return (f"Dialogue: 0,{ass_time(start)},{ass_time(end)},Impact,,0,0,0,,"
+            + head + "\\N".join(out))
+
+
 def srt_time(seconds):
     """Seconds as the HH:MM:SS,mmm that SRT expects."""
     seconds = max(0.0, seconds)
@@ -137,7 +258,10 @@ def srt_document(lines):
 def build_styles(platform):
     """Only captions live here. Titles are cards of kind 'chip', drawn by cards.py:
     a title set as ASS text over the frame is what reads as a slide heading."""
-    return STYLE.format(name="Caption", **platform["subtitle"])
+    styles = [STYLE.format(name="Caption", **platform["subtitle"])]
+    if "impact" in platform:
+        styles.append(IMPACT_STYLE.format(**platform["impact"]))
+    return "\n".join(styles)
 
 
 ALONGSIDE_CAPTIONS = ("chip", "title")
@@ -169,6 +293,10 @@ def parse_args():
     parser.add_argument("-o", "--output", default="subs.ass")
     parser.add_argument("--preset", default="tiktok")
     parser.add_argument("--plan", default=None, help="plan.json, to know when cards hide captions")
+    parser.add_argument("--style", choices=("impacto", "karaoke"), default=None,
+                        help="impacto: frases cortas en mayúsculas con una palabra de "
+                             "color; karaoke: la línea que se va iluminando. Por "
+                             "defecto, el del preset")
     parser.add_argument("--max-chars", type=int, default=None,
                         help="override the preset's line length")
     parser.add_argument("--srt", default=None,
@@ -213,11 +341,30 @@ def main():
 
     cards = plan.get("cards", [])
     words = with_minimum_duration(transcript["words"])
-    lines = group_into_lines(words, args.max_chars or style["max_chars"], blocked_windows(cards))
+    mode = args.style or style.get("mode", "karaoke")
+    if mode == "impacto" and "impact" not in platform:
+        raise SystemExit(f"el preset '{args.preset}' no tiene estilo impacto: usa --style karaoke")
+
+    if mode == "impacto":
+        impact = platform["impact"]
+        if args.margin_v is not None:
+            impact["margin_v"] = args.margin_v
+        if args.fontsize is not None:
+            impact["fontsize"] = args.fontsize
+        geometry["caption_y"] = platform["height"] - impact["margin_v"]
+        lines = chunks_for_impact(words, impact["max_words"],
+                                  args.max_chars or impact["line_chars"] * 2,
+                                  blocked_windows(cards))
+        keywords = plan.get("emphasis", [])
+        colours = impact["colors"]
+        events = [impact_event(chunk, impact, geometry, colours[i % len(colours)], keywords)
+                  for i, chunk in enumerate(lines)]
+    else:
+        lines = group_into_lines(words, args.max_chars or style["max_chars"],
+                                 blocked_windows(cards))
+        events = [caption_event(line, style, geometry) for line in lines]
     if not lines:
         raise SystemExit("no quedó ninguna palabra visible — ¿las cards cubren todo el vídeo?")
-
-    events = [caption_event(line, style, geometry) for line in lines]
     header = HEADER.format(w=platform["width"], h=platform["height"],
                            styles=build_styles(platform))
     with open(args.output, "w", encoding="utf-8-sig") as handle:

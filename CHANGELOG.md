@@ -8,6 +8,33 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.22.0 — 2026-09-25
+
+Sale de analizar fotograma a fotograma un reel de referencia que el autor quería
+igualar. Lo que lo hace dinámico no era lo que Fragua estaba haciendo.
+
+### Added
+- **Subtítulos «impacto», por defecto en vertical.** Frases cortas enteras, en
+  mayúsculas, sin caja detrás, con sombra, y **una palabra de color por frase**.
+  El karaoke ilumina todas las palabras por igual a medida que suenan; esto
+  destaca la que importa, que es lo que hace que la frase se entienda de un
+  vistazo con el sonido apagado.
+- La palabra de color la elige quien edita, en `"emphasis"` del plan. Si una
+  frase no tiene ninguna, se colorea la más larga que no sea relleno. Los colores
+  rotan entre amarillo, coral, morado y rosa.
+- Las frases se parten en las **comas** y en los finales de oración. Sin eso salía
+  «NÚMERO UNO, UN BRANCH POR» y «FEATURE.» suelto.
+- `--style karaoke` vuelve al estilo anterior. En vídeo largo sigue siendo el
+  karaoke, que además va en `.srt` aparte.
+
+### Changed
+- **El ritmo de un reel lo ponen los gráficos, no la cámara**, y así queda en la
+  skill. Medido en la referencia: 94 s con la cámara quieta de principio a fin
+  —sin un zoom— y algo nuevo en pantalla cada 2-3 segundos. Fragua hacía lo
+  contrario: mucho movimiento de cámara y pocos gráficos.
+
+---
+
 ## 1.21.1 — 2026-09-25
 
 ### Fixed
