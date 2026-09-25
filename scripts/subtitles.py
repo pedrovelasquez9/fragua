@@ -264,7 +264,9 @@ def build_styles(platform):
     return "\n".join(styles)
 
 
-ALONGSIDE_CAPTIONS = ("chip", "title")
+# Etiquetas, sellos y logos acompañan a lo que se dice en vez de sustituirlo:
+# en la referencia van a la vez que el subtítulo, cada uno en su altura.
+ALONGSIDE_CAPTIONS = ("chip", "title", "section", "stamp", "logos")
 
 # Una card que empieza por encima de esto no llega a la franja de subtítulos
 # (0.73-0.78 del alto): tendría que medir más de un tercio de pantalla, y

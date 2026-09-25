@@ -918,6 +918,32 @@ def test_impact_captions():
     print("ok  subtítulos impacto (comas, palabra clave, líneas)")
 
 
+def test_icon_slugs():
+    """El nombre del fichero de cada marca es el oficial, no el título pelado.
+
+    Con la versión ingenua «C++» y «C» caían los dos en `c` y uno pisaba al
+    otro, y «.NET» buscaba `net`.
+    """
+    from icons import slug_oficial
+
+    assert slug_oficial("C++") == "cplusplus"
+    assert slug_oficial("C") == "c"
+    assert slug_oficial(".NET") == "dotnet"
+    assert slug_oficial("Node.js") == "nodedotjs"
+    assert slug_oficial("Citroën") == "citroen"
+    print("ok  nombres de icono (C++ y C no se pisan)")
+
+
+def test_graphics_beside_captions():
+    """Etiqueta, sello y fila de logos acompañan al subtítulo, no lo apagan."""
+    from subtitles import blocked_windows
+
+    en_medio = [{"t": 1.0, "dur": 2.0, "kind": k, "y_frac": 0.5}
+                for k in ("stamp", "logos", "section")]
+    assert blocked_windows(en_medio) == [], blocked_windows(en_medio)
+    print("ok  sello, logos y sección conviven con los subtítulos")
+
+
 def main():
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
@@ -941,6 +967,8 @@ def main():
         test_lottie_wiring()
         test_captions_beside_band_cards()
         test_impact_captions()
+        test_icon_slugs()
+        test_graphics_beside_captions()
         test_icon_words(tmp)
         test_timeline_mapping()
         test_shot_shape()
@@ -1001,13 +1029,18 @@ def main():
                  "items": ["a", "b", "c"], "done": 2},
                 {"t": 12.0, "dur": 1.0, "kind": "code", "title": "terminal",
                  "lines": ["claude plugin install fragua@fragua"]},
+                {"t": 12.0, "dur": 1.0, "kind": "section", "number": 2,
+                 "title": "Commits con un fin", "y_frac": 0.03},
+                {"t": 12.0, "dur": 1.0, "kind": "logos", "highlight": 1,
+                 "items": [{"label": "Git", "check": True}, {"label": "Docker"}]},
+                {"t": 12.0, "dur": 1.0, "kind": "stamp", "title": "No sirve"},
             ],
         }), encoding="utf-8")
 
         cdir = tmp / "cards"
         sh(sys.executable, SCRIPTS / "cards.py", cardplan, "--preset", "tiktok", "--outdir", cdir)
         pngs = sorted(cdir.glob("card*.png"))
-        assert len(pngs) == 8, f"esperaba 8 PNG, salieron {len(pngs)}"
+        assert len(pngs) == 11, f"esperaba 11 PNG, salieron {len(pngs)}"
         for png in pngs:
             assert png.stat().st_size > 2000, f"{png.name} salió vacío"
         print(f"ok  cards rasterizadas ({len(pngs)} tipos)")

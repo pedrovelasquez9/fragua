@@ -355,6 +355,17 @@ the author**. The plugin ships none: you pick your own, like the music.
 
 It needs the same as animated cards: Node and `/fragua:setup`.
 
+### Section labels, logos and stamps
+
+Three more graphics, the kind the best-performing reels use:
+
+- **Section label** top left — *«02 · ONE COMMIT, ONE PURPOSE»* — that stays up
+  while that part lasts.
+- **Logo row** of the tools you mention, arriving one by one, with a green tick
+  or one highlighted.
+- **Red stamp** on a slant for a verdict — *«USELESS»* — that slams in with a
+  signal glitch.
+
 ### Captions with the key word in colour
 
 On TikTok, Reels and Shorts the captions come as short phrases, uppercase, with
