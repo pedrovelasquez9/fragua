@@ -355,6 +355,24 @@ the author**. The plugin ships none: you pick your own, like the music.
 
 It needs the same as animated cards: Node and `/fragua:setup`.
 
+### How it edits by default
+
+Without being asked, every reel comes out like this:
+
+- **The picture as you shot it**: no colour filters, no sharpening. Ask for them
+  if you want them.
+- **Captions in short phrases with the key word in colour.**
+- **A label up top with the topic**, and a numbered one per point if the video
+  lists things.
+- **Something new on screen every few seconds** — the command, the tool's logo,
+  the idea in four words, a stamp on the verdict — and never more than five
+  seconds with nothing.
+- **An almost still camera**: the rhythm comes from the graphics, not zooms.
+- **Room at the end of every sentence**, so none sounds clipped.
+
+If your framing is very tight it will tell you: with your face filling most of
+the height there is no chest left to put the logos and stamps on.
+
 ### Section labels, logos and stamps
 
 Three more graphics, the kind the best-performing reels use:
