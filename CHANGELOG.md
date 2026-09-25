@@ -8,6 +8,37 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.24.0 — 2026-09-25
+
+La forma de editar que el autor aprobó tras igualar el reel de referencia pasa a
+ser la de siempre. Hasta ahora buena parte dependía de que quien editaba se
+acordara de pedirla en cada vídeo.
+
+### Changed
+- **La imagen sale como entró.** `render.py` ya no aplica color cinematográfico
+  ni denoise ni afilado por defecto; se piden con `--grade` y `--polish`. Un
+  `grade` escrito en el plan se sigue aplicando, porque es una petición explícita.
+  `--no-grade` y `--no-polish` se siguen aceptando para no romper comandos viejos.
+- **Más aire al final de cada frase**: `--pad-out` pasa de 0.22 a 0.32 por
+  defecto. Con 0.22 los finales se oían cortados reel tras reel y había que
+  subirlo a mano cada vez.
+- **La skill tiene una receta de reel que se aplica siempre**: subtítulos impacto
+  con la palabra clave elegida, una etiqueta con el tema desde el segundo 0, una
+  `section` numerada por punto, algo nuevo cada 2-3 s, un sello en el veredicto,
+  cámara casi quieta y las cards grandes donde no tapan la cara.
+- Se quita de la skill la regla vieja que decía lo contrario —«un `zoom_punch`
+  cada 8-15 segundos, y flashes o shakes entre medias»— y el ejemplo de plan que
+  enseñaba letterbox, sacudidas y barridos.
+
+### Added
+- **`render.py` avisa de cada tramo de más de 5 s sin nada nuevo en pantalla**,
+  con sus tiempos, antes de renderizar. Hasta ahora ese hueco se calculaba a
+  mano. Sólo en vertical: en vídeo largo el ritmo es otro.
+- La skill le dice al autor cuándo su encuadre es demasiado cerrado para la fila
+  de logos y el sello, y qué cambiar al grabar.
+
+---
+
 ## 1.23.0 — 2026-09-25
 
 ### Added

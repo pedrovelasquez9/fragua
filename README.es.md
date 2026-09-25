@@ -356,6 +356,24 @@ autor**. El plugin no trae ninguna: las eliges tú, como la música.
 
 Necesita lo mismo que las cards animadas: Node y `/fragua:setup`.
 
+### Cómo edita por defecto
+
+Sin que se lo pidas, cada reel sale así:
+
+- **La imagen tal como la grabaste**: sin filtros de color ni afilado. Si los
+  quieres, pídelos.
+- **Subtítulos en frases cortas con la palabra clave de color.**
+- **Una etiqueta arriba con el tema**, y otra numerada por cada punto si el vídeo
+  enumera cosas.
+- **Algo nuevo en pantalla cada pocos segundos** —el comando, el logo de la
+  herramienta, la idea resumida, un sello en el veredicto— y nunca más de cinco
+  segundos sin nada.
+- **Cámara casi quieta**: el ritmo lo ponen los gráficos, no los zooms.
+- **Aire al final de cada frase**, para que ninguna suene cortada.
+
+Si tu encuadre es muy cerrado te lo dirá: con la cara ocupando casi todo el alto
+no queda pecho donde poner los logos y los sellos.
+
 ### Etiquetas de sección, logos y sellos
 
 Tres gráficos más, de los que usan los reels que mejor funcionan:

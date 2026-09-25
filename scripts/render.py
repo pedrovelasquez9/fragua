@@ -704,9 +704,24 @@ def audio_graph(plan, first_index, duration, lufs):
     return chunks, inputs
 
 
+# En un reel, más de esto sin nada nuevo en pantalla se siente lento. Medido en
+# un reel de referencia que funciona: algo cambia cada 2-3 s durante 94 s.
+GRAPHIC_GAP = 5.0
+
+
+def graphic_gaps(plan, duration, limit=GRAPHIC_GAP):
+    """Tramos de más de `limit` segundos en los que no entra nada nuevo."""
+    marks = sorted({0.0, duration} | {float(item["t"]) for key in
+                   ("cards", "stickers", "effects", "cutaways", "broll")
+                   for item in plan.get(key, []) if "t" in item})
+    return [(a, b) for a, b in zip(marks, marks[1:]) if b - a > limit]
+
+
 def video_graph(args, platform, effects, plan, cutaway_index):
     """Frame -> motion -> polish -> look -> cutaways -> subtitles, at [styled]."""
-    polish = not args.no_polish
+    # Por defecto la imagen sale como entró: sin denoise, sin afilado y sin
+    # color. Se pedía a mano en cada edición; ahora hay que pedir lo contrario.
+    polish = args.polish and not args.no_polish
     width, height, fps = platform["width"], platform["height"], platform["fps"]
 
     # Polish is its own labelled sub-graph because the sharpening mask needs a split.
@@ -725,7 +740,9 @@ def video_graph(args, platform, effects, plan, cutaway_index):
         chunks.append("[prepolish]null[polished]")
 
     look = ""
-    if not args.no_grade:
+    # Un `grade` escrito en el plan es una petición explícita y se aplica; el
+    # look por defecto sólo con --grade.
+    if (args.grade or "grade" in plan) and not args.no_grade:
         # The right look depends on the footage, not the platform, so plan.json
         # can replace it wholesale (dark material hates the default vignette).
         look += "," + plan.get("grade", f"{GRADE},{FILM}")
@@ -864,9 +881,14 @@ def parse_args():
                         help="carpeta con los PNG de cards.py "
                              "(por defecto, cards/ junto a plan.json)")
     parser.add_argument("-o", "--output", default="output.mp4")
-    parser.add_argument("--no-grade", action="store_true", help="skip the cinematic look")
-    parser.add_argument("--no-polish", action="store_true",
-                        help="sin denoise ni afilado: el píxel de la grabación, intacto")
+    parser.add_argument("--grade", action="store_true",
+                        help="aplica el color cinematográfico (por defecto, la imagen original)")
+    parser.add_argument("--polish", action="store_true",
+                        help="aplica denoise y afilado (por defecto, el píxel intacto)")
+    # Se siguen aceptando para no romper comandos escritos antes de 1.24, en los
+    # que eran la forma de pedir lo que ahora es lo normal.
+    parser.add_argument("--no-grade", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--no-polish", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--print-cmd", action="store_true",
                         help="print the ffmpeg command before running it")
     return parser.parse_args()
@@ -904,6 +926,12 @@ def main():
     plan = read_json(args.plan) if args.plan else {}
     probe_stream(args.input)  # fails loudly if the input is unreadable
     duration = output_duration(segments)
+
+    # Sólo en vertical: en un vídeo largo el ritmo es otro y avisar sería ruido.
+    if plan and platform["height"] > platform["width"]:
+        for a, b in graphic_gaps(plan, duration):
+            print(f"  aviso: {b - a:.1f}s sin nada nuevo en pantalla entre {a:.1f}s y "
+                  f"{b:.1f}s — en un reel ese tramo se siente lento")
 
     if len(segments) <= MAX_SEGMENTS_ONE_PASS:
         run_render(build(args, platform, segments, plan, args.input), args.print_cmd)

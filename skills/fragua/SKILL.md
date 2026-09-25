@@ -68,7 +68,7 @@ Y el último segmento se queda además con 0.45 s de silencio del original,
 porque `render.py` cierra con un fundido de audio de 0.35 s: sin ese hueco, el
 fundido se come la última palabra.
 
-`--pad-in` (0.06) y `--pad-out` (0.22) son **asimétricos a propósito**: las colas
+`--pad-in` (0.06) y `--pad-out` (0.32) son **asimétricos a propósito**: las colas
 de consonante y el decaimiento de la voz se prolongan más allá de donde el
 detector declara silencio, así que recortar el final de un segmento se oye mucho
 más que recortar el principio. Si una frase suena truncada, sube `--pad-out`.
@@ -183,12 +183,10 @@ convertir un tiempo del original usa `source_to_output()` de `scripts/common.py`
 ```json
 {
   "effects": [
-    {"t": 0.0,  "type": "letterbox",  "dur": 2.5, "amount": 0.12},
-    {"t": 3.2,  "type": "zoom_punch", "hold": 2.0, "amount": 0.12},
-    {"t": 8.7,  "type": "shake",      "dur": 0.3, "amount": 8},
-    {"t": 12.0, "type": "flash",      "dur": 0.15},
-    {"t": 15.4, "type": "whip_pan",   "dur": 0.2}
+    {"t": 4.02,  "type": "pullback", "dur": 3.4, "ramp": 0.5, "scale": 0.76},
+    {"t": 35.62, "type": "cut_in",   "dur": 1.6, "amount": 0.14}
   ],
+  "emphasis": ["branch", "feature", "commits", "desordenado"],
   "cards": [
     {"t": 0, "dur": 3.4, "y_frac": 0.07, "kind": "chip",
      "title": "Nadie te cuenta esto"},
@@ -273,6 +271,37 @@ resultado limpio que ningún filtro iguala.
 | `dip` | bajón a negro | −0.4 a −0.7 | un golpe seco, sin rótulo |
 | `flash` | destello a blanco | 0.3–0.6 | en un corte duro o un beat |
 | `letterbox` | barras negras cine | 0.08–0.15 | en el hook o un momento dramático |
+
+### La receta de un reel — lo que se hace siempre, sin que lo pidan
+
+Es la forma de editar por defecto en vertical. Sale de igualar un reel de
+referencia fotograma a fotograma, y el autor la aprobó para todos sus vídeos.
+
+1. **Imagen original.** `render.py` ya no aplica color ni afilado salvo que se
+   pida con `--grade` o `--polish`.
+2. **Subtítulos «impacto»** con la palabra clave de cada frase en `emphasis`.
+   Elígela tú, frase a frase: el sustantivo o el verbo que carga el sentido.
+3. **Una `section` desde el segundo 0** con el tema del vídeo, sin número —*«BUENAS
+   PRÁCTICAS · GIT»*— hasta que empieza el primer punto.
+4. **Si el vídeo enumera puntos, una `section` numerada por punto**, fija desde
+   que se anuncia hasta que empieza el siguiente.
+5. **Algo nuevo en pantalla cada 2-3 s, y nunca más de 5 s sin nada.** Lo que
+   sirva en cada momento: una card con el comando, el logo de la herramienta que
+   se nombra, un `chip` que resuma la idea en cuatro palabras. `render.py` avisa
+   de cada tramo de más de 5 s sin nada nuevo: arréglalo antes de entregar.
+6. **Un `stamp` en el veredicto más fuerte del vídeo**, dos como mucho.
+7. **Cámara casi quieta**: un `cut_in` en el remate y los `pullback` justos para
+   las cards grandes. Nada de letterbox, sacudidas ni barridos por rutina.
+8. **Las cards grandes van donde no tapan la cara.** Mide el encuadre con
+   `measure.py --card`. Si la barba baja del 0.72, bajo la cara no queda sitio:
+   `code`, `checklist` y `compare` van en la banda de un `pullback`, con
+   `y_frac` 0.065 para no pisar la etiqueta de sección de arriba.
+9. **Al menos una card con contenido de verdad**, no sólo chips y etiquetas.
+
+**Si el encuadre es muy cerrado, díselo al autor.** La fila de `logos` y el sello
+van a la altura del pecho, y con la cara ocupando del 15% al 80% del alto no hay
+pecho donde ponerlos. Un paso atrás de la cámara —la cara en el 25-45% de arriba
+y el pecho a la vista— desbloquea el resto del estilo sin tocar nada del plugin.
 
 ### Dónde van los efectos (esto es lo que separa un montaje de un adorno)
 
@@ -372,12 +401,15 @@ frase. Para el tirón rápido de antes: `{"hold": 0, "ramp": 0.25}`.
 que dos a la vez dan un zoom doble. `render.py` aborta con los tiempos exactos si
 ocurre; `zoom_punch`, `shake` y `whip_pan` cuentan todos como zoom.
 
-Ritmo: un `zoom_punch` cada 8-15 segundos, y flashes o shakes entre medias para
-lo puntual. Efecto continuo marea y el espectador se va, que es exactamente lo
-contrario de lo que buscas.
+Ritmo de cámara: **poca**. En un reel, un `cut_in` en el remate y los `pullback`
+que hagan falta para abrir sitio a una card grande; el resto del ritmo lo ponen
+los gráficos (ver «La receta de un reel»). `zoom_punch`, `shake`, `flash`,
+`whip_pan` y `letterbox` siguen ahí para cuando el autor los pida o el vídeo sea
+de otro tipo, no para salpicar cada reel.
 
 **Cards**: anotaciones gráficas que resumen o estructuran lo que se dice.
-Mientras una card está en pantalla **los subtítulos se ocultan solos** — dos
+Mientras una card grande tapa la franja de subtítulos **los subtítulos se ocultan
+solos**; las que van en otra altura, o son etiquetas y sellos, conviven con ellos — dos
 bloques de texto compitiendo es lo que hace que una edición parezca amateur.
 
 Se dibujan con Pillow en `scripts/cards.py` y se componen como PNG, no como
@@ -580,11 +612,13 @@ python scripts/render.py entrada.mp4 --cuts cuts.json --subs subs.ass \
 Un solo pase de ffmpeg desde el original: sin pérdida por recodificaciones
 encadenadas. Con más de 300 segmentos pasa automáticamente a dos pases.
 
-`--no-grade` desactiva el color cinematográfico y `--no-polish` el denoise y
-el afilado. Los dos juntos son «la imagen original»: lo único que queda sobre el
-píxel grabado es el recorte, el encuadre de los efectos y lo que se compone
-encima. Con `--no-polish` los cutaways tampoco se afilan, así que un clip de
-menos resolución que la salida entra más blando — es el precio de no tocar nada.
+**Por defecto la imagen sale como entró**: sin color cinematográfico y sin
+denoise ni afilado. Lo único que queda sobre el píxel grabado es el recorte, el
+encuadre de los efectos y lo que se compone encima. `--grade` aplica el color y
+`--polish` el denoise y el afilado, sólo si el autor los pide; un `grade` escrito
+en el plan también se aplica, porque es una petición explícita. Sin `--polish`
+los cutaways tampoco se afilan, así que un clip de menos resolución que la
+salida entra más blando — es el precio de no tocar nada.
 
 Cuando se pide sin filtros, **el igualado de los cutaways sigue haciendo falta**:
 no es un look sobre la grabación, es lo que hace que material de otra cámara
