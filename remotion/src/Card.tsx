@@ -253,10 +253,76 @@ const Stat: React.FC<CardProps> = ({ theme, base, width, spec }) => {
   );
 };
 
+// «A → B → C»: cada nodo llega por su cuenta y la flecha se dibuja justo antes
+// del siguiente. Todo el pill a la vez se lee como una frase; uno detrás de otro
+// se lee como un proceso, que es lo que es.
+const NODE_STEP = 9;         // fotogramas entre un nodo y el siguiente (0.3 s)
+const NODE_SPLIT = /\s*(?:→|->)\s*/;
+
+const ChipNode: React.FC<{ i: number; text: string; theme: Theme; size: number }> = ({
+  i, text, theme, size,
+}) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const pop = spring({ frame: frame - i * NODE_STEP, fps, config: POP });
+  return (
+    <div style={{ transform: `scale(${pop})`, opacity: Math.min(1, pop * 3), flexShrink: 0 }}>
+      <Panel theme={theme} radius={999} style={{
+        display: "inline-block", padding: `${size * 0.55}px ${size * 0.8}px`,
+      }}>
+        <span style={{ fontSize: size, fontWeight: 800, color: theme.accent,
+                       whiteSpace: "nowrap" }}>{text}</span>
+      </Panel>
+    </div>
+  );
+};
+
+const ChipArrow: React.FC<{ i: number; theme: Theme; size: number }> = ({ i, theme, size }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  // Se dibuja de izquierda a derecha y termina justo cuando llega el nodo al que
+  // apunta: la flecha lleva la mirada al siguiente paso.
+  const draw = spring({ frame: frame - i * NODE_STEP + 5, fps, config: { damping: 200 } });
+  const w = size * 1.3;
+  return (
+    <div style={{ width: w, height: size, flexShrink: 0, overflow: "hidden" }}>
+      <svg viewBox="0 0 26 20" style={{ width: w * draw, height: size, display: "block" }}
+           preserveAspectRatio="none">
+        <line x1="3" y1="10" x2="18" y2="10" stroke={theme.accent} strokeWidth="2.6"
+              strokeLinecap="round" />
+        <polygon points="24,10 17,5.5 17,14.5" fill={theme.accent} />
+      </svg>
+    </div>
+  );
+};
+
 // Sin panel alrededor, el chip ES el elemento: entra con la card entera, en su
 // cue. Con un Enter dentro esperaba 12 fotogramas y llegaba 0.4 s tarde a la
 // palabra que lo dispara.
-const Chip: React.FC<CardProps> = ({ theme, base, spec }) => (
+const Chip: React.FC<CardProps> = (props) => {
+  const { theme, base, width, spec } = props;
+  const text = String(spec.title ?? spec.content ?? "");
+  const nodes = text.split(NODE_SPLIT).filter(Boolean);
+  if (nodes.length > 1) {
+    // Misma cuenta que la versión fija: la letra se encoge hasta que quepa.
+    const chars = nodes.reduce((n, s) => n + s.length, 0);
+    const room = width * 0.94 - (nodes.length - 1) * base * 1.1;
+    const size = Math.max(base * 0.4, Math.min(base * 0.86, room / (chars * 0.62 + nodes.length * 1.6)));
+    return (
+      <div style={{ width, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {nodes.map((node, i) => (
+          <React.Fragment key={i}>
+            {i > 0 ? <ChipArrow i={i} theme={theme} size={size} /> : null}
+            <ChipNode i={i} text={node} theme={theme} size={size} />
+          </React.Fragment>
+        ))}
+      </div>
+    );
+  }
+  return <SingleChip {...props} />;
+};
+
+const SingleChip: React.FC<CardProps> = ({ theme, base, spec }) => (
   <Enter from={0} delay={0}>
     <Panel theme={theme} radius={999} style={{
       display: "inline-block", padding: `${PAD * 0.9}px ${PAD * 1.4}px`,

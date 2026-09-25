@@ -1117,6 +1117,27 @@ def test_trajectories():
     print("ok  trayectorias (salen de fuera, llegan a su sitio, estela detrás)")
 
 
+def test_node_chain():
+    """«A → B → C» se parte en nodos igual en la fija y en la animada, y cabe."""
+    import re
+    from cards import build_theme, chip_nodes, draw_chip
+    from common import preset
+
+    assert chip_nodes("Problema → solución -> código") == ["Problema", "solución", "código"]
+    assert chip_nodes("Sin flechas") == []
+    tsx = (ROOT / "remotion" / "src" / "Card.tsx").read_text(encoding="utf-8")
+    assert r"NODE_SPLIT = /\s*(?:→|->)\s*/" in tsx, "la animada parte los nodos distinto"
+
+    ajustes = preset("tiktok")["card"]
+    tema = build_theme(ajustes)
+    largo = " → ".join(["Transcribir", "Cortar silencios", "Subtitular", "Exportar"])
+    card = draw_chip({"title": largo}, tema, 1080, ajustes["base_size"])
+    caja = card.getchannel("A").getbbox()
+    # La sombra sobresale ~30 px del panel; lo que no puede es tocar el borde.
+    assert caja[0] > 0 and caja[2] < 1080 - 1, f"la cadena se sale: {caja}"
+    print("ok  chip con nodos (se parte igual y cabe)")
+
+
 def main():
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
@@ -1149,6 +1170,7 @@ def main():
         test_sticker_clip()
         test_wipe()
         test_trajectories()
+        test_node_chain()
         test_icon_words(tmp)
         test_timeline_mapping()
         test_shot_shape()
