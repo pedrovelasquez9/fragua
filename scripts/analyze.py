@@ -104,7 +104,9 @@ def parse_args():
                         help="shortest silence worth cutting (s)")
     parser.add_argument("--pad-in", type=float, default=0.06,
                         help="air kept before speech starts (s)")
-    parser.add_argument("--pad-out", type=float, default=0.22,
+    # 0.32 y no 0.22: con 0.22 los finales de frase se oían cortados en reel
+    # tras reel, y había que subirlo a mano en cada edición.
+    parser.add_argument("--pad-out", type=float, default=0.32,
                         help="air kept after speech ends (s)")
     parser.add_argument("--min-keep", type=float, default=0.12,
                         help="drop kept segments shorter than this (s)")

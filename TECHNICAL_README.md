@@ -180,7 +180,7 @@ Produce `cuts.json` con los segmentos que se conservan, en tiempo del original.
 | `--threshold` | `-30` | dB por debajo de los cuales hay silencio. Micro flojo o sala ruidosa: prueba `-40` |
 | `--min-silence` | `0.35` | Silencio más corto que se recorta. `0.25` para ritmo agresivo |
 | `--pad-in` | `0.06` | Aire antes de que empiece la voz |
-| `--pad-out` | `0.22` | Aire después. **Más alto a propósito**: las colas de consonante se oyen si las cortas |
+| `--pad-out` | `0.32` | Aire después. **Más alto a propósito**: las colas de consonante se oyen si las cortas |
 
 Después de invertir los silencios, `analyze.py` hace una **segunda pasada a
 −42 dB** para saber dónde para el sonido de verdad y alarga hasta ahí cualquier
@@ -300,10 +300,10 @@ python scripts/render.py entrada.mp4 \
 | Opción | Para qué |
 |---|---|
 | `--preset` | `tiktok`, `reels`, `youtube_short` o `youtube_long` |
-| `--no-grade` | Salta el color cinematográfico |
-| `--no-polish` | Salta el denoise y el afilado enmascarado |
+| `--grade` | Aplica el color cinematográfico (por defecto, no) |
+| `--polish` | Aplica el denoise y el afilado enmascarado (por defecto, no) |
 
-Los dos juntos dejan el píxel de la grabación intacto: la cadena se queda en
+Sin ninguno de los dos —lo normal desde 1.24— el píxel de la grabación queda intacto: la cadena se queda en
 `[prepolish]null[polished]` y sobre la imagen sólo actúan el recorte, el
 encuadre de los efectos y lo que se compone encima. Los cutaways tampoco se
 afilan entonces, así que un clip de menos resolución que la salida entra más

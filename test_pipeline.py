@@ -944,6 +944,39 @@ def test_graphics_beside_captions():
     print("ok  sello, logos y sección conviven con los subtítulos")
 
 
+def test_graphic_gaps():
+    """render.py nombra cada tramo de más de 5 s sin nada nuevo en pantalla."""
+    from render import graphic_gaps
+
+    plan = {"cards": [{"t": 0.0}, {"t": 4.0}, {"t": 13.5}],
+            "stickers": [{"t": 15.0}], "effects": [{"t": 17.0}]}
+    # 4.0 -> 13.5 es el hueco; 17.0 -> 20.0 (el final) no llega a 5 s.
+    assert graphic_gaps(plan, 20.0) == [(4.0, 13.5)], graphic_gaps(plan, 20.0)
+    assert graphic_gaps({"cards": [{"t": 2.0}]}, 30.0) == [(2.0, 30.0)]
+    print("ok  huecos sin gráficos (el tramo exacto que se siente lento)")
+
+
+def test_original_picture_by_default():
+    """Sin pedir nada, la imagen sale sin color ni afilado."""
+    from argparse import Namespace
+    from render import video_graph
+    from common import preset
+
+    base = dict(no_polish=False, no_grade=False, subs=None)
+    graph = ";".join(video_graph(Namespace(polish=False, grade=False, **base),
+                                 preset("tiktok"), [], {}, 1)[0])
+    assert "vignette" not in graph and "maskedmerge" not in graph, "color o afilado sin pedirlos"
+
+    pedido = ";".join(video_graph(Namespace(polish=True, grade=True, **base),
+                                  preset("tiktok"), [], {}, 1)[0])
+    assert "maskedmerge" in pedido, "--polish no afila"
+    assert "vignette" in pedido, "--grade no aplica el color"
+    en_plan = ";".join(video_graph(Namespace(polish=False, grade=False, **base),
+                                   preset("tiktok"), [], {"grade": "eq=gamma=1.1"}, 1)[0])
+    assert "eq=gamma=1.1" in en_plan, "un grade escrito en el plan es una petición explícita"
+    print("ok  imagen original por defecto (color y afilado, sólo si se piden)")
+
+
 def main():
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
@@ -969,6 +1002,8 @@ def main():
         test_impact_captions()
         test_icon_slugs()
         test_graphics_beside_captions()
+        test_graphic_gaps()
+        test_original_picture_by_default()
         test_icon_words(tmp)
         test_timeline_mapping()
         test_shot_shape()
