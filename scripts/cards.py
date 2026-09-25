@@ -267,8 +267,57 @@ def draw_stat(spec, theme, width, base):
     return image.crop((0, 0, width, card_height + 20))
 
 
+# «Problema → solución → código» es una cadena, no una frase: cada paso va en su
+# propia pastilla y las flechas entre ellas. La animada los hace llegar de uno en
+# uno; aquí se dibujan todos, con la misma forma.
+NODE_ARROWS = ("→", "->")
+
+
+def chip_nodes(text):
+    """Los pasos de un chip con flechas, o [] si es un chip normal."""
+    import re
+
+    parts = [p for p in re.split(r"\s*(?:→|->)\s*", text) if p]
+    return parts if len(parts) > 1 else []
+
+
+def draw_node_chain(nodes, theme, width, base):
+    """Una pastilla por nodo y una flecha entre cada dos, centradas."""
+    probe = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+    padding, arrow_w = int(PAD * 0.7), int(base * 1.0)
+    size = int(base * 0.86)
+    # Se encoge la letra hasta que la cadena entera quepa en el ancho.
+    while size > int(base * 0.4):
+        font = load_font(size)
+        widths = [text_size(probe, node, font)[0] + padding * 2 for node in nodes]
+        total = sum(widths) + arrow_w * (len(nodes) - 1)
+        if total <= width * 0.94:
+            break
+        size -= 2
+    text_h = text_size(probe, "Ág", font)[1]
+    height = text_h + padding * 2
+    image = Image.new("RGBA", (width, height + 20), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    x = (width - total) // 2
+    for index, (node, w) in enumerate(zip(nodes, widths)):
+        panel(image, (x, 0, x + w, height), theme, radius=height // 2)
+        draw.text((x + w // 2, height // 2), node, font=font, fill=theme["accent"], anchor="mm")
+        x += w
+        if index < len(nodes) - 1:
+            mid = height // 2
+            head = max(8, arrow_w // 4)
+            draw.line((x + 8, mid, x + arrow_w - 10, mid), fill=theme["accent"], width=4)
+            draw.polygon([(x + arrow_w - 6, mid), (x + arrow_w - 6 - head, mid - head * 0.7),
+                          (x + arrow_w - 6 - head, mid + head * 0.7)], fill=theme["accent"])
+            x += arrow_w
+    return image
+
+
 def draw_chip(spec, theme, width, base):
     """A single rounded pill. This is what a title looks like as a card."""
+    nodes = chip_nodes(str(spec.get("title") or spec.get("content", "")))
+    if nodes:
+        return draw_node_chain(nodes, theme, width, base)
     font = load_font(int(base * 0.86))
     image = Image.new("RGBA", (width, width), (0, 0, 0, 0))
     draw = ImageDraw.Draw(image)
