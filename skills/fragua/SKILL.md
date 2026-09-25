@@ -821,11 +821,18 @@ En `plan.json`, las rutas se escriben **relativas a la biblioteca**:
 "stickers": [{"file": "stickers/fuego.png", "t": 5, "dur": 2, "scale": 0.22}]
 ```
 
-Los **stickers entran creciendo y salen con fundido**, igual que las cards: nada
-aparece de golpe. Hasta 1.18 lo hacían — `enable=between()` y nada más —, y un
-elemento que salta a pantalla con corte seco es el tell más barato de una
-edición. `"pop": 0` lo quita para un sticker concreto; `"pop": 0.3` entra desde
-más pequeño, para algo que merezca más golpe.
+**Todo lo que entra en pantalla se mueve igual**, stickers y cards: nace de
+nada, llega a su tamaño en un cuarto de segundo **pasándose un 8 % y volviendo**,
+respira un poco mientras está —un ±2.5 % de tamaño y un grado y medio de giro— y
+al irse se recoge en 5 fotogramas. Son las curvas medidas fotograma a fotograma
+en un showreel de motion graphics de referencia: ahí sólo el 7 % de los
+fotogramas están quietos. Un elemento que entra con un fundido suave, se queda
+congelado y sale despacio es lo contrario, y se nota aunque no se sepa decir por
+qué.
+
+La curva vive en `scripts/motion.py` para los stickers y con las mismas
+constantes en `Card.tsx` para las cards; una prueba impide que se separen.
+`"pop": 0` deja un sticker quieto, sólo con un fundido corto.
 
 **`sfx`** son golpes puntuales que se mezclan sobre la voz sin bajarla. Úsalos
 para acompañar lo que ya hace la imagen: un whoosh en un `whip_pan`, un pop

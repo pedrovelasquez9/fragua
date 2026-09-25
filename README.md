@@ -355,6 +355,14 @@ the author**. The plugin ships none: you pick your own, like the music.
 
 It needs the same as animated cards: Node and `/fragua:setup`.
 
+### Graphics that move with a punch
+
+Everything that appears on screen — stickers, logos, cards — enters the same
+way: out of nothing, arriving in a quarter of a second **overshooting slightly
+and settling back**, breathing while it stays, and snapping away when it leaves.
+Nothing fades in softly or sits frozen, which is what makes a graphic look pasted
+on rather than animated.
+
 ### How it edits by default
 
 Without being asked, every reel comes out like this:

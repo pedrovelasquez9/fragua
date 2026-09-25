@@ -977,6 +977,91 @@ def test_original_picture_by_default():
     print("ok  imagen original por defecto (color y afilado, sólo si se piden)")
 
 
+def test_motion_curve():
+    """La entrada, la vida en pantalla y la salida, con los números medidos.
+
+    Medido en el showreel de referencia: pico a ~0.25 s pasándose un ~8 %,
+    asentado hacia los 0.5 s, y salida en 5 fotogramas.
+    """
+    from motion import EXIT, exit_scale, pose, spring
+
+    muestras = [(k / 100, spring(k / 100)) for k in range(0, 100)]
+    pico_t, pico = max(muestras, key=lambda p: p[1])
+    assert 0.20 <= pico_t <= 0.30, f"el pico cae a {pico_t}s"
+    assert 1.05 <= pico <= 1.11, f"se pasa un {(pico - 1) * 100:.1f}%"
+    assert abs(spring(0.5) - 1) < 0.02, f"a 0.5 s aún no se ha asentado: {spring(0.5):.3f}"
+
+    assert exit_scale(1.0) == 1.0 and exit_scale(0.0) == 0.0
+    assert exit_scale(EXIT / 2) < 1.0, "la salida no empieza a recogerse"
+    assert round(EXIT * 30) == 5, "la salida son 5 fotogramas a 30 fps"
+
+    # En pantalla no está quieto: entre dos instantes ya asentados cambia algo.
+    a, b = pose(1.0, 3.0), pose(1.6, 3.0)
+    assert abs(a[0] - b[0]) > 0.005 or abs(a[1] - b[1]) > 0.2, "congelado en pantalla"
+    assert pose(1.0, 3.0, animate=False)[:2] == (1.0, 0.0), "pop 0 debe quedarse quieto"
+    print("ok  curva de movimiento (pico 0.25 s, +8 %, salida en 5 fotogramas)")
+
+
+def test_motion_matches_remotion():
+    """Stickers y cards entran con el mismo resorte, o se nota que no son lo mismo."""
+    import re
+    import motion
+
+    tsx = (ROOT / "remotion" / "src" / "Card.tsx").read_text(encoding="utf-8")
+    pop = re.search(r"const POP = \{ stiffness: ([\d.]+), damping: ([\d.]+), mass: ([\d.]+) \}", tsx)
+    assert pop, "no encuentro POP en Card.tsx"
+    assert tuple(float(x) for x in pop.groups()) == (
+        motion.POP_STIFFNESS, motion.POP_DAMPING, motion.POP_MASS), pop.groups()
+    salida = re.search(r"const EXIT_FRAMES = (\d+);", tsx)
+    assert int(salida.group(1)) == round(motion.EXIT * 30), "la salida difiere entre los dos"
+    respira = re.search(r"const IDLE_PERIOD = ([\d.]+);", tsx)
+    assert float(respira.group(1)) == motion.IDLE_PERIOD
+    print("ok  mismo movimiento en stickers (Python) y cards (Remotion)")
+
+
+def test_sticker_clip():
+    """El sticker animado sale en un clip con alfa, entero y en su sitio."""
+    from PIL import Image
+    from motion import sticker_clip
+    from render import sticker_graph
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        png = tmp / "icono.png"
+        arte = Image.new("RGBA", (200, 100), (0, 0, 0, 0))
+        arte.paste(Image.new("RGBA", (160, 80), (240, 80, 50, 255)), (20, 10))
+        arte.save(png)
+
+        clip = tmp / "s.mov"
+        cw, ch, dx, dy = sticker_clip(png, 200, 1.0, 30, clip)
+        assert cw > 200 and ch > 100 and dx > 0 and dy > 0, (cw, ch, dx, dy)
+        info = sh("ffprobe", "-v", "error", "-count_frames", "-select_streams", "v:0",
+                  "-show_entries", "stream=nb_read_frames,pix_fmt", "-of", "csv=p=0", clip)
+        assert "rgba" in info and ",30" in info.replace("\n", ""), info
+
+        def opaco(n):
+            raw = subprocess.run(["ffmpeg", "-v", "error", "-i", str(clip), "-vf",
+                                  f"select=eq(n\\,{n})", "-frames:v", "1", "-f", "image2pipe",
+                                  "-vcodec", "png", "-"], capture_output=True).stdout
+            import io as _io
+            alfa = Image.open(_io.BytesIO(raw)).getchannel("A")
+            return sum(1 for a in alfa.getdata() if a > 128)
+
+        # Nace de nada, se pasa en el pico, se asienta y se ha ido al final.
+        assert opaco(0) == 0, "el primer fotograma ya muestra el sticker entero"
+        pico, asentado = opaco(8), opaco(18)
+        assert pico > asentado, f"no rebota: pico {pico} vs asentado {asentado}"
+        assert opaco(29) < asentado * 0.3, "no se recoge al salir"
+
+        inputs, chunks, _ = sticker_graph(
+            [{"file": str(png), "t": 2.0, "dur": 1.0, "scale": 0.2, "x": "100", "y": "200"}],
+            1, 1000, 1920, 30, tmp / "plan.json")
+        graph = ";".join(chunks)
+        assert "-loop" not in inputs, "el clip ya está animado: no se repite"
+        assert "overlay=x=(100)-" in graph, f"el clip no compensa su margen: {graph}"
+    print("ok  sticker animado (nace de nada, rebota, se asienta y se recoge)")
+
+
 def main():
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
@@ -1004,6 +1089,9 @@ def main():
         test_graphics_beside_captions()
         test_graphic_gaps()
         test_original_picture_by_default()
+        test_motion_curve()
+        test_motion_matches_remotion()
+        test_sticker_clip()
         test_icon_words(tmp)
         test_timeline_mapping()
         test_shot_shape()

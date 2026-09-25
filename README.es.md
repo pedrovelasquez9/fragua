@@ -356,6 +356,14 @@ autor**. El plugin no trae ninguna: las eliges tú, como la música.
 
 Necesita lo mismo que las cards animadas: Node y `/fragua:setup`.
 
+### Gráficos que se mueven con golpe
+
+Todo lo que aparece en pantalla —stickers, logos, cards— entra de la misma
+manera: sale de la nada, llega en un cuarto de segundo **pasándose un poco y
+volviendo**, respira mientras está y se recoge en un instante al irse. Nada
+aparece con un fundido suave ni se queda congelado, que es lo que hace que un
+gráfico parezca pegado encima en vez de animado.
+
 ### Cómo edita por defecto
 
 Sin que se lo pidas, cada reel sale así:

@@ -556,6 +556,23 @@ En la versión animada, las imágenes de `logos` viajan dentro de las props como
 data URL: Remotion no ve el disco del usuario. Los tres están en
 `ALONGSIDE_CAPTIONS` y no ocultan los subtítulos.
 
+### Movimiento
+
+`scripts/motion.py` define cómo se mueve todo lo que entra en pantalla, con las
+curvas medidas en un showreel de motion graphics de referencia:
+
+| Fase | Qué hace | Medido |
+|---|---|---|
+| Entrada | resorte de rigidez 262 y amortiguamiento 20.4 | pico a 0.25 s pasándose un 8 %, asentado a 0.5 s |
+| En pantalla | ±2.5 % de tamaño y ±1.5° de giro, periodo 2.4 s | en la referencia sólo el 7 % de los fotogramas están quietos |
+| Salida | se recoge acelerando, `1 − u²` | 5 fotogramas a 30 fps |
+
+Los stickers PNG se componen con Pillow en un clip con alfa (`motion/` junto al
+plan) antes de renderizar: ffmpeg no sabe escalar por debajo de 1 con `zoompan`
+ni cambiar el tamaño de un overlay fotograma a fotograma, y así la curva es
+exactamente la medida. Las cards animadas usan las mismas constantes en
+`Card.tsx`, y `test_motion_matches_remotion` falla si se separan.
+
 ### Iconos de marca
 
 ```bash
@@ -803,6 +820,7 @@ fragua/
 │   ├── measure.py         formato, color, sonoridad y láminas de card
 │   ├── icons.py           Simple Icons → PNG por palabra clave
 │   ├── lottie.py          stickers Lottie → clips con alfa
+│   ├── motion.py          entrada con rebote, vida y salida de los elementos
 │   ├── cards.py           plan.json → cards/*.png
 │   ├── subtitles.py       words.json → subs.ass
 │   └── render.py          todo junto → salida.mp4
