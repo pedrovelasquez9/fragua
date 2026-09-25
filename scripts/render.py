@@ -13,7 +13,7 @@ import subprocess
 import sys
 import tempfile
 
-from motion import sticker_clip
+from motion import STYLES, path_clip, sticker_clip
 from pathlib import Path
 
 from common import (FONTS, ROOT, assets_dir, atempo_chain, ff_path, output_duration,
@@ -388,6 +388,20 @@ def letterbox_graph(effects, height):
     return "".join(bars)
 
 
+def plan_number(value, width, height):
+    """Una posición del plan en píxeles: un número, o una cuenta con W y H.
+
+    El plan escribe las posiciones como ffmpeg («W*0.7»), pero una trayectoria
+    se calcula aquí, fotograma a fotograma, y necesita el número.
+    """
+    if isinstance(value, (int, float)):
+        return float(value)
+    try:
+        return float(eval(str(value), {"__builtins__": {}}, {"W": width, "H": height}))
+    except Exception:                                         # noqa: BLE001
+        sys.exit(f"no entiendo la posición «{value}»: usa un número o algo como W*0.7")
+
+
 def sticker_graph(stickers, start_index, width, height, fps, plan_path=None):
     """Returns (extra_inputs, filter_chunks). Each sticker is its own overlay.
 
@@ -423,21 +437,40 @@ def sticker_graph(stickers, start_index, width, height, fps, plan_path=None):
 
         path = asset_path(s["file"], "sticker")
         w = int(width * s.get("scale", 0.2))
+        folder = (Path(plan_path).resolve().parent / "motion" if plan_path
+                  else Path(tempfile.mkdtemp(prefix="fragua-motion-")))
+        clip = folder / f"sticker{i:02d}.mov"
+        style = s.get("motion", "pop")
+        if style not in STYLES:
+            sys.exit(f"sticker {i}: motion '{style}' no existe. Usa: {', '.join(STYLES)}")
+        x, y = s.get("x", "W*0.7"), s.get("y", "H*0.15")
+
+        if style != "pop":
+            # Llega viajando: el clip ocupa todo el cuadro porque el viaje lo
+            # cruza, así que se superpone en 0:0 y la posición va dentro.
+            path_clip(path, w, dur, fps, clip, (width, height),
+                      (plan_number(x, width, height), plan_number(y, width, height)),
+                      style, trail=s.get("trail", True))
+            inputs += ["-i", str(clip)]
+            chunks.append(f"[{idx}:v]format=rgba,setpts=PTS-STARTPTS+{t0:.3f}/TB[s{i}]")
+            nxt = f"[ov{i}]"
+            chunks.append(f"{label}[s{i}]overlay=x=0:y=0"
+                          f":enable='between(t,{t0},{t0 + dur})'{nxt}")
+            label = nxt
+            continue
+
         # La animación se compone antes, en un clip con alfa: entrada con rebote,
         # respiración mientras está y salida en 5 fotogramas (ver motion.py).
         # `"pop": 0` lo deja quieto, sólo con un fundido corto.
         animate = float(s.get("pop", 1)) > 0
-        folder = (Path(plan_path).resolve().parent / "motion" if plan_path
-                  else Path(tempfile.mkdtemp(prefix="fragua-motion-")))
-        clip = folder / f"sticker{i:02d}.mov"
         _, _, dx, dy = sticker_clip(path, w, dur, fps, clip, animate)
         inputs += ["-i", str(clip)]
         chunks.append(f"[{idx}:v]format=rgba,setpts=PTS-STARTPTS+{t0:.3f}/TB[s{i}]")
         # El clip es más grande que el sticker para que quepan el rebote y el
         # giro; se mueve su esquina para que el sticker quede donde dice el plan.
         nxt = f"[ov{i}]"
-        chunks.append(f"{label}[s{i}]overlay=x=({s.get('x', 'W*0.7')})-{dx:.1f}"
-                      f":y=({s.get('y', 'H*0.15')})-{dy:.1f}"
+        chunks.append(f"{label}[s{i}]overlay=x=({x})-{dx:.1f}"
+                      f":y=({y})-{dy:.1f}"
                       f":enable='between(t,{t0},{t0 + dur})'{nxt}")
         label = nxt
     return inputs, chunks, label
