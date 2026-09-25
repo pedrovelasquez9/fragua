@@ -417,7 +417,7 @@ la rama más corta.
 | `cut_in` | `dur` (2.4) | 0.10–0.16 | El salto: cambia de plano en un fotograma, sin rampa |
 | `shake` | `dur` | 4–14 px | Un remate, un dato que golpea |
 | `whip_pan` | `dur` | — | Transición entre dos ideas distintas |
-| `wipe` | `dur` (0.36) + `from` | — | Barrido de color. En `t: 0` abre el gancho; `t` es el centro, cuando tapa el cuadro |
+| `wipe` | `dur` (0.36) + `from` | — | Barrido de color; `t` es el centro, cuando tapa el cuadro. El de `t: 0` lo pone `render.py` solo (`"opening_wipe": false` lo quita) |
 | `dip` | `dur` | −0.4 a −0.7 | Bajón a negro, un golpe seco sin rótulo |
 | `flash` | `dur` | 0.3–0.6 | Un corte duro, un cambio de bloque |
 | `letterbox` | `dur` | 0.08–0.15 | Momento dramático. Ojo si la cara va alta en el encuadre |
@@ -581,11 +581,14 @@ ni cambiar el tamaño de un overlay fotograma a fotograma, y así la curva es
 exactamente la medida. Las cards animadas usan las mismas constantes en
 `Card.tsx`, y `test_motion_matches_remotion` falla si se separan.
 
-Con `"motion"` un sticker llega viajando (`path_clip` en `motion.py`):
+Un sticker llega viajando (`path_clip` en `motion.py`). Sin `"motion"`,
+`sticker_motion` le da el turno que le toque —`bounce`, `drop`, `slide`, por
+índice— y `"pop": 0` lo deja quieto. `t` es el aterrizaje: el clip empieza
+`TRAVEL[style]` segundos antes.
 
 | `motion` | Trayectoria | Viaje |
 |---|---|---|
-| `pop` | nace en su sitio (por defecto) | 0.25 s |
+| `pop` | nace en su sitio | 0.25 s |
 | `bounce` | desde fuera por el lado contrario, tres botes que menguan y una vuelta rodando | 0.95 s |
 | `drop` | cae acelerando desde arriba y rebota dos veces | 0.85 s |
 | `slide` | desde el lado más cercano con el resorte de entrada, pasándose un poco | 0.5 s |
