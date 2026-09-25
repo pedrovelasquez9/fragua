@@ -8,6 +8,19 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.21.1 — 2026-09-25
+
+### Fixed
+- **Las cards grandes en la banda de un pullback apagaban los subtítulos.**
+  Salió en la primera edición real con 1.21: tres cards de código y checklist
+  arriba del todo, y durante las tres no había ni un subtítulo abajo, aunque no
+  se tocaban. La regla era por tipo —sólo `chip` y `title` convivían con los
+  subtítulos—, que con los tipos antiguos colocados a media altura era cierto.
+  Ahora se decide **por posición**: una card que empieza por encima del 40% del
+  alto no llega a la franja de subtítulos y no los oculta.
+
+---
+
 ## 1.21.0 — 2026-09-25
 
 ### Added
