@@ -1045,7 +1045,7 @@ def test_sticker_clip():
                                   "-vcodec", "png", "-"], capture_output=True).stdout
             import io as _io
             alfa = Image.open(_io.BytesIO(raw)).getchannel("A")
-            return sum(1 for a in alfa.getdata() if a > 128)
+            return sum(alfa.histogram()[129:])
 
         # Nace de nada, se pasa en el pico, se asienta y se ha ido al final.
         assert opaco(0) == 0, "el primer fotograma ya muestra el sticker entero"

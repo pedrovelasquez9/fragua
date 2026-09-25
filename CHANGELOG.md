@@ -8,6 +8,21 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.25.1 — 2026-09-26
+
+### Fixed
+- **Los chips y las filas de logos llegaban 0.4 s tarde a su palabra.** Dentro
+  llevaban una segunda animación que esperaba 12 fotogramas, pensada para los
+  elementos que van dentro de un panel. Un chip no tiene panel alrededor —es él
+  mismo— y la fila de logos tampoco, así que el gráfico entero aparecía tarde
+  respecto a lo que lo dispara. Con el movimiento de 1.25, que es rápido, se
+  notaba más. Medido: el chip ahora es visible desde el fotograma 3, antes desde
+  el 14.
+- La prueba del sticker animado usaba `Image.getdata()`, que Pillow retira en
+  2027. Ahora cuenta con el histograma.
+
+---
+
 ## 1.25.0 — 2026-09-26
 
 Sale de medir fotograma a fotograma un showreel de motion graphics que el autor
