@@ -871,6 +871,28 @@ def test_lottie_wiring():
     print("ok  stickers Lottie (su clip, sin bucle ni pop, con fundido)")
 
 
+def test_captions_beside_band_cards():
+    """Una card en la banda de arriba no apaga los subtítulos de abajo.
+
+    Pasó en una edición real: tres cards de código y checklist en la banda
+    negra de los pullbacks y, durante las tres, ni un subtítulo, aunque no se
+    tocaban. La decisión era por tipo de card; tiene que ser por posición.
+    """
+    from subtitles import blocked_windows
+
+    arriba = {"t": 4.0, "dur": 3.0, "kind": "code", "y_frac": 0.045}
+    en_medio = {"t": 9.0, "dur": 3.0, "kind": "code", "y_frac": 0.62}
+    sin_sitio = {"t": 14.0, "dur": 2.0, "kind": "bullets"}      # por defecto 0.60
+    chip = {"t": 18.0, "dur": 2.0, "kind": "chip", "y_frac": 0.62}
+
+    ventanas = blocked_windows([arriba, en_medio, sin_sitio, chip])
+    assert (4.0, 7.0) not in ventanas, "la card de la banda apaga los subtítulos"
+    assert (9.0, 12.0) in ventanas, "una card sobre los subtítulos debe ocultarlos"
+    assert (14.0, 16.0) in ventanas, "sin y_frac se asume media pantalla, como siempre"
+    assert len(ventanas) == 2, ventanas
+    print("ok  subtítulos junto a cards de la banda (por posición, no por tipo)")
+
+
 def main():
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
@@ -892,6 +914,7 @@ def main():
         test_card_kinds_match()
         test_code_card_fits()
         test_lottie_wiring()
+        test_captions_beside_band_cards()
         test_icon_words(tmp)
         test_timeline_mapping()
         test_shot_shape()

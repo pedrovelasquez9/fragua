@@ -142,17 +142,25 @@ def build_styles(platform):
 
 ALONGSIDE_CAPTIONS = ("chip", "title")
 
+# Una card que empieza por encima de esto no llega a la franja de subtítulos
+# (0.73-0.78 del alto): tendría que medir más de un tercio de pantalla, y
+# ninguna mide eso. Es donde van las cards en la banda negra de un pullback.
+CAPTION_CLEAR_ABOVE = 0.40
+
 
 def blocked_windows(cards):
     """Time ranges where a card replaces the captions.
 
     A chip is a small label, not a block of message, so it coexists with them.
-    A title lives in the black band a `pullback` opens above the shrunk video,
-    so it never lands on top of the captions either. Every other kind takes over
-    the screen while it is up.
+    Un card grande tapa los subtítulos sólo si está donde ellos: se decide por su
+    posición, no por su tipo. Hasta 1.21 era por tipo, y una card de código en la
+    banda de un pullback —arriba del todo— apagaba los subtítulos de abajo sin
+    tocarlos.
     """
     return [(float(card["t"]), float(card["t"]) + float(card.get("dur", 3)))
-            for card in cards if card.get("kind", "panel") not in ALONGSIDE_CAPTIONS]
+            for card in cards
+            if card.get("kind", "panel") not in ALONGSIDE_CAPTIONS
+            and float(card.get("y_frac", 0.60)) >= CAPTION_CLEAR_ABOVE]
 
 
 def parse_args():
