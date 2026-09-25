@@ -528,6 +528,22 @@ Las gratuitas de LottieFiles son *Lottie Simple License*: comercial, sin
 atribución, pero sin permiso para recopilarlas en un servicio parecido. Por eso
 el plugin no trae ninguna.
 
+### Subtítulos «impacto»
+
+El modo por defecto en `tiktok`, `reels` y `youtube_short`. Frases de hasta cinco
+palabras, partidas en comas y finales de oración, en mayúsculas, sin caja, con
+sombra, y una palabra de color por frase.
+
+```json
+"emphasis": ["branch", "feature", "commits"]
+```
+
+Las palabras de `emphasis` en el plan mandan; si una frase no tiene ninguna, se
+colorea la más larga que no sea relleno. Los colores rotan entre los de
+`impact.colors` del preset. El tamaño, el interlineado y la altura están en el
+bloque `impact` de cada preset; `--fontsize` y `--margin-v` los sobrescriben.
+`--style karaoke` vuelve al estilo anterior.
+
 ### Iconos de marca
 
 ```bash

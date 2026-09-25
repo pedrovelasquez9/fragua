@@ -276,6 +276,21 @@ resultado limpio que ningún filtro iguala.
 
 ### Dónde van los efectos (esto es lo que separa un montaje de un adorno)
 
+**El ritmo de un reel lo ponen los gráficos, no la cámara.** Medido en un reel de
+referencia de 94 s que funciona: la cámara no se mueve **ni una vez** —trípode,
+sin zooms, sin sacudidas— y aun así algo cambia en pantalla **cada 2-3
+segundos**: un logo que entra, una etiqueta de sección, un sello, una card. Un
+montaje que mueve mucho la cámara y pone pocos gráficos se ve como el vídeo de
+alguien intentando que parezca dinámico; uno con la cámara quieta y un elemento
+nuevo cada pocos segundos se ve editado.
+
+Así que en reels: **pocos movimientos de cámara** —un `cut_in` en el remate, los
+`pullback` que hagan falta para abrir sitio a una card grande— y **muchos
+elementos gráficos pequeños**, uno cada 2-3 s, cada uno anclado a lo que se dice
+en ese momento. Cuenta cuántos pones: si hay huecos de más de cinco segundos sin
+nada nuevo, ese tramo se va a sentir lento.
+
+
 **Cada efecto va sobre una frase concreta, no cada N segundos.** Repartirlos por
 reloj es exactamente lo que se ve como «aleatorio y brusco»: el espectador nota
 que el movimiento no responde a nada. Antes de colocar ninguno, busca en
@@ -475,6 +490,30 @@ ignorarla en silencio.
 acelerado) — útil para comprimir una parte aburrida sin cortarla.
 
 ### 4. Subtítulos — siempre después de cortar
+
+**En vertical, el estilo por defecto es «impacto»**: frases cortas enteras, en
+mayúsculas, sin caja detrás, con sombra, y **una palabra de color por frase**.
+Es el de los reels que funcionan. El karaoke ilumina todas las palabras por
+igual a medida que suenan; esto destaca **la que importa**, que es lo que hace
+que la frase se entienda de un vistazo con el sonido apagado.
+
+**Tú eliges qué palabra va de color**, porque es una decisión editorial. Ponlas
+en el plan:
+
+```json
+"emphasis": ["branch", "feature", "commits", "rollbacks", "entender"]
+```
+
+La que coincida en cada frase va de color, y los colores rotan (amarillo, coral,
+morado, rosa). Si una frase no tiene ninguna del plan, se colorea la palabra más
+larga que no sea relleno — suele acertar, pero es un respaldo, no el criterio.
+Elige el sustantivo o el verbo que carga la frase: *«NO ME SEAS
+**DESORDENADO**»*, no *«NO ME **SEAS** DESORDENADO»*.
+
+Las frases se parten en las comas y en los finales de oración, con cinco
+palabras como mucho. `--style karaoke` vuelve al estilo anterior; en vídeo largo
+sigue siendo el karaoke, que además va en `.srt` aparte.
+
 
 ```bash
 python scripts/subtitles.py words.json -o subs.ass --preset tiktok --plan plan.json
