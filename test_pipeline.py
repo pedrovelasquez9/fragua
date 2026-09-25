@@ -893,6 +893,31 @@ def test_captions_beside_band_cards():
     print("ok  subtítulos junto a cards de la banda (por posición, no por tipo)")
 
 
+def test_impact_captions():
+    """Frases cortas partidas en las comas, con la palabra clave del plan de color."""
+    from subtitles import chunks_for_impact, emphasis_index, lines_for_impact
+
+    def w(text, start):
+        return {"start": start, "end": start + 0.3, "text": text}
+
+    frase = [w("Número", 0.0), w("uno,", 0.3), w("un", 0.6), w("branch", 0.9),
+             w("por", 1.2), w("feature.", 1.5)]
+    trozos = [[x["text"] for x in c] for c in chunks_for_impact(frase, 5, 26, [])]
+    # Sin partir en la coma saldría «NÚMERO UNO, UN BRANCH POR» y «FEATURE.» suelto.
+    assert trozos == [["Número", "uno,"], ["un", "branch", "por", "feature."]], trozos
+
+    # Manda el plan; si no dice nada, la palabra más larga que no sea relleno.
+    trozo = [w("no", 0), w("me", 0), w("seas", 0), w("desordenado,", 0)]
+    assert emphasis_index(trozo, ["seas"]) == 2
+    assert emphasis_index(trozo, []) == 3
+    assert emphasis_index([w("que", 0), w("para", 0)], []) is None
+
+    # Líneas cortas y parecidas, sin una palabra suelta colgando al final.
+    assert lines_for_impact(["UN", "BRANCH", "POR", "FEATURE."], 13) == ["UN BRANCH POR", "FEATURE."]
+    assert lines_for_impact(["TODOS", "RELACIONADOS", "CON", "UN"], 13) ==         ["TODOS", "RELACIONADOS", "CON UN"]
+    print("ok  subtítulos impacto (comas, palabra clave, líneas)")
+
+
 def main():
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
@@ -915,6 +940,7 @@ def main():
         test_code_card_fits()
         test_lottie_wiring()
         test_captions_beside_band_cards()
+        test_impact_captions()
         test_icon_words(tmp)
         test_timeline_mapping()
         test_shot_shape()
@@ -944,7 +970,10 @@ def main():
         ]}
         words.write_text(json.dumps(payload), encoding="utf-8")
 
-        sh(sys.executable, SCRIPTS / "subtitles.py", words, "-o", subs, "--preset", "tiktok")
+        # Karaoke explícito: en vertical el estilo por defecto es «impacto», que
+        # tiene su propia prueba; aquí se comprueba el karaoke, que sigue vivo.
+        sh(sys.executable, SCRIPTS / "subtitles.py", words, "-o", subs, "--preset", "tiktok",
+           "--style", "karaoke")
         ass = subs.read_text(encoding="utf-8-sig")
         # Case follows the preset, so assert the mechanism rather than a fixed style.
         from common import preset
@@ -985,7 +1014,7 @@ def main():
 
         subs2 = tmp / "subs2.ass"
         sh(sys.executable, SCRIPTS / "subtitles.py", words, "-o", subs2,
-           "--preset", "tiktok", "--plan", cardplan)
+           "--preset", "tiktok", "--plan", cardplan, "--style", "karaoke")
         ass2 = subs2.read_text(encoding="utf-8-sig")
         assert "Style: Title," not in ass2 and "Style: Card," not in ass2, \
             "títulos y cards son PNG, no estilos ASS"
