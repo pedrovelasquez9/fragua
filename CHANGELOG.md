@@ -8,6 +8,30 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.26.0 — 2026-09-26
+
+### Added
+- **Barrido de color.** Dos paneles —uno oscuro y detrás el naranja— cruzan el
+  plano en 0.36 s y el corte cae debajo, cuando está tapado. Con
+  `{"t": 0, "type": "wipe"}` el vídeo empieza tapado y se descubre: es la
+  apertura del gancho, y la receta de reel lo pone siempre.
+- **Cortes a pantalla con barrido.** Un plano de recurso con
+  `"transition": "wipe"` entra y sale en seco con un barrido en cada corte. Es
+  lo que se usa cuando el vídeo alterna cámara y grabación de pantalla; los
+  clips de recurso normales siguen con fundido.
+- **Stickers que llegan viajando**, con `"motion"`: `bounce` cruza desde el lado
+  contrario botando y rodando, `drop` cae desde arriba y rebota dos veces,
+  `slide` entra desde el borde más cercano pasándose un poco. Los tres dejan una
+  estela naranja que sigue el recorrido y se recoge al aterrizar.
+- **La fila de logos salta desde abajo**, uno tras otro, rebotando al llegar y
+  con su estela; el nombre aparece cuando el logo aterriza.
+- **Chips con nodos.** Un chip titulado «Problema → solución → código» se dibuja
+  como una cadena: una pastilla por paso y una flecha entre cada dos. En la
+  versión animada cada nodo llega 0.3 s después del anterior y la flecha se
+  dibuja justo antes del nodo al que apunta.
+
+---
+
 ## 1.25.1 — 2026-09-26
 
 ### Fixed

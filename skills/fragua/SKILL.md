@@ -267,6 +267,7 @@ resultado limpio que ningún filtro iguala.
 | `zoom_punch` | **cambio de plano** progresivo: entra, deriva, sale | 0.08–0.15 | al abrir una sección |
 | `shake` | vibración con caída | 4–14 (px) | en un remate o un dato impactante |
 | `whip_pan` | barrido lateral con desenfoque | — | entre dos ideas distintas |
+| `wipe` | barrido de color: dos paneles cruzan el plano en 0.36 s | `from` left/right/up/down | **en `t: 0`, siempre**; y donde se pasa de cámara a pantalla |
 | `pullback` | el vídeo se encoge sobre negro y vuelve | `scale` 0.72–0.82 | **donde cambia el tema** |
 | `dip` | bajón a negro | −0.4 a −0.7 | un golpe seco, sin rótulo |
 | `flash` | destello a blanco | 0.3–0.6 | en un corte duro o un beat |
@@ -291,12 +292,24 @@ referencia fotograma a fotograma, y el autor la aprobó para todos sus vídeos.
    de cada tramo de más de 5 s sin nada nuevo: arréglalo antes de entregar.
 6. **Un `stamp` en el veredicto más fuerte del vídeo**, dos como mucho.
 7. **Cámara casi quieta**: un `cut_in` en el remate y los `pullback` justos para
-   las cards grandes. Nada de letterbox, sacudidas ni barridos por rutina.
+   las cards grandes. Nada de letterbox, sacudidas ni `whip_pan` por rutina.
 8. **Las cards grandes van donde no tapan la cara.** Mide el encuadre con
    `measure.py --card`. Si la barba baja del 0.72, bajo la cara no queda sitio:
    `code`, `checklist` y `compare` van en la banda de un `pullback`, con
    `y_frac` 0.065 para no pisar la etiqueta de sección de arriba.
 9. **Al menos una card con contenido de verdad**, no sólo chips y etiquetas.
+10. **Un `wipe` en `t: 0`.** El vídeo empieza tapado de color y se descubre: es
+    la apertura del gancho. `{"t": 0, "type": "wipe"}` en `effects`.
+11. **Si el vídeo alterna cámara y pantalla**, cada plano de pantalla lleva
+    `"transition": "wipe"` en su `cutaway`: un barrido al entrar y otro al salir,
+    y el corte cae debajo. Los clips de recurso normales siguen con fundido.
+12. **Los stickers llegan viajando, y variados.** Alterna `"motion": "bounce"`,
+    `"drop"` y `"slide"`: nunca dos seguidos iguales. Llegan desde fuera con una
+    estela naranja detrás, que es lo que hace que el ojo los siga.
+13. **Toda secuencia se escribe como cadena**: un `chip` con título
+    `"Problema → solución → código"` sale como nodos que aparecen de uno en uno,
+    con una flecha que se dibuja hacia el siguiente. Si lo que se dice es un
+    proceso de pasos, va así y no como una frase.
 
 **Si el encuadre es muy cerrado, díselo al autor.** La fila de `logos` y el sello
 van a la altura del pecho, y con la cara ocupando del 15% al 80% del alto no hay
@@ -505,6 +518,13 @@ esta es la card.
 pantalla y se lee como dos órdenes. Si no cabe, encoge la letra. Aun así, más de
 unos 70 caracteres ya no se lee en un móvil — acórtalo en el plan antes de
 confiar en el encogido.
+
+**Un chip con flechas es una cadena de nodos.** `"title": "Problema → solución
+→ código"` (vale `→` o `->`) se dibuja con una pastilla por paso y una flecha
+entre cada dos. En la animada cada nodo llega 0.3 s después del anterior y la
+flecha se dibuja justo antes del nodo al que apunta: se lee como un proceso, no
+como una frase. Si no cabe, la letra encoge; con más de cuatro pasos, mejor una
+card `flow`.
 
 **Los títulos son cards de kind `chip`**, no texto ASS sobre el fotograma: un
 rótulo suelto encima del vídeo se lee como encabezado de diapositiva. El `chip`
@@ -834,6 +854,24 @@ La curva vive en `scripts/motion.py` para los stickers y con las mismas
 constantes en `Card.tsx` para las cards; una prueba impide que se separen.
 `"pop": 0` deja un sticker quieto, sólo con un fundido corto.
 
+**Un sticker también puede llegar viajando**, con `"motion"`:
+
+| `motion` | cómo llega | dura |
+|---|---|---|
+| `pop` | nace en su sitio (por defecto) | 0.25 s |
+| `bounce` | cruza desde el lado contrario botando tres veces y rodando | 0.95 s |
+| `drop` | cae desde arriba y rebota dos veces al tocar su sitio | 0.85 s |
+| `slide` | entra por el lado más cercano y se pasa un poco | 0.5 s |
+
+Los tres que viajan dejan una **estela naranja** que engorda hacia el elemento,
+sigue el recorrido hecho y se recoge en 0.3 s al aterrizar; `"trail": false` la
+quita. `x` e `y` son dónde aterriza, igual que con `pop`. Como el viaje dura más,
+ponle el `t` un poco antes de la palabra: con `bounce`, 0.8 s antes.
+
+La fila de `logos` hace lo mismo sola: cada logo **salta desde abajo**, uno tras
+otro, girando un poco y con su estela, y el nombre aparece cuando aterriza.
+`"enter": "pop"` la deja como antes.
+
 **`sfx`** son golpes puntuales que se mezclan sobre la voz sin bajarla. Úsalos
 para acompañar lo que ya hace la imagen: un whoosh en un `whip_pan`, un pop
 cuando entra una card, un riser antes de un dato. Un efecto que no coincide con
@@ -1010,6 +1048,16 @@ clips en 47/10, 86/19 y 93/34. Sin igualar, los tres cantaban.
 una enumeración, una idea abstracta. Nunca sobre el gancho ni sobre el remate —
 ahí la expresión es el contenido. Tres o cuatro segundos cada uno: menos no da
 tiempo a leerlos, más y se pierde a quien habla.
+
+**Planos de pantalla con barrido.** Si el vídeo alterna cámara y grabación de
+pantalla, cada plano de pantalla va con `"transition": "wipe"`: entra y sale en
+seco, y un barrido de color tapa cada corte. `wipe_from` elige el lado y
+`wipe_color` el color (naranja `#FF8A3D` por defecto). El `t` y el `t + dur` del
+plano son el centro de cada barrido, el instante en que el cuadro está tapado.
+
+```json
+{"t": 12.0, "dur": 6.5, "file": "pantalla.mp4", "transition": "wipe"}
+```
 
 No pueden solaparse entre sí ni caer sobre un `pullback` —taparían el vídeo
 encogido y su rótulo— y `render.py` aborta con los tiempos si ocurre.

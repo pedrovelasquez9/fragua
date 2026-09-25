@@ -253,10 +253,76 @@ const Stat: React.FC<CardProps> = ({ theme, base, width, spec }) => {
   );
 };
 
+// «A → B → C»: cada nodo llega por su cuenta y la flecha se dibuja justo antes
+// del siguiente. Todo el pill a la vez se lee como una frase; uno detrás de otro
+// se lee como un proceso, que es lo que es.
+const NODE_STEP = 9;         // fotogramas entre un nodo y el siguiente (0.3 s)
+const NODE_SPLIT = /\s*(?:→|->)\s*/;
+
+const ChipNode: React.FC<{ i: number; text: string; theme: Theme; size: number }> = ({
+  i, text, theme, size,
+}) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const pop = spring({ frame: frame - i * NODE_STEP, fps, config: POP });
+  return (
+    <div style={{ transform: `scale(${pop})`, opacity: Math.min(1, pop * 3), flexShrink: 0 }}>
+      <Panel theme={theme} radius={999} style={{
+        display: "inline-block", padding: `${size * 0.55}px ${size * 0.8}px`,
+      }}>
+        <span style={{ fontSize: size, fontWeight: 800, color: theme.accent,
+                       whiteSpace: "nowrap" }}>{text}</span>
+      </Panel>
+    </div>
+  );
+};
+
+const ChipArrow: React.FC<{ i: number; theme: Theme; size: number }> = ({ i, theme, size }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  // Se dibuja de izquierda a derecha y termina justo cuando llega el nodo al que
+  // apunta: la flecha lleva la mirada al siguiente paso.
+  const draw = spring({ frame: frame - i * NODE_STEP + 5, fps, config: { damping: 200 } });
+  const w = size * 1.3;
+  return (
+    <div style={{ width: w, height: size, flexShrink: 0, overflow: "hidden" }}>
+      <svg viewBox="0 0 26 20" style={{ width: w * draw, height: size, display: "block" }}
+           preserveAspectRatio="none">
+        <line x1="3" y1="10" x2="18" y2="10" stroke={theme.accent} strokeWidth="2.6"
+              strokeLinecap="round" />
+        <polygon points="24,10 17,5.5 17,14.5" fill={theme.accent} />
+      </svg>
+    </div>
+  );
+};
+
 // Sin panel alrededor, el chip ES el elemento: entra con la card entera, en su
 // cue. Con un Enter dentro esperaba 12 fotogramas y llegaba 0.4 s tarde a la
 // palabra que lo dispara.
-const Chip: React.FC<CardProps> = ({ theme, base, spec }) => (
+const Chip: React.FC<CardProps> = (props) => {
+  const { theme, base, width, spec } = props;
+  const text = String(spec.title ?? spec.content ?? "");
+  const nodes = text.split(NODE_SPLIT).filter(Boolean);
+  if (nodes.length > 1) {
+    // Misma cuenta que la versión fija: la letra se encoge hasta que quepa.
+    const chars = nodes.reduce((n, s) => n + s.length, 0);
+    const room = width * 0.94 - (nodes.length - 1) * base * 1.1;
+    const size = Math.max(base * 0.4, Math.min(base * 0.86, room / (chars * 0.62 + nodes.length * 1.6)));
+    return (
+      <div style={{ width, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {nodes.map((node, i) => (
+          <React.Fragment key={i}>
+            {i > 0 ? <ChipArrow i={i} theme={theme} size={size} /> : null}
+            <ChipNode i={i} text={node} theme={theme} size={size} />
+          </React.Fragment>
+        ))}
+      </div>
+    );
+  }
+  return <SingleChip {...props} />;
+};
+
+const SingleChip: React.FC<CardProps> = ({ theme, base, spec }) => (
   <Enter from={0} delay={0}>
     <Panel theme={theme} radius={999} style={{
       display: "inline-block", padding: `${PAD * 0.9}px ${PAD * 1.4}px`,
@@ -487,23 +553,42 @@ const Section: React.FC<CardProps> = ({ base, width, spec }) => {
 
 type LogoItem = { src?: string; label?: string; check?: boolean };
 
+// Resorte del salto: más flojo que POP para que al llegar rebote de verdad, que
+// es lo que se ve como «juguetón» en vez de «correcto».
+const JUMP = { stiffness: 180, damping: 11, mass: 1 };
+
 const Logo: React.FC<{
   i: number; item: LogoItem; side: number; big: boolean; square: boolean;
-  theme: Theme; base: number;
-}> = ({ i, item, side, big, square, theme, base }) => {
+  theme: Theme; base: number; jump: boolean;
+}> = ({ i, item, side, big, square, theme, base, jump }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   // Salta con rebote, y el visto llega después de que el logo esté puesto:
   // aprobar algo que todavía no ha aparecido se lee como un error.
   // El primero salta casi en su cue: la fila no tiene panel que llegue antes,
   // así que esperar ITEMS la dejaba 0.4 s por detrás de la palabra.
-  const pop = spring({ frame: frame - HEADING - i * 5, fps, config: POP });
-  const tick = spring({ frame: frame - HEADING - 12 - i * 5, fps, config: POP });
+  const pop = spring({ frame: frame - HEADING - i * 5, fps, config: jump ? JUMP : POP });
+  const tick = spring({ frame: frame - HEADING - 14 - i * 5, fps, config: POP });
   const s = big ? side * 1.14 : side;
   const radius = square ? s / 4 : s / 2;
+  // Salta desde abajo —ahí la card tiene sitio; arriba el lienzo lo cortaría—
+  // girando, y deja una estela que se recoge a medida que llega.
+  const rise = jump ? (1 - pop) * side * 1.9 : 0;
+  const spin = jump ? (1 - pop) * -18 : 0;
+  const streak = jump ? Math.max(0, 1 - pop) : 0;
+  const shown = jump ? Math.min(1, pop * 4) : 1;
   return (
     <div style={{ width: side, display: "flex", flexDirection: "column", alignItems: "center" }}>
-      <div style={{ position: "relative", width: s, height: s, transform: `scale(${pop})` }}>
+      <div style={{ position: "relative", width: s, height: s, opacity: shown,
+                    transform: jump ? `translateY(${rise}px) rotate(${spin}deg)`
+                                    : `scale(${pop})` }}>
+        {streak > 0.02 ? (
+          <div style={{
+            position: "absolute", left: s / 2 - s * 0.06, top: s * 0.7, width: s * 0.12,
+            height: side * 1.9 * streak, borderRadius: s,
+            background: `linear-gradient(to bottom, ${alpha(SECTION_NUMBER, 230)}, ${alpha(SECTION_NUMBER, 0)})`,
+          }} />
+        ) : null}
         <div style={{
           position: "absolute", inset: 0, borderRadius: radius, boxSizing: "border-box",
           background: "rgba(22,24,32,0.94)",
@@ -530,7 +615,10 @@ const Logo: React.FC<{
       </div>
       {item.label ? (
         <div style={{ marginTop: base * 0.3, fontSize: base * 0.44, fontWeight: 700,
-                      color: theme.fg, opacity: pop }}>{item.label}</div>
+                      // El nombre aparece cuando el logo llega, no esperándolo.
+                      color: theme.fg, opacity: Math.min(1, Math.max(0, (pop - 0.6) * 2.5)) }}>
+          {item.label}
+        </div>
       ) : null}
     </div>
   );
@@ -555,7 +643,7 @@ const Logos: React.FC<CardProps> = ({ theme, base, width, spec }) => {
       <div style={{ display: "flex", gap: base * 0.35, alignItems: "center" }}>
         {items.map((item, i) => (
           <Logo key={i} i={i} item={item} side={side} big={i === highlight}
-                square={square} theme={theme} base={base} />
+                square={square} theme={theme} base={base} jump={spec.enter !== "pop"} />
         ))}
       </div>
     </div>

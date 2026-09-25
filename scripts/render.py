@@ -13,7 +13,7 @@ import subprocess
 import sys
 import tempfile
 
-from motion import sticker_clip
+from motion import STYLES, path_clip, sticker_clip
 from pathlib import Path
 
 from common import (FONTS, ROOT, assets_dir, atempo_chain, ff_path, output_duration,
@@ -388,6 +388,20 @@ def letterbox_graph(effects, height):
     return "".join(bars)
 
 
+def plan_number(value, width, height):
+    """Una posición del plan en píxeles: un número, o una cuenta con W y H.
+
+    El plan escribe las posiciones como ffmpeg («W*0.7»), pero una trayectoria
+    se calcula aquí, fotograma a fotograma, y necesita el número.
+    """
+    if isinstance(value, (int, float)):
+        return float(value)
+    try:
+        return float(eval(str(value), {"__builtins__": {}}, {"W": width, "H": height}))
+    except Exception:                                         # noqa: BLE001
+        sys.exit(f"no entiendo la posición «{value}»: usa un número o algo como W*0.7")
+
+
 def sticker_graph(stickers, start_index, width, height, fps, plan_path=None):
     """Returns (extra_inputs, filter_chunks). Each sticker is its own overlay.
 
@@ -423,21 +437,40 @@ def sticker_graph(stickers, start_index, width, height, fps, plan_path=None):
 
         path = asset_path(s["file"], "sticker")
         w = int(width * s.get("scale", 0.2))
+        folder = (Path(plan_path).resolve().parent / "motion" if plan_path
+                  else Path(tempfile.mkdtemp(prefix="fragua-motion-")))
+        clip = folder / f"sticker{i:02d}.mov"
+        style = s.get("motion", "pop")
+        if style not in STYLES:
+            sys.exit(f"sticker {i}: motion '{style}' no existe. Usa: {', '.join(STYLES)}")
+        x, y = s.get("x", "W*0.7"), s.get("y", "H*0.15")
+
+        if style != "pop":
+            # Llega viajando: el clip ocupa todo el cuadro porque el viaje lo
+            # cruza, así que se superpone en 0:0 y la posición va dentro.
+            path_clip(path, w, dur, fps, clip, (width, height),
+                      (plan_number(x, width, height), plan_number(y, width, height)),
+                      style, trail=s.get("trail", True))
+            inputs += ["-i", str(clip)]
+            chunks.append(f"[{idx}:v]format=rgba,setpts=PTS-STARTPTS+{t0:.3f}/TB[s{i}]")
+            nxt = f"[ov{i}]"
+            chunks.append(f"{label}[s{i}]overlay=x=0:y=0"
+                          f":enable='between(t,{t0},{t0 + dur})'{nxt}")
+            label = nxt
+            continue
+
         # La animación se compone antes, en un clip con alfa: entrada con rebote,
         # respiración mientras está y salida en 5 fotogramas (ver motion.py).
         # `"pop": 0` lo deja quieto, sólo con un fundido corto.
         animate = float(s.get("pop", 1)) > 0
-        folder = (Path(plan_path).resolve().parent / "motion" if plan_path
-                  else Path(tempfile.mkdtemp(prefix="fragua-motion-")))
-        clip = folder / f"sticker{i:02d}.mov"
         _, _, dx, dy = sticker_clip(path, w, dur, fps, clip, animate)
         inputs += ["-i", str(clip)]
         chunks.append(f"[{idx}:v]format=rgba,setpts=PTS-STARTPTS+{t0:.3f}/TB[s{i}]")
         # El clip es más grande que el sticker para que quepan el rebote y el
         # giro; se mueve su esquina para que el sticker quede donde dice el plan.
         nxt = f"[ov{i}]"
-        chunks.append(f"{label}[s{i}]overlay=x=({s.get('x', 'W*0.7')})-{dx:.1f}"
-                      f":y=({s.get('y', 'H*0.15')})-{dy:.1f}"
+        chunks.append(f"{label}[s{i}]overlay=x=({x})-{dx:.1f}"
+                      f":y=({y})-{dy:.1f}"
                       f":enable='between(t,{t0},{t0 + dur})'{nxt}")
         label = nxt
     return inputs, chunks, label
@@ -536,7 +569,8 @@ def cutaway_graph(items, start_index, base_label, width, height, fps, polish=Tru
         # El afilado no es un look: compensa el reescalado. Un clip de 478x850
         # subido a 1080x1920 llega sin borde, y eso no es "la imagen original".
         crisp = f",{CUTAWAY_SHARPEN}" if polish else ""
-        fade = min(float(item.get("fade", CUTAWAY_FADE)), dur / 3)
+        default_fade = 0.0 if item.get("transition") == "wipe" else CUTAWAY_FADE
+        fade = min(float(item.get("fade", default_fade)), dur / 3)
         fades = ("" if fade <= 0 else
                  f",fade=t=in:st=0:d={fade:.2f}:alpha=1"
                  f",fade=t=out:st={dur - fade:.3f}:d={fade:.2f}:alpha=1")
@@ -550,6 +584,63 @@ def cutaway_graph(items, start_index, base_label, width, height, fps, polish=Tru
                       f"enable='between(t,{t0},{t0 + dur:.3f})'{nxt}")
         label = nxt
     return inputs, chunks, label
+
+
+# Barrido: dos paneles de color cruzan el plano y el corte ocurre debajo, justo
+# cuando lo tapan. En el showreel de referencia cada cambio de escena es así, y
+# dura muy poco: el ojo no ve un fundido, ve un golpe de color. El panel oscuro va
+# delante y el de color encima y un poco detrás, así que lo que domina es el
+# color con un filo oscuro en el borde que avanza.
+WIPE_DUR = 0.36
+WIPE_COLOR = "#FF8A3D"      # el naranja de los números de sección: un solo acento
+WIPE_EDGE = "#14161F"
+WIPE_LAG = 0.07             # s que el panel de color va detrás del oscuro
+
+
+def _hex(colour):
+    return "0x" + str(colour).lstrip("#")
+
+
+def cutaway_wipes(items):
+    """Un barrido en la entrada y otro en la salida de cada plano con `transition: wipe`."""
+    wipes = []
+    for item in items:
+        if item.get("transition") != "wipe":
+            continue
+        t0, dur = float(item["t"]), float(item.get("dur", 3.0))
+        for mid in (t0, t0 + dur):
+            wipes.append({"t": mid, "type": "wipe", "from": item.get("wipe_from", "left"),
+                          "color": item.get("wipe_color", WIPE_COLOR)})
+    return wipes
+
+
+def wipe_graph(wipes, base_label, width, height, fps):
+    """Los barridos, encima de todo: tapan el plano entero en el instante del corte.
+
+    `t` es el centro del barrido, el momento en que el plano está tapado: ahí es
+    donde tiene que caer el corte. Con `t` en 0 el vídeo empieza tapado y se
+    descubre, que es la apertura de gancho.
+    """
+    chunks, label = [], base_label
+    for i, wipe in enumerate(w for w in wipes if w.get("type") == "wipe"):
+        mid, dur = float(wipe["t"]), float(wipe.get("dur", WIPE_DUR))
+        side = wipe.get("from", "left")
+        span = height if side in ("up", "down") else width
+        sign = -1 if side in ("right", "down") else 1
+        for layer, (colour, lag) in enumerate(((wipe.get("edge", WIPE_EDGE), 0.0),
+                                               (wipe.get("color", WIPE_COLOR), WIPE_LAG))):
+            start = mid - dur / 2 + lag
+            u = f"clip((t-{start:.3f})/{dur:.3f},0,1)"
+            # De fuera por un lado a fuera por el otro, pasando por 0 en su centro.
+            pos = f"{sign}*(-{span}+2*{span}*{smooth(u)})"
+            x, y = (("0", pos) if side in ("up", "down") else (pos, "0"))
+            src, nxt = f"[wp{i}_{layer}]", f"[wv{i}_{layer}]"
+            chunks.append(f"color=c={_hex(colour)}:s={width}x{height}:r={fps}"
+                          f":d={mid + dur + 0.5:.3f}{src}")
+            chunks.append(f"{label}{src}overlay=x='{x}':y='{y}':shortest=0:repeatlast=0"
+                          f":enable='between(t,{max(0.0, start):.3f},{start + dur:.3f})'{nxt}")
+            label = nxt
+    return chunks, label
 
 
 def check_cutaways(items, effects):
@@ -820,6 +911,12 @@ def build(args, platform, segments, plan, source):
         width, height, caption_y)
     graph += broll_chunks
     next_input += len(broll)
+
+    # El barrido va encima de todo, subtítulos y cards incluidos: una cortinilla
+    # que deja asomar un rótulo por encima no tapa el corte, lo delata.
+    wipes = effects + cutaway_wipes(plan.get("cutaways", []))
+    wipe_chunks, video_label = wipe_graph(wipes, video_label, width, height, fps)
+    graph += wipe_chunks
 
     # Cada imagen de apoyo puede traer su propio golpe de sonido de entrada.
     plan_with_broll_sfx = dict(plan)
