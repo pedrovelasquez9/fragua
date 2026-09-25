@@ -13,7 +13,7 @@ import subprocess
 import sys
 import tempfile
 
-from PIL import Image
+from motion import sticker_clip
 from pathlib import Path
 
 from common import (FONTS, ROOT, assets_dir, atempo_chain, ff_path, output_duration,
@@ -104,14 +104,8 @@ TAIL_FADE = 0.35
 
 CARD_FADE = 0.28
 
-# Un sticker que aparece con corte seco es el tell más barato de una edición, y
-# hasta ahora era lo que hacía: `enable=between()` y nada más, mientras las cards
-# de al lado ya entraban con fundido y desplazamiento. Entra creciendo desde
-# STICKER_POP por debajo de su tamaño, porque en un elemento pequeño el «pop» se
-# lee mejor que el deslizamiento que usan las cards, que son anchas.
+# Fundido de las Lottie, que traen su movimiento pero no su entrada.
 STICKER_FADE = 0.24
-STICKER_POP = 0.18        # cuánto más pequeño entra, en fracción de su tamaño
-STICKER_POP_IN = 0.36     # lo que tarda en llegar a tamaño natural
 
 # zoom_punch defaults: push in over SHOT_RAMP, stay SHOT_HOLD, pull back out.
 # Casi un segundo de recorrido: un plano que tarda un tercio de segundo se lee
@@ -397,11 +391,8 @@ def letterbox_graph(effects, height):
 def sticker_graph(stickers, start_index, width, height, fps, plan_path=None):
     """Returns (extra_inputs, filter_chunks). Each sticker is its own overlay.
 
-    Cada sticker se repite en bucle durante su duración para que `fade` y
-    `zoompan` tengan línea de tiempo sobre la que trabajar, igual que las cards
-    fijas. zoompan no sabe alejarse por debajo de 1, así que el crecimiento se
-    hace rellenando antes con transparencia y encuadrando dentro — el mismo
-    truco del pullback, y medido: el alfa sobrevive al zoompan.
+    Un sticker PNG se compone antes en un clip animado (motion.py) y una Lottie
+    llega ya animada de lottie.py: aquí sólo se colocan en su sitio y su momento.
     """
     inputs, chunks, label = [], [], "[styled]"
     for i, s in enumerate(stickers):
@@ -432,35 +423,21 @@ def sticker_graph(stickers, start_index, width, height, fps, plan_path=None):
 
         path = asset_path(s["file"], "sticker")
         w = int(width * s.get("scale", 0.2))
-        pop = float(s.get("pop", STICKER_POP))
-        # Sin -framerate, un PNG en bucle entra a 25 fps y zoompan lo reescala:
-        # el sticker acaba durando dur*25/fps y el fundido de salida se pierde.
-        inputs += ["-loop", "1", "-framerate", f"{fps:g}",
-                   "-t", f"{dur:.3f}", "-i", str(path)]
-
-        entrada = ""
-        if pop > 0:
-            # `s=` de zoompan no admite expresiones, así que el lienzo se mide
-            # aquí: el sticker se escala a lo ancho y el alto sale de su propia
-            # proporción. El lienzo crece un `pop` por los cuatro lados; a z=1 se
-            # ve entero —y el icono, pequeño— y en z=1+pop queda a tamaño natural.
-            with Image.open(path) as art:
-                h = max(2, round(art.height * w / art.width) // 2 * 2)
-            pad_w = round(w * (1 + pop)) // 2 * 2
-            pad_h = round(h * (1 + pop)) // 2 * 2
-            frames = max(1, round(STICKER_POP_IN * fps))
-            u = f"min(1,on/{frames})"
-            entrada = (f"pad={pad_w}:{pad_h}:(ow-iw)/2:(oh-ih)/2:0x00000000,"
-                       f"zoompan=z='1+{pop:.4f}*{smooth(u)}':d=1:fps={fps:g}:"
-                       f"s={pad_w}x{pad_h},format=rgba,")
-
-        chunks.append(
-            f"[{idx}:v]format=rgba,scale={w}:-1,{entrada}"
-            f"fade=t=in:st=0:d={fade:.2f}:alpha=1,"
-            f"fade=t=out:st={dur - fade:.3f}:d={fade:.2f}:alpha=1,"
-            f"setpts=PTS+{t0:.3f}/TB[s{i}]")
+        # La animación se compone antes, en un clip con alfa: entrada con rebote,
+        # respiración mientras está y salida en 5 fotogramas (ver motion.py).
+        # `"pop": 0` lo deja quieto, sólo con un fundido corto.
+        animate = float(s.get("pop", 1)) > 0
+        folder = (Path(plan_path).resolve().parent / "motion" if plan_path
+                  else Path(tempfile.mkdtemp(prefix="fragua-motion-")))
+        clip = folder / f"sticker{i:02d}.mov"
+        _, _, dx, dy = sticker_clip(path, w, dur, fps, clip, animate)
+        inputs += ["-i", str(clip)]
+        chunks.append(f"[{idx}:v]format=rgba,setpts=PTS-STARTPTS+{t0:.3f}/TB[s{i}]")
+        # El clip es más grande que el sticker para que quepan el rebote y el
+        # giro; se mueve su esquina para que el sticker quede donde dice el plan.
         nxt = f"[ov{i}]"
-        chunks.append(f"{label}[s{i}]overlay=x={s.get('x', 'W*0.7')}:y={s.get('y', 'H*0.15')}"
+        chunks.append(f"{label}[s{i}]overlay=x=({s.get('x', 'W*0.7')})-{dx:.1f}"
+                      f":y=({s.get('y', 'H*0.15')})-{dy:.1f}"
                       f":enable='between(t,{t0},{t0 + dur})'{nxt}")
         label = nxt
     return inputs, chunks, label

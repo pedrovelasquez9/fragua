@@ -16,7 +16,14 @@ export type CardProps = {
 
 const RADIUS = 26;
 const PAD = 34;
-const EXIT_FRAMES = 8;
+// El movimiento de todos los elementos, medido en un showreel de referencia: las
+// mismas constantes que scripts/motion.py, y una prueba comprueba que coinciden.
+// Pico a 0.25 s pasándose un 8 %, asentado a 0.5 s.
+const POP = { stiffness: 262, damping: 20.4, mass: 1 };
+// Se recoge en 5 fotogramas. Una salida lenta se lee como un vídeo colgado.
+const EXIT_FRAMES = 5;
+// Mientras está en pantalla respira: congelado se lee como una imagen pegada.
+const IDLE_PERIOD = 2.4;
 
 const FONT_FACE = `@font-face {
   font-family: "Fragua";
@@ -61,11 +68,15 @@ const HEADING = 4;
 const RULE = 8;
 const ITEMS = 12;
 
-/** Stagger helper: element `i` starts `step` frames after the one before it. */
-const useStagger = (i: number, step = 5, delay = ITEMS, damping = 15) => {
+/** Stagger helper: element `i` starts `step` frames after the one before it.
+    Por defecto con el resorte POP, que se pasa un poco y vuelve: sin ese rebote
+    las piezas llegan correctas pero sin golpe. Un `damping` explícito lo cambia
+    por un resorte sin rebote, para lo que se dibuja (filetes, espinas). */
+const useStagger = (i: number, step = 5, delay = ITEMS, damping?: number) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  return spring({ frame: frame - delay - i * step, fps, config: { damping, mass: 0.5 } });
+  return spring({ frame: frame - delay - i * step, fps,
+                  config: damping === undefined ? POP : { damping, mass: 0.5 } });
 };
 
 const Enter: React.FC<React.PropsWithChildren<{
@@ -129,7 +140,7 @@ const Bullets: React.FC<CardProps> = ({ theme, base, width, spec }) => {
 const Bullet: React.FC<{
   i: number; item: string; theme: Theme; base: number; marker: number;
 }> = ({ i, item, theme, base, marker }) => {
-  const pop = useStagger(i, 5, ITEMS, 9);
+  const pop = useStagger(i, 5, ITEMS);
   return (
     <div style={{ display: "flex", alignItems: "center", height: base * 1.15 }}>
       <Enter i={i}>
@@ -481,7 +492,7 @@ const Logo: React.FC<{
   const { fps } = useVideoConfig();
   // Salta con rebote, y el visto llega después de que el logo esté puesto:
   // aprobar algo que todavía no ha aparecido se lee como un error.
-  const pop = spring({ frame: frame - ITEMS - i * 5, fps, config: { damping: 9, mass: 0.6 } });
+  const pop = spring({ frame: frame - ITEMS - i * 5, fps, config: POP });
   const tick = spring({ frame: frame - ITEMS - 12 - i * 5, fps, config: { damping: 10 } });
   const s = big ? side * 1.14 : side;
   const radius = square ? s / 4 : s / 2;
@@ -592,19 +603,27 @@ export const Card: React.FC<CardProps> = (props) => {
   // The whole card arrives first, then its contents fill in. Without this the
   // surface pops in empty and the viewer watches a box wait for its own text.
   // El sello trae su propia entrada de golpe; suavizarla aquí la mataría.
-  const arrive = props.kind === "stamp" ? 1
-    : spring({ frame, fps, config: { damping: 14, mass: 0.6 } });
+  const arrive = props.kind === "stamp" ? 1 : spring({ frame, fps, config: POP });
 
-  // The exit is as quick as the entrance: a card that leaves slowly reads as a
-  // video that has frozen.
-  const out = interpolate(frame, [durationInFrames - EXIT_FRAMES, durationInFrames], [1, 0],
+  // Sale recogiéndose y acelerando, como motion.exit_scale: 1 - u².
+  const u = interpolate(frame, [durationInFrames - EXIT_FRAMES, durationInFrames], [0, 1],
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const exit = 1 - u * u;
+
+  // Crece desde un 70 % y, como el resorte se pasa, llega a un 102 % antes de
+  // asentarse: en texto no hace falta más golpe que ese para que se note.
+  const scale = interpolate(arrive, [0, 1], [0.7, 1]) * (0.85 + 0.15 * exit);
+  const breath = Math.sin((2 * Math.PI * frame) / (fps * IDLE_PERIOD)) * Math.min(1, arrive);
+  const y = interpolate(arrive, [0, 1], [24, 0]) + 3 * breath;
 
   return (
     <AbsoluteFill style={{
-      opacity: out * arrive, fontFamily: "Fragua, sans-serif",
+      opacity: Math.min(1, arrive * 3) * exit, fontFamily: "Fragua, sans-serif",
       alignItems: "center", justifyContent: "flex-start",
-      transform: `translateY(${interpolate(arrive, [0, 1], [34, 0])}px)`,
+      transform: `translateY(${y}px) scale(${scale})`,
+      // Crece desde donde está anclado, no desde el centro del lienzo: una
+      // etiqueta a la izquierda que crece desde el centro se desplaza al llegar.
+      transformOrigin: props.kind === "section" ? "6.5% 0" : "50% 0",
     }}>
       <style>{FONT_FACE}</style>
       <Kind {...props} />
