@@ -13,7 +13,7 @@ import subprocess
 import sys
 import tempfile
 
-from motion import STYLES, path_clip, sticker_clip
+from motion import STYLES, TRAVEL, path_clip, sticker_clip
 from pathlib import Path
 
 from common import (FONTS, ROOT, assets_dir, atempo_chain, ff_path, output_duration,
@@ -402,6 +402,27 @@ def plan_number(value, width, height):
         sys.exit(f"no entiendo la posición «{value}»: usa un número o algo como W*0.7")
 
 
+# Sin `motion` en el plan, los stickers llegan viajando y se van turnando: la
+# línea que el autor aprobó en 1.26 es la edición por defecto, no un extra.
+DEFAULT_TRAVEL = ("bounce", "drop", "slide")
+
+
+def sticker_motion(index, sticker):
+    """Cómo llega el sticker `index`: lo que diga el plan, o el turno que le toque."""
+    if float(sticker.get("pop", 1)) <= 0:
+        return "pop"            # `"pop": 0` es quieto, y sigue siéndolo
+    return sticker.get("motion", DEFAULT_TRAVEL[index % len(DEFAULT_TRAVEL)])
+
+
+def opening_wipes(plan, effects):
+    """El barrido de apertura, salvo que el plan ya traiga uno o lo quite."""
+    if plan.get("opening_wipe", True) is False:
+        return []
+    if any(e.get("type") == "wipe" and float(e["t"]) < 0.5 for e in effects):
+        return []
+    return [{"t": 0.0, "type": "wipe"}]
+
+
 def sticker_graph(stickers, start_index, width, height, fps, plan_path=None):
     """Returns (extra_inputs, filter_chunks). Each sticker is its own overlay.
 
@@ -440,12 +461,16 @@ def sticker_graph(stickers, start_index, width, height, fps, plan_path=None):
         folder = (Path(plan_path).resolve().parent / "motion" if plan_path
                   else Path(tempfile.mkdtemp(prefix="fragua-motion-")))
         clip = folder / f"sticker{i:02d}.mov"
-        style = s.get("motion", "pop")
+        style = sticker_motion(i, s)
         if style not in STYLES:
             sys.exit(f"sticker {i}: motion '{style}' no existe. Usa: {', '.join(STYLES)}")
         x, y = s.get("x", "W*0.7"), s.get("y", "H*0.15")
 
         if style != "pop":
+            # `t` es cuándo aterriza, no cuándo sale: el viaje empieza antes para
+            # que el elemento esté en su sitio en la palabra que lo dispara.
+            launch = max(0.0, t0 - TRAVEL[style])
+            dur, t0 = dur + (t0 - launch), launch
             # Llega viajando: el clip ocupa todo el cuadro porque el viaje lo
             # cruza, así que se superpone en 0:0 y la posición va dentro.
             path_clip(path, w, dur, fps, clip, (width, height),
@@ -914,7 +939,7 @@ def build(args, platform, segments, plan, source):
 
     # El barrido va encima de todo, subtítulos y cards incluidos: una cortinilla
     # que deja asomar un rótulo por encima no tapa el corte, lo delata.
-    wipes = effects + cutaway_wipes(plan.get("cutaways", []))
+    wipes = opening_wipes(plan, effects) + effects + cutaway_wipes(plan.get("cutaways", []))
     wipe_chunks, video_label = wipe_graph(wipes, video_label, width, height, fps)
     graph += wipe_chunks
 
