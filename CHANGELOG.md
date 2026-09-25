@@ -8,6 +8,32 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.25.0 — 2026-09-26
+
+Sale de medir fotograma a fotograma un showreel de motion graphics que el autor
+quería igualar en fluidez e impacto.
+
+### Changed
+- **Todo lo que entra en pantalla se mueve igual, con las curvas medidas.**
+  Stickers y cards nacen de nada, llegan a su tamaño en un cuarto de segundo
+  **pasándose un 8 % y volviendo**, respiran mientras están —±2.5 % de tamaño,
+  ±1.5° de giro— y al irse se recogen en 5 fotogramas. Antes entraban con un
+  crecimiento suave, se quedaban congelados y salían con un fundido lento: en la
+  referencia sólo el 7 % de los fotogramas están quietos.
+- **Los stickers se componen antes en un clip animado** (`motion.py`, con Pillow)
+  en vez de con `zoompan`, que no sabe escalar por debajo de 1 ni cambiar el
+  tamaño de un overlay fotograma a fotograma. Así la curva es exactamente la
+  medida.
+- Las cards animadas usan **el mismo resorte** que los stickers, con las mismas
+  constantes en `Card.tsx`, y los elementos de dentro de cada card rebotan igual.
+
+### Added
+- Comprobaciones de la curva (pico a 0.25 s, +8 %, salida en 5 fotogramas), de
+  que Python y Remotion usan el mismo resorte, y del clip de sticker: nace de
+  nada, rebota, se asienta y se recoge.
+
+---
+
 ## 1.24.0 — 2026-09-25
 
 La forma de editar que el autor aprobó tras igualar el reel de referencia pasa a
