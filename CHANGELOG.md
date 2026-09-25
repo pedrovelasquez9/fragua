@@ -8,6 +8,30 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.21.0 — 2026-09-25
+
+### Added
+- **Stickers Lottie.** Un sticker cuyo `file` es un `.json` es una animación
+  Lottie: flechas que se dibujan, subrayados, destellos, un check que se marca.
+  `lottie.py` la pasa por `@remotion/lottie` a un clip con alfa **a su tamaño
+  final** —es vectorial, y dejar que ffmpeg la reduzca tiraría su única ventaja
+  sobre un GIF— y `render.py` la superpone donde diga el plan.
+- No se le añade el «pop» de los stickers fijos: ya trae su movimiento, y
+  crecerla encima sería animar la animación. Sí el fundido. `"loop": false` para
+  las que cuentan algo una vez, `"speed"` para la velocidad.
+- `assets.py` las cataloga en `lottie`, con su duración y la palabra de su
+  nombre, y **sólo si el `.json` es de verdad una Lottie**: un fichero de
+  configuración en la misma carpeta no se confunde con una animación.
+- `@remotion/lottie` y `lottie-web` en `remotion/`, con el mismo rango que el
+  resto de paquetes de Remotion, que tienen que coincidir exactos.
+
+### Notes
+- Las gratuitas de LottieFiles van bajo la *Lottie Simple License*: uso
+  comercial, **sin atribución**. No permite recopilarlas en un servicio
+  parecido, así que el plugin no trae ninguna: cada usuario baja las suyas.
+
+---
+
 ## 1.20.0 — 2026-09-25
 
 ### Added

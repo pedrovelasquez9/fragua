@@ -739,6 +739,45 @@ catálogo reporta, no el nombre del archivo.
 Si el usuario no ha configurado nada, la biblioteca es la carpeta `assets/` de la
 propia skill y todo funciona igual, solo que vacía.
 
+## Stickers animados con Lottie
+
+Un sticker cuyo `file` es un `.json` es una animación **Lottie**: flechas que se
+dibujan, subrayados, destellos, un check que se marca. Vectorial y con alfa.
+
+```json
+"stickers": [{"file": "lottie/flecha.json", "t": 12.4, "dur": 2.5,
+              "scale": 0.30, "x": "W*0.55", "y": "H*0.40", "loop": false}]
+```
+
+```bash
+python scripts/lottie.py plan.json --preset tiktok     # antes de render.py
+```
+
+`lottie.py` pasa cada una por Remotion a un clip con alfa **a su tamaño final**,
+en `lottie/` junto al plan, y `render.py` lo coge de ahí. Se renderiza ya a su
+tamaño porque es vectorial: dejar que ffmpeg la reduzca sería tirar la única
+ventaja que tiene sobre un GIF. Si falta el clip, `render.py` aborta diciendo
+qué ejecutar.
+
+No se le añade el «pop» de los stickers fijos —ya trae su movimiento, y crecerla
+encima sería animar la animación—, pero sí el fundido de entrada y salida.
+`"loop": false` para las que cuentan algo una vez (una flecha, un check);
+por defecto se repiten, que es lo que quiere un destello o un pulso.
+`"speed"` cambia su velocidad.
+
+**De dónde sacarlas.** Las gratuitas de LottieFiles van bajo la *Lottie Simple
+License*: uso comercial permitido y **sin atribución**. Lo que no permite es
+recopilarlas para montar un servicio parecido, por eso el plugin no trae ninguna:
+el usuario baja las que quiera a su carpeta de assets, como la música.
+`assets.py` las cataloga en `lottie` —valida que el `.json` sea de verdad una
+Lottie— con su duración y la palabra de su nombre.
+
+**Dónde encajan.** Lo que mejor funciona es lo que **señala**: una flecha hacia
+lo que se enseña, un subrayado bajo un rótulo, un check al confirmar algo. Un
+elemento decorativo sin motivo es ruido, y moviéndose todavía más.
+
+Necesita Node y las dependencias de `remotion/`, como las cards animadas.
+
 ## Iconos de marca, sin buscarlos a mano
 
 ```bash

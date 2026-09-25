@@ -833,6 +833,44 @@ def test_code_card_fits():
     print("ok  card de código (el comando largo cabe sin partirse)")
 
 
+def test_lottie_wiring():
+    """Una Lottie entra como sticker con su clip, sin bucle ni pop encima.
+
+    No se renderiza con Remotion: eso necesita Node. Se comprueba el cableado,
+    que es lo que se rompe: que el .json busque su .mov, que falte avisando, y
+    que no se le vuelva a animar lo que ya trae animado.
+    """
+    from lottie import clip_de, medida
+    from render import sticker_graph
+
+    # El alto sale de la proporción del propio fichero, y todo par para x264.
+    assert medida({"w": 200, "h": 100}, 400) == (400, 200)
+    assert medida({"w": 100, "h": 300}, 301) == (300, 902)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        plan = tmp / "plan.json"
+        plan.write_text("{}", encoding="utf-8")
+        sticker = [{"file": "algo/pulso.json", "t": 2.0, "dur": 3.0, "scale": 0.3}]
+
+        try:
+            sticker_graph(sticker, 1, 1080, 1920, 30, plan)
+            raise AssertionError("una Lottie sin su clip debería abortar")
+        except SystemExit as fallo:
+            assert "lottie.py" in str(fallo), fallo
+
+        clip = clip_de(plan, 0)
+        clip.parent.mkdir(parents=True)
+        clip.write_bytes(b"x")
+        inputs, chunks, _ = sticker_graph(sticker, 1, 1080, 1920, 30, plan)
+        graph = ";".join(chunks)
+        assert str(clip) in inputs, inputs
+        assert "-loop" not in inputs, "un clip no se repite como si fuera una imagen"
+        assert "zoompan" not in graph, "la Lottie ya trae su movimiento: nada de pop"
+        assert "fade=t=in" in graph and "fade=t=out" in graph, "perdió el fundido"
+    print("ok  stickers Lottie (su clip, sin bucle ni pop, con fundido)")
+
+
 def main():
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
@@ -853,6 +891,7 @@ def main():
         test_icon_colour()
         test_card_kinds_match()
         test_code_card_fits()
+        test_lottie_wiring()
         test_icon_words(tmp)
         test_timeline_mapping()
         test_shot_shape()
