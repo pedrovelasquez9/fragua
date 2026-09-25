@@ -253,8 +253,11 @@ const Stat: React.FC<CardProps> = ({ theme, base, width, spec }) => {
   );
 };
 
+// Sin panel alrededor, el chip ES el elemento: entra con la card entera, en su
+// cue. Con un Enter dentro esperaba 12 fotogramas y llegaba 0.4 s tarde a la
+// palabra que lo dispara.
 const Chip: React.FC<CardProps> = ({ theme, base, spec }) => (
-  <Enter from={0}>
+  <Enter from={0} delay={0}>
     <Panel theme={theme} radius={999} style={{
       display: "inline-block", padding: `${PAD * 0.9}px ${PAD * 1.4}px`,
     }}>
@@ -492,8 +495,10 @@ const Logo: React.FC<{
   const { fps } = useVideoConfig();
   // Salta con rebote, y el visto llega después de que el logo esté puesto:
   // aprobar algo que todavía no ha aparecido se lee como un error.
-  const pop = spring({ frame: frame - ITEMS - i * 5, fps, config: POP });
-  const tick = spring({ frame: frame - ITEMS - 12 - i * 5, fps, config: { damping: 10 } });
+  // El primero salta casi en su cue: la fila no tiene panel que llegue antes,
+  // así que esperar ITEMS la dejaba 0.4 s por detrás de la palabra.
+  const pop = spring({ frame: frame - HEADING - i * 5, fps, config: POP });
+  const tick = spring({ frame: frame - HEADING - 12 - i * 5, fps, config: POP });
   const s = big ? side * 1.14 : side;
   const radius = square ? s / 4 : s / 2;
   return (
