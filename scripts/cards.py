@@ -17,6 +17,9 @@ Kinds, chosen per card with "kind":
   compare    dos o tres columnas enfrentadas: X frente a Y
   checklist  lista con casillas, marcadas hasta `done`
   code       un comando o un fragmento, en monoespaciada
+  section    etiqueta de sección arriba a la izquierda: «02 · TÍTULO»
+  logos      fila de logos o iconos, con check o uno destacado
+  stamp      sello rojo en diagonal con una palabra
 """
 import argparse
 import shutil
@@ -25,9 +28,17 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-from common import FONTS, ROOT, preset, read_json, write_json
+from common import FONTS, ROOT, preset, read_json, resolve_asset, write_json
 
 RADIUS = 26
+
+# Colores propios de estos tres tipos, fuera del tema del preset: el número de
+# sección es naranja y el sello rojo en cualquier canal, igual que el verde de
+# un check no depende del color de acento.
+SECTION_NUMBER = (255, 138, 61, 255)
+SECTION_TEXT = (240, 228, 205, 255)
+STAMP_RED = (240, 52, 58, 255)
+CHECK_GREEN = (52, 199, 89, 255)
 PAD = 34
 SHADOW_BLUR = 18
 
@@ -452,9 +463,149 @@ def draw_code(spec, theme, width, base):
     return image.crop((0, 0, width, card_height + 20))
 
 
+def tracked(draw, xy, text, font, fill, tracking):
+    """Texto con espaciado entre letras. Pillow no lo hace solo."""
+    x, y = xy
+    for char in text:
+        draw.text((x, y), char, font=font, fill=fill, anchor="ls")
+        x += draw.textlength(char, font=font) + tracking
+    return x
+
+
+def draw_section(spec, theme, width, base):
+    """«02 · CLAUDE CODE, EL CONSTRUCTOR», arriba a la izquierda y sin panel.
+
+    Se queda fija toda la sección. Estructura el vídeo sin interrumpirlo: quien
+    llega a mitad sabe en qué parte está, y quien se queda ve que avanza.
+    """
+    number = str(spec.get("number", "")).zfill(2) if spec.get("number") is not None else ""
+    title = str(spec.get("title", "")).upper()
+    num_font = load_font(int(base * 0.62), "Black")
+    title_font = load_font(int(base * 0.46), "Bold")
+    height = int(base * 1.1)
+    image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    left, baseline = int(width * 0.065), int(base * 0.78)
+
+    shadow = Image.new("RGBA", image.size, (0, 0, 0, 0))
+    sdraw = ImageDraw.Draw(shadow)
+    x = left
+    if number:
+        x = tracked(sdraw, (x + 2, baseline + 2), number, num_font, (0, 0, 0, 200), 2)
+        x += int(base * 0.28)
+    tracked(sdraw, (x + 2, baseline + 2), title, title_font, (0, 0, 0, 200), int(base * 0.07))
+    image.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(3)))
+
+    x = left
+    if number:
+        x = tracked(draw, (x, baseline), number, num_font, SECTION_NUMBER, 2)
+        x += int(base * 0.28)
+    tracked(draw, (x, baseline), title, title_font, SECTION_TEXT, int(base * 0.07))
+    return image
+
+
+def _logo_art(path, side):
+    """El logo encajado en un cuadrado, sin deformarlo."""
+    art = Image.open(resolve_asset(path)).convert("RGBA")
+    art.thumbnail((side, side), Image.LANCZOS)
+    canvas = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    canvas.alpha_composite(art, ((side - art.width) // 2, (side - art.height) // 2))
+    return canvas
+
+
+def draw_logos(spec, theme, width, base):
+    """Una fila de logos en círculo —o iconos en cuadrado— con su nombre debajo.
+
+    `check` en un elemento le pone el visto verde; `highlight` agranda uno y le
+    da un anillo, para cuando la frase habla de ese y no de los demás.
+    """
+    items = spec.get("items") or []
+    square = spec.get("shape") == "square"
+    highlight = spec.get("highlight")
+    label_font = load_font(int(base * 0.44), "Bold")
+    title_font = load_font(int(base * 0.46), "Bold")
+    count = max(1, len(items))
+    side = min(int(base * 2.3), int(width * 0.82 / count) - int(base * 0.35))
+    gap = int(base * 0.35)
+    title = str(spec.get("title", "")).upper()
+    top = int(base * 0.9) if title else int(base * 0.25)
+    label_h = int(base * 0.75) if any(i.get("label") for i in items) else 0
+    height = top + int(side * 1.2) + label_h + int(base * 0.2)
+    image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+
+    if title:
+        title_w = text_size(draw, title, title_font)[0] + int(base * 0.07) * len(title)
+        tracked(draw, ((width - title_w) // 2, int(base * 0.6)), title, title_font,
+                SECTION_TEXT, int(base * 0.07))
+
+    row = count * side + (count - 1) * gap
+    x = (width - row) // 2
+    for index, item in enumerate(items):
+        big = index == highlight
+        s = int(side * 1.14) if big else side
+        cx, cy = x + side // 2, top + int(side * 0.6)
+        box = (cx - s // 2, cy - s // 2, cx + s // 2, cy + s // 2)
+        glow = Image.new("RGBA", image.size, (0, 0, 0, 0))
+        gdraw = ImageDraw.Draw(glow)
+        ring = theme["accent"] if big else (0, 0, 0, 160)
+        if square:
+            gdraw.rounded_rectangle(box, s // 4, fill=ring)
+        else:
+            gdraw.ellipse(box, fill=ring)
+        image.alpha_composite(glow.filter(ImageFilter.GaussianBlur(int(base * 0.35))))
+        inner = (box[0] + 4, box[1] + 4, box[2] - 4, box[3] - 4)
+        if square:
+            draw.rounded_rectangle(inner, s // 4, fill=(22, 24, 32, 240),
+                                   outline=theme["accent"] if big else theme["line"], width=3)
+        else:
+            draw.ellipse(inner, fill=(22, 24, 32, 240),
+                         outline=theme["accent"] if big else theme["line"], width=3)
+        if item.get("file"):
+            art = _logo_art(item["file"], int(s * 0.62))
+            image.alpha_composite(art, (cx - art.width // 2, cy - art.height // 2))
+        if item.get("check"):
+            r = int(s * 0.17)
+            bx, by = box[2] - r, box[1] + r
+            draw.ellipse((bx - r, by - r, bx + r, by + r), fill=CHECK_GREEN,
+                         outline=(12, 14, 20, 255), width=3)
+            check_mark(draw, (bx - r, by - r, bx + r, by + r), (255, 255, 255, 255),
+                       max(3, r // 3))
+        if item.get("label"):
+            draw.text((cx, top + int(side * 1.2) + int(base * 0.35)), item["label"],
+                      font=label_font, fill=theme["fg"], anchor="mm")
+        x += side + gap
+    return image
+
+
+def draw_stamp(spec, theme, width, base):
+    """Un sello rojo en diagonal: EQUIVOCADA, NO SIRVE.
+
+    Es puntuación, no información: marca un veredicto con el golpe que tiene la
+    frase dicha. Por eso una palabra o dos, y poco tiempo en pantalla.
+    """
+    text = str(spec.get("title") or spec.get("text") or "").upper()
+    font = load_font(int(base * 1.35), "Black")
+    probe = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+    tw, th = text_size(probe, text, font)
+    pad_x, pad_y, stroke = int(base * 0.45), int(base * 0.3), max(6, base // 7)
+    w, h = tw + pad_x * 2 + stroke * 2, th + pad_y * 2 + stroke * 2
+    stamp = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    sdraw = ImageDraw.Draw(stamp)
+    sdraw.rounded_rectangle((stroke // 2, stroke // 2, w - stroke // 2, h - stroke // 2),
+                            int(base * 0.25), outline=STAMP_RED, width=stroke)
+    sdraw.text((w // 2, h // 2), text, font=font, fill=STAMP_RED, anchor="mm")
+    angle = float(spec.get("angle", -8))
+    stamp = stamp.rotate(-angle, resample=Image.BICUBIC, expand=True)
+    image = Image.new("RGBA", (width, stamp.height + 20), (0, 0, 0, 0))
+    image.alpha_composite(stamp, ((width - stamp.width) // 2, 10))
+    return image
+
+
 KINDS = {"panel": draw_panel, "bullets": draw_bullets, "flow": draw_flow,
          "title": draw_title, "stat": draw_stat, "chip": draw_chip,
-         "compare": draw_compare, "checklist": draw_checklist, "code": draw_code}
+         "compare": draw_compare, "checklist": draw_checklist, "code": draw_code,
+         "section": draw_section, "logos": draw_logos, "stamp": draw_stamp}
 
 
 def build_theme(card_settings):
@@ -500,6 +651,24 @@ def remotion_ready():
     return bool(shutil.which("npx")) and (REMOTION / "node_modules").is_dir()
 
 
+def with_inline_images(spec):
+    """Los logos entran en las props como data URL: Remotion no ve el disco."""
+    if spec.get("kind") != "logos":
+        return spec
+    import base64
+    import mimetypes
+
+    items = []
+    for item in spec.get("items", []):
+        item = dict(item)
+        if item.get("file"):
+            path = Path(resolve_asset(item["file"]))
+            mime = mimetypes.guess_type(path.name)[0] or "image/png"
+            item["src"] = f"data:{mime};base64," + base64.b64encode(path.read_bytes()).decode()
+        items.append(item)
+    return {**spec, "items": items}
+
+
 def render_animated(cards, platform, output_dir):
     """Render each card as a ProRes 4444 clip with alpha, animation baked in.
 
@@ -543,7 +712,7 @@ def render_animated(cards, platform, output_dir):
         props = output_dir / f"card{index:02d}.props.json"
         write_json(props, {"kind": kind, "dur": float(spec.get("dur", 3)),
                            "width": platform["width"], "base": settings["base_size"],
-                           "theme": theme, "spec": spec})
+                           "theme": theme, "spec": with_inline_images(spec)})
         result = subprocess.run(
             [npx, "remotion", "render", "build", "Card",
              str(path.resolve()), f"--props={props.resolve()}", "--log=error"],

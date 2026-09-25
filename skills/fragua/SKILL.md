@@ -417,6 +417,9 @@ defecto y cae a las estáticas sólo si no hay Node.**
 | `compare` | dos o tres columnas enfrentadas | **X frente a Y**: MCP y skill, antes y después |
 | `checklist` | casillas que se marcan hasta `done` | pasos que se van cumpliendo |
 | `code` | ventana de terminal en monoespaciada | un comando que el espectador va a teclear |
+| `section` | «02 · TÍTULO» arriba a la izquierda | estructura: fija toda la sección |
+| `logos` | fila de logos (círculo) o iconos (cuadrado) | las herramientas de las que se habla |
+| `stamp` | sello rojo en diagonal | un veredicto: EQUIVOCADA, NO SIRVE |
 
 ```json
 {"kind": "compare", "title": "¿Cuál uso?",
@@ -427,6 +430,33 @@ defecto y cae a las estáticas sólo si no hay Node.**
 {"kind": "code", "title": "terminal",
  "lines": ["claude plugin install fragua@fragua"], "prompt": "$"}
 ```
+
+```json
+{"kind": "section", "number": 2, "title": "Commits con un solo fin",
+ "t": 13.8, "dur": 13.5, "y_frac": 0.03}
+{"kind": "logos", "items": [{"file": "images/git.png", "label": "Git", "check": true},
+                            {"file": "images/github.png", "label": "GitHub"}],
+ "highlight": 0, "y_frac": 0.50}
+{"kind": "logos", "shape": "square", "title": "02 · lo empaca", "items": [...]}
+{"kind": "stamp", "title": "No sirve", "t": 25.2, "dur": 1.2, "y_frac": 0.45}
+```
+
+**`section` va fija toda la sección**, desde que se anuncia hasta que empieza la
+siguiente: `dur` es lo que dura esa parte, no tres segundos. Quien llega a mitad
+sabe en qué punto está, y quien se queda ve que el vídeo avanza.
+
+**`logos` es el motivo que más se repite en los reels que funcionan.** Entran de
+uno en uno con rebote y el visto llega después. `check` marca los que cumplen
+algo; `highlight` agranda uno cuando la frase habla de ese. Con `"shape":
+"square"` es una fila de iconos de apps. Los ficheros salen de `icons.py`: para
+dentro del círculo, usa `--no-plate`.
+
+**`stamp` es puntuación, no información**: una o dos palabras, poco más de un
+segundo, sobre un veredicto que el autor dice con énfasis. Cae de golpe con un
+fallo de señal. Más de dos en un reel y deja de golpear.
+
+Estos tres, igual que `chip` y `title`, **conviven con los subtítulos**: van a
+otra altura y acompañan a lo que se dice en vez de sustituirlo.
 
 **Los tres ganan de verdad animados**, y por eso existen: la comparación llega
 columna a columna en el orden en que se construye; las casillas **se marcan

@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  AbsoluteFill, interpolate, spring, staticFile,
+  AbsoluteFill, Img, interpolate, spring, staticFile,
   useCurrentFrame, useVideoConfig,
 } from "remotion";
 
@@ -433,9 +433,155 @@ const Code: React.FC<CardProps> = ({ theme, base, width, spec, dur }) => {
   );
 };
 
+const SECTION_NUMBER = "#FF8A3D";
+const SECTION_TEXT = "#F0E4CD";
+const STAMP_RED = "#F0343A";
+const CHECK_GREEN = "#34C759";
+
+/** «02 · TÍTULO» arriba a la izquierda. El número entra deslizándose y el
+    título letra a letra: una etiqueta que se escribe se lee como estructura, una
+    que aparece entera de golpe se lee como un rótulo más. */
+const Section: React.FC<CardProps> = ({ base, width, spec }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const number = spec.number != null ? String(spec.number).padStart(2, "0") : "";
+  const title = String(spec.title ?? "").toUpperCase();
+  const t = spring({ frame: frame - HEADING, fps, config: { damping: 18 } });
+  return (
+    <div style={{
+      width, boxSizing: "border-box", paddingLeft: width * 0.065, paddingTop: base * 0.2,
+      display: "flex", alignItems: "baseline", textShadow: "0 2px 6px rgba(0,0,0,0.8)",
+    }}>
+      {number ? (
+        <span style={{
+          fontSize: base * 0.62, fontWeight: 900, color: SECTION_NUMBER, letterSpacing: 2,
+          marginRight: base * 0.28, opacity: t, display: "inline-block",
+          transform: `translateX(${interpolate(t, [0, 1], [-20, 0])}px)`,
+        }}>{number}</span>
+      ) : null}
+      <span style={{ fontSize: base * 0.46, fontWeight: 700, color: SECTION_TEXT,
+                     letterSpacing: base * 0.07 }}>
+        {title.split("").map((ch, i) => (
+          <span key={i} style={{
+            opacity: spring({ frame: frame - ITEMS - i * 0.8, fps, config: { damping: 200 } }),
+          }}>{ch}</span>
+        ))}
+      </span>
+    </div>
+  );
+};
+
+type LogoItem = { src?: string; label?: string; check?: boolean };
+
+const Logo: React.FC<{
+  i: number; item: LogoItem; side: number; big: boolean; square: boolean;
+  theme: Theme; base: number;
+}> = ({ i, item, side, big, square, theme, base }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  // Salta con rebote, y el visto llega después de que el logo esté puesto:
+  // aprobar algo que todavía no ha aparecido se lee como un error.
+  const pop = spring({ frame: frame - ITEMS - i * 5, fps, config: { damping: 9, mass: 0.6 } });
+  const tick = spring({ frame: frame - ITEMS - 12 - i * 5, fps, config: { damping: 10 } });
+  const s = big ? side * 1.14 : side;
+  const radius = square ? s / 4 : s / 2;
+  return (
+    <div style={{ width: side, display: "flex", flexDirection: "column", alignItems: "center" }}>
+      <div style={{ position: "relative", width: s, height: s, transform: `scale(${pop})` }}>
+        <div style={{
+          position: "absolute", inset: 0, borderRadius: radius, boxSizing: "border-box",
+          background: "rgba(22,24,32,0.94)",
+          border: `3px solid ${big ? theme.accent : alpha(theme.accent, 90)}`,
+          boxShadow: big ? `0 0 ${base * 0.7}px ${alpha(theme.accent, 200)}`
+                         : "0 10px 24px rgba(0,0,0,0.6)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          {item.src ? <Img src={item.src} style={{ width: s * 0.62, height: s * 0.62,
+                                                   objectFit: "contain" }} /> : null}
+        </div>
+        {item.check ? (
+          <div style={{
+            position: "absolute", right: -s * 0.02, top: -s * 0.02, width: s * 0.34,
+            height: s * 0.34, borderRadius: "50%", background: CHECK_GREEN,
+            border: "3px solid #0C0E14", boxSizing: "border-box", transform: `scale(${tick})`,
+          }}>
+            <svg viewBox="0 0 1 1" style={{ width: "100%", height: "100%" }}>
+              <polyline points="0.22,0.52 0.42,0.72 0.78,0.30" fill="none" stroke="#fff"
+                        strokeWidth={0.14} strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+        ) : null}
+      </div>
+      {item.label ? (
+        <div style={{ marginTop: base * 0.3, fontSize: base * 0.44, fontWeight: 700,
+                      color: theme.fg, opacity: pop }}>{item.label}</div>
+      ) : null}
+    </div>
+  );
+};
+
+const Logos: React.FC<CardProps> = ({ theme, base, width, spec }) => {
+  const items = (spec.items as LogoItem[]) ?? [];
+  const square = spec.shape === "square";
+  const highlight = spec.highlight as number | undefined;
+  const count = Math.max(1, items.length);
+  const side = Math.min(base * 2.3, (width * 0.82) / count - base * 0.35);
+  const title = String(spec.title ?? "").toUpperCase();
+  return (
+    <div style={{ width, display: "flex", flexDirection: "column", alignItems: "center",
+                  paddingTop: base * 0.25 }}>
+      {title ? (
+        <Enter from={0} delay={HEADING}>
+          <div style={{ fontSize: base * 0.46, fontWeight: 700, color: SECTION_TEXT,
+                        letterSpacing: base * 0.07, marginBottom: base * 0.3 }}>{title}</div>
+        </Enter>
+      ) : null}
+      <div style={{ display: "flex", gap: base * 0.35, alignItems: "center" }}>
+        {items.map((item, i) => (
+          <Logo key={i} i={i} item={item} side={side} big={i === highlight}
+                square={square} theme={theme} base={base} />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/** El sello cae de golpe —de casi el doble de tamaño a su sitio en unos
+    fotogramas— con un fallo de señal rojo y cian mientras cae. Es puntuación:
+    tiene que sonar como un golpe, no deslizarse como una card. */
+const Stamp: React.FC<CardProps> = ({ base, width, spec }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const text = String(spec.title ?? spec.text ?? "").toUpperCase();
+  const angle = Number(spec.angle ?? -8);
+  const slam = spring({ frame, fps, config: { damping: 12, stiffness: 320, mass: 0.7 } });
+  const scale = interpolate(slam, [0, 1], [1.9, 1]);
+  const glitch = frame < 7 ? (7 - frame) * 2.4 : 0;
+  const stroke = Math.max(6, base / 7);
+  const box = (color: string, dx: number, absolute: boolean) => (
+    <div style={{
+      position: absolute ? "absolute" : "relative", left: 0, top: 0,
+      transform: `translateX(${dx}px)`, border: `${stroke}px solid ${color}`,
+      borderRadius: base * 0.25, padding: `${base * 0.3}px ${base * 0.45}px`,
+      fontSize: base * 1.35, fontWeight: 900, color, lineHeight: 1, whiteSpace: "nowrap",
+    }}>{text}</div>
+  );
+  return (
+    <div style={{ width, display: "flex", justifyContent: "center", paddingTop: 10 }}>
+      <div style={{ position: "relative", opacity: Math.min(1, slam * 3),
+                    transform: `rotate(${angle}deg) scale(${scale})` }}>
+        {box(STAMP_RED, 0, false)}
+        {glitch ? box("rgba(0,229,255,0.7)", -glitch, true) : null}
+        {glitch ? box("rgba(255,0,90,0.7)", glitch, true) : null}
+      </div>
+    </div>
+  );
+};
+
 const KINDS: Record<string, React.FC<CardProps>> = {
   bullets: Bullets, panel: PanelCard, flow: Flow, stat: Stat, chip: Chip,
   title: Title, compare: Compare, checklist: Checklist, code: Code,
+  section: Section, logos: Logos, stamp: Stamp,
 };
 
 export const Card: React.FC<CardProps> = (props) => {
@@ -445,7 +591,9 @@ export const Card: React.FC<CardProps> = (props) => {
 
   // The whole card arrives first, then its contents fill in. Without this the
   // surface pops in empty and the viewer watches a box wait for its own text.
-  const arrive = spring({ frame, fps, config: { damping: 14, mass: 0.6 } });
+  // El sello trae su propia entrada de golpe; suavizarla aquí la mataría.
+  const arrive = props.kind === "stamp" ? 1
+    : spring({ frame, fps, config: { damping: 14, mass: 0.6 } });
 
   // The exit is as quick as the entrance: a card that leaves slowly reads as a
   // video that has frozen.

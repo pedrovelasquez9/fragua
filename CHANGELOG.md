@@ -8,6 +8,28 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.23.0 — 2026-09-25
+
+### Added
+- **Tres tipos de card más, sacados del reel de referencia**, fijos y animados:
+  - **`section`** — «02 · TÍTULO» arriba a la izquierda, con el número en
+    naranja, fija toda la sección. Animada, el título se escribe letra a letra.
+  - **`logos`** — fila de logos en círculo, o de iconos en cuadrado, con su
+    nombre, un visto verde o uno destacado. Entran de uno en uno con rebote y el
+    visto llega después. Es el motivo que más repite la referencia.
+  - **`stamp`** — un sello rojo en diagonal para un veredicto. Cae de casi el
+    doble de tamaño a su sitio con un fallo de señal rojo y cian.
+- Los tres **conviven con los subtítulos**, como en la referencia.
+
+### Fixed
+- **`icons.py` confundía marcas.** Buscaba por el título sin símbolos, así que
+  «C++» y «C» caían los dos en `c` —uno pisaba al otro— y «.NET» buscaba
+  `net`. Ahora usa el nombre oficial de Simple Icons, que cambia cada símbolo por
+  su nombre (`cplusplus`, `dotnet`), y lo mismo para las palabras que se piden.
+  La caché del índice lleva versión y se rehace sola si es de antes.
+
+---
+
 ## 1.22.0 — 2026-09-25
 
 Sale de analizar fotograma a fotograma un reel de referencia que el autor quería
