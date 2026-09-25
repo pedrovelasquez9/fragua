@@ -795,6 +795,44 @@ def test_icon_words(tmp_root):
     print("ok  iconos por palabra (sin repetir, sin falsos como 'go')")
 
 
+def test_card_kinds_match():
+    """Cada tipo de card existe en la versión fija y en la animada.
+
+    Si falta en Card.tsx no hay error: cae en `?? PanelCard` y la card animada
+    sale como un panel cualquiera, sin avisar. Y si falta en cards.py, el mismo
+    plan.json da una card distinta según se pida animada o no.
+    """
+    import re
+    from cards import KINDS
+
+    tsx = (ROOT / "remotion" / "src" / "Card.tsx").read_text(encoding="utf-8")
+    # [^=]* se traga la anotación de tipo entera, que lleva > anidados.
+    bloque = re.search(r"const KINDS\b[^=]*=\s*\{(.*?)\};", tsx, re.S)
+    assert bloque, "no encuentro el mapa KINDS en Card.tsx"
+    animadas = set(re.findall(r"(\w+):\s*\w+", bloque.group(1)))
+    fijas = set(KINDS)
+    assert animadas == fijas, (f"sólo fijas: {sorted(fijas - animadas)} · "
+                               f"sólo animadas: {sorted(animadas - fijas)}")
+    print(f"ok  tipos de card iguales en fija y animada ({len(fijas)})")
+
+
+def test_code_card_fits():
+    """Un comando largo encoge la letra en vez de salirse o partirse."""
+    from PIL import Image as PILImage
+    from cards import build_theme, draw_code
+    from common import preset
+
+    ajustes = preset("tiktok")["card"]
+    tema = build_theme(ajustes)
+    largo = "ffmpeg -i entrada.mp4 -af silencedetect=noise=-42dB:d=0.30 -f null -"
+    card = draw_code({"lines": [largo]}, tema, 1080, ajustes["base_size"])
+    caja = card.getchannel("A").getbbox()
+    # La sombra del panel sobresale un poco; lo que no puede es tocar el borde.
+    assert caja[2] < 1080 - 8, f"el comando se sale del lienzo: {caja}"
+    assert isinstance(card, PILImage.Image)
+    print("ok  card de código (el comando largo cabe sin partirse)")
+
+
 def main():
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
@@ -813,6 +851,8 @@ def main():
         test_silence_at_the_head()
         test_false_starts()
         test_icon_colour()
+        test_card_kinds_match()
+        test_code_card_fits()
         test_icon_words(tmp)
         test_timeline_mapping()
         test_shot_shape()
@@ -863,13 +903,20 @@ def main():
                 {"t": 9.0, "dur": 1.0, "kind": "flow", "root": "R", "nodes": ["a", "b"]},
                 {"t": 9.0, "dur": 1.0, "kind": "stat", "value": "42", "label": "cosas"},
                 {"t": 0.0, "dur": 1.0, "kind": "chip", "title": "Titular"},
+                {"t": 12.0, "dur": 1.0, "kind": "compare", "title": "X o Y",
+                 "columns": [{"title": "X", "items": ["uno"]},
+                             {"title": "Y", "items": ["dos", "tres"]}]},
+                {"t": 12.0, "dur": 1.0, "kind": "checklist", "title": "Pasos",
+                 "items": ["a", "b", "c"], "done": 2},
+                {"t": 12.0, "dur": 1.0, "kind": "code", "title": "terminal",
+                 "lines": ["claude plugin install fragua@fragua"]},
             ],
         }), encoding="utf-8")
 
         cdir = tmp / "cards"
         sh(sys.executable, SCRIPTS / "cards.py", cardplan, "--preset", "tiktok", "--outdir", cdir)
         pngs = sorted(cdir.glob("card*.png"))
-        assert len(pngs) == 5, f"esperaba 5 PNG, salieron {len(pngs)}"
+        assert len(pngs) == 8, f"esperaba 8 PNG, salieron {len(pngs)}"
         for png in pngs:
             assert png.stat().st_size > 2000, f"{png.name} salió vacío"
         print(f"ok  cards rasterizadas ({len(pngs)} tipos)")
