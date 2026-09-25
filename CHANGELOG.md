@@ -8,6 +8,41 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.19.0 — 2026-09-25
+
+El apartado gráfico tenía una incoherencia que se veía en todos los vídeos: las
+cards entraban con fundido y desplazamiento, y los stickers aparecían de golpe.
+
+### Added
+- **Los stickers entran creciendo y salen con fundido.** Hasta ahora eran un
+  `overlay` con `enable=between()` y nada más: un corte seco, que es el tell más
+  barato que hay en una edición. Ahora crecen desde un 18% más pequeños con la
+  misma curva suave que usan los cambios de plano. `"pop"` lo ajusta por sticker,
+  y `0` lo apaga. El crecimiento rellena antes con transparencia y encuadra
+  dentro —el mismo truco del pullback—, y se midió que el alfa sobrevive al
+  `zoompan`.
+- **`icons.py`: los logos de las herramientas que se mencionan, descargados
+  solos.** Cruza el texto del vídeo con Simple Icons (3.300 logos, CC0) y los
+  guarda con el nombre de la palabra, así que enganchan con el b-roll por palabra
+  clave que ya existía: si se dice «docker», aparece Docker.
+- Con `--color brand`, el color oficial se **corrige hasta que contraste**,
+  medido con WCAG contra el plato del icono. GitHub es `#181717` y daba 1.08: el
+  logo desaparecía entero. Las marcas monocromas oscuras salen en blanco, como en
+  sus propias guías; las que ya contrastan conservan su color exacto.
+- Cada icono lleva un plato oscuro redondeado detrás, que es lo que lo hace
+  legible tanto sobre un plano oscuro como sobre una grabación de pantalla clara.
+
+### Fixed
+- Un PNG en bucle entra a 25 fps si no se le dice otra cosa. Con `zoompan` en
+  medio eso reescala la duración: un sticker de 3 s duraba 2.5 y el fundido de
+  salida no llegaba a verse. Ahora el bucle entra a la cadencia del vídeo.
+
+### Notes
+- `icons.py` necesita `skia-python`, opcional. Es una rueda de pip —sin Cairo
+  ni DLLs sueltas—, verificada en Windows.
+
+---
+
 ## 1.18.0 — 2026-08-26
 
 Editando un reel real salieron dos formas de estropear un montaje que la skill no

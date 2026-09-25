@@ -753,6 +753,48 @@ def test_false_starts():
     print("ok  falsos arranques (corto y aislado, no corto a secas)")
 
 
+def test_icon_colour():
+    """El color de marca se corrige hasta que el icono se vea sobre el plato.
+
+    Medido: GitHub es #181717 y sobre el plato da 1.08 de contraste — el icono
+    desaparece entero. Los que ya contrastan no se tocan, que si no se pierde la
+    marca por corregir lo que no estaba roto.
+    """
+    from icons import CONTRASTE_MIN, PLATE_COLOR, _contraste, legible, slugify
+
+    def rgb(hexa):
+        hexa = hexa.lstrip("#")
+        return tuple(int(hexa[i:i + 2], 16) for i in (0, 2, 4))
+
+    # Monocromo oscuro: va en blanco, no a un gris subido.
+    assert legible("181717") == "#FFFFFF", legible("181717")
+
+    # Los que ya se ven se quedan exactamente como estaban.
+    for marca in ("FF4438", "2496ED", "4169E1", "D97757"):
+        assert legible(marca) == "#" + marca.upper(), f"{marca} -> {legible(marca)}"
+
+    # Un color con tono pero demasiado oscuro se aclara sin cambiar de tono.
+    subido = legible("0A1F0A")
+    assert _contraste(rgb(subido), PLATE_COLOR[:3]) >= CONTRASTE_MIN, subido
+
+    assert slugify("Node.js") == "nodejs"
+    assert slugify("PostgreSQL") == "postgresql"
+    print("ok  color de icono (contraste medido, marca intacta)")
+
+
+def test_icon_words(tmp_root):
+    """Del texto salen los nombres de marca, no cualquier palabra."""
+    from icons import palabras_del_texto
+
+    tabla = {"docker": {}, "postgresql": {}, "go": {}, "redis": {}}
+    texto = tmp_root / "d.txt"
+    texto.write_text("Vamos a levantar Docker y PostgreSQL, y luego "
+                     "go a mirar Redis. Docker otra vez.", encoding="utf-8")
+    salida = [clave for _, clave in palabras_del_texto(texto, tabla)]
+    assert salida == ["docker", "postgresql", "redis"], salida
+    print("ok  iconos por palabra (sin repetir, sin falsos como 'go')")
+
+
 def main():
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
@@ -770,6 +812,8 @@ def main():
         test_animated_cards_wiring()
         test_silence_at_the_head()
         test_false_starts()
+        test_icon_colour()
+        test_icon_words(tmp)
         test_timeline_mapping()
         test_shot_shape()
         test_overlap_guard()

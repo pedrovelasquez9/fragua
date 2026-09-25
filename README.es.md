@@ -249,6 +249,22 @@ demás funciona igual.
 > reclamaciones de copyright en YouTube. Usa fuentes CC0 como Pixabay, Mixkit o
 > Freesound.
 
+### Los logos los pone solo
+
+Pídele los iconos de lo que sale en el vídeo y se los descarga:
+
+```
+consigue los iconos de las herramientas que menciono
+```
+
+Salen de Simple Icons —3.300 logos con licencia CC0— con el color oficial de
+cada marca, y se guardan con el nombre de la palabra, así que enganchan
+directamente con lo de abajo: si dices «docker», aparece el logo de Docker.
+
+Con una corrección que importa: un logo oscuro sobre un plano oscuro no se ve.
+GitHub es casi negro y desaparecía del todo, así que las marcas monocromas
+salen en blanco, como en sus propias guías. Las demás conservan su color exacto.
+
 ### Imágenes que aparecen cuando mencionas algo
 
 Mete en tu carpeta de assets una imagen con el nombre de una palabra

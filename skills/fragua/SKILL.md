@@ -689,6 +689,12 @@ En `plan.json`, las rutas se escriben **relativas a la biblioteca**:
 "stickers": [{"file": "stickers/fuego.png", "t": 5, "dur": 2, "scale": 0.22}]
 ```
 
+Los **stickers entran creciendo y salen con fundido**, igual que las cards: nada
+aparece de golpe. Hasta 1.18 lo hacían — `enable=between()` y nada más —, y un
+elemento que salta a pantalla con corte seco es el tell más barato de una
+edición. `"pop": 0` lo quita para un sticker concreto; `"pop": 0.3` entra desde
+más pequeño, para algo que merezca más golpe.
+
 **`sfx`** son golpes puntuales que se mezclan sobre la voz sin bajarla. Úsalos
 para acompañar lo que ya hace la imagen: un whoosh en un `whip_pan`, un pop
 cuando entra una card, un riser antes de un dato. Un efecto que no coincide con
@@ -703,6 +709,33 @@ catálogo reporta, no el nombre del archivo.
 
 Si el usuario no ha configurado nada, la biblioteca es la carpeta `assets/` de la
 propia skill y todo funciona igual, solo que vacía.
+
+## Iconos de marca, sin buscarlos a mano
+
+```bash
+python scripts/icons.py --from digest.txt --color brand
+```
+
+Lee lo que se dice en el vídeo, cruza cada palabra con el catálogo de **Simple
+Icons** (3.300 logos, CC0) y deja los PNG en la carpeta de imágenes de la
+biblioteca con el nombre de la palabra. Ahí ya funciona el disparo por palabra
+clave de abajo: `docker.png` aparece cuando se dice «docker».
+
+`--color brand` usa el color oficial de cada marca, **corregido para que se
+vea**. Es una corrección medida, no un capricho: GitHub es `#181717` y sobre el
+plato del icono da 1.08 de contraste WCAG — el logo desaparece entero. Las
+marcas monocromas oscuras salen en blanco, como en sus propias guías; las que ya
+contrastan se quedan con su color exacto.
+
+Cada icono lleva detrás un plato oscuro redondeado. Sin él, un logo claro se
+pierde sobre una grabación de pantalla blanca y uno oscuro sobre un plano de
+noche; con él funciona en los dos y parece puesto a propósito.
+
+Necesita `skia-python` (`pip install skia-python`), que no viene por defecto.
+Es una rueda de pip: no hay librerías nativas que buscar.
+
+**Simple Icons es CC0, pero los logos siguen siendo marcas registradas.** Sirven
+para señalar el producto del que se habla, no para sugerir patrocinio.
 
 ## Imágenes de apoyo por palabra clave
 

@@ -486,6 +486,31 @@ original sigue sonando, que es lo que lo hace leerse como otra cámara.
 `render.py` rechaza dos cutaways solapados, uno que caiga sobre un `pullback`, y
 uno que pida más metraje del que queda en el archivo.
 
+### Iconos de marca
+
+```bash
+python scripts/icons.py --from digest.txt --color brand
+python scripts/icons.py --words docker postgres redis --color white
+```
+
+Cruza el texto con el catálogo de Simple Icons (3.300 logos, CC0) y escribe los
+PNG en `images/` de la biblioteca con el nombre de la palabra, que es lo que
+dispara el b-roll por palabra clave.
+
+| Opción | Por defecto | Para qué |
+|---|---|---|
+| `--color` | `white` | `brand` usa el color oficial; también acepta `#RRGGBB` |
+| `--size` | `512` | Lado del PNG |
+| `--no-plate` | | Sin el plato oscuro redondeado detrás |
+| `--refresh` | | Vuelve a bajar el índice, cacheado en `~/.fragua/` |
+
+Con `--color brand` el color se corrige hasta que contraste **contra el plato**,
+medido con la fórmula de WCAG: GitHub es `#181717` y ahí da 1.08, o sea que el
+icono no se ve. Las marcas monocromas oscuras pasan a blanco; las que ya
+contrastan no se tocan, porque corregir lo que no está roto pierde la marca.
+
+Rasterizar el SVG necesita `skia-python`, opcional y de rueda de pip.
+
 ### Capítulos
 
 ```json
@@ -706,6 +731,7 @@ fragua/
 │   ├── analyze.py         silencios → cuts.json
 │   ├── transcribe.py      whisper.cpp → words.json + digest.txt
 │   ├── measure.py         formato, color, sonoridad y láminas de card
+│   ├── icons.py           Simple Icons → PNG por palabra clave
 │   ├── cards.py           plan.json → cards/*.png
 │   ├── subtitles.py       words.json → subs.ass
 │   └── render.py          todo junto → salida.mp4
