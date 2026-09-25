@@ -78,6 +78,10 @@ $want = @{
     "OFL-Roboto.txt"        = "https://raw.githubusercontent.com/google/fonts/main/ofl/roboto/OFL.txt"
     "OFL-Anton.txt"         = "https://raw.githubusercontent.com/google/fonts/main/ofl/anton/OFL.txt"
     "OFL-Poppins.txt"       = "https://raw.githubusercontent.com/google/fonts/main/ofl/poppins/OFL.txt"
+    # Monoespaciada para las cards de código: un comando en proporcional se lee
+    # como una frase, no como algo que se teclea.
+    "JetBrainsMono-Variable.ttf" = "https://github.com/google/fonts/raw/main/ofl/jetbrainsmono/JetBrainsMono%5Bwght%5D.ttf"
+    "OFL-JetBrainsMono.txt"      = "https://raw.githubusercontent.com/google/fonts/main/ofl/jetbrainsmono/OFL.txt"
 }
 foreach ($name in $want.Keys) {
     $dest = Join-Path $fonts $name
@@ -106,7 +110,8 @@ if (Get-Command npm -ErrorAction SilentlyContinue) {
 # --- verify -----------------------------------------------------------------
 $cli = Find-Whisper
 if (-not $cli) { throw "la descarga terminó pero no encuentro el ejecutable en $vendor" }
-$missing = @("Roboto-Variable.ttf", "Anton-Regular.ttf", "Poppins-ExtraBold.ttf") |
+$missing = @("Roboto-Variable.ttf", "Anton-Regular.ttf", "Poppins-ExtraBold.ttf",
+             "JetBrainsMono-Variable.ttf") |
            Where-Object { -not (Test-Path (Join-Path $fonts $_)) }
 if ($missing) { throw "faltan fuentes: $($missing -join ', ')" }
 

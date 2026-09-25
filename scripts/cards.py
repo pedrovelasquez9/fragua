@@ -6,12 +6,17 @@ ASS can only put a rectangle behind a line of text, which is why cards drawn
 that way look like slide titles. These are real graphics: rounded panels with a
 divided header, bullet lists, connected flow diagrams and stat blocks.
 
-Four kinds, chosen per card with "kind":
+Kinds, chosen per card with "kind":
 
-  panel    título + párrafo, separados por una banda de acento
-  bullets  título + lista con viñetas
-  flow     nodos conectados, tipo mapa mental
-  stat     una cifra grande + su etiqueta
+  panel      título + párrafo, separados por una banda de acento
+  bullets    título + lista con viñetas
+  flow       nodos conectados, tipo mapa mental
+  stat       una cifra grande + su etiqueta
+  chip       una pastilla con una frase
+  title      texto grande sin panel, para la banda de un pullback
+  compare    dos o tres columnas enfrentadas: X frente a Y
+  checklist  lista con casillas, marcadas hasta `done`
+  code       un comando o un fragmento, en monoespaciada
 """
 import argparse
 import shutil
@@ -31,6 +36,25 @@ def hex_rgba(value, alpha=255):
     """'#14161F' -> (20, 22, 31, alpha)."""
     value = value.lstrip("#")
     return tuple(int(value[i:i + 2], 16) for i in (0, 2, 4)) + (alpha,)
+
+
+def load_mono(size, weight="Medium"):
+    """JetBrains Mono para las cards de código; Roboto si no está instalada.
+
+    Un comando en proporcional se lee como una frase, no como algo que se
+    teclea: la monoespaciada es lo que dice «esto es código» antes de leerlo.
+    """
+    path = FONTS / "JetBrainsMono-Variable.ttf"
+    if not path.exists():
+        print("  aviso: falta JetBrainsMono-Variable.ttf — ejecuta el setup; "
+              "la card de código sale en Roboto")
+        return load_font(size, weight)
+    font = ImageFont.truetype(str(path), size)
+    try:
+        font.set_variation_by_name(weight)
+    except (OSError, ValueError):
+        pass
+    return font
 
 
 def load_font(size, weight="Black"):
@@ -269,9 +293,168 @@ def draw_title(spec, theme, width, base):
     return image.crop((0, 0, width, y + 16))
 
 
+def draw_compare(spec, theme, width, base):
+    """Columnas enfrentadas, cada una con su cabecera y sus puntos.
+
+    Es la card de «X frente a Y», que es media explicación técnica: MCP frente a
+    skill, antes frente a después. Una lista de viñetas lo cuenta en serie y
+    obliga a recordar; dos columnas lo ponen lado a lado.
+    """
+    title_font = load_font(int(base * 0.82))
+    head_font = load_font(int(base * 0.80))
+    item_font = load_font(int(base * 0.66), "Medium")
+    image = Image.new("RGBA", (width, width * 2), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    columns = spec.get("columns") or []
+    count = max(1, min(3, len(columns)))
+    card_width = int(width * 0.86)
+    left = (width - card_width) // 2
+    col_width = (card_width - PAD * 2) // count
+
+    title = spec.get("title", "")
+    title_height = text_size(draw, title, title_font)[1] if title else 0
+    header_height = title_height + PAD if title else 0
+    head_height = int(base * 1.2)
+    line_height = int(base * 0.98)
+
+    wrapped = [[line for item in (col.get("items") or [])
+                for line in wrap(draw, item, item_font, col_width - PAD)]
+               for col in columns[:count]]
+    rows = max((len(lines) for lines in wrapped), default=0)
+    card_height = header_height + PAD // 2 + head_height + rows * line_height + PAD
+
+    panel(image, (left, 0, left + card_width, card_height), theme)
+    if title:
+        title_width = text_size(draw, title, title_font)[0]
+        draw.text(((width - title_width) // 2, PAD // 2 + 2), title,
+                  font=title_font, fill=theme["fg"])
+        draw.line((left + PAD, header_height, left + card_width - PAD, header_height),
+                  fill=theme["line"], width=2)
+
+    top = header_height + PAD // 2
+    for index, (column, lines) in enumerate(zip(columns[:count], wrapped)):
+        x0 = left + PAD + index * col_width
+        center = x0 + col_width // 2
+        if index:
+            draw.line((x0, top + 6, x0, card_height - PAD // 2),
+                      fill=theme["line"], width=2)
+        draw.text((center, top + head_height // 2), column.get("title", ""),
+                  font=head_font, fill=theme["accent"], anchor="mm")
+        y = top + head_height
+        for line in lines:
+            draw.text((center, y + line_height // 2), line, font=item_font,
+                      fill=theme["fg"], anchor="mm")
+            y += line_height
+    return image.crop((0, 0, width, card_height + 20))
+
+
+def check_mark(draw, box, colour, width):
+    """El trazo de la marca, en las mismas proporciones que dibuja la animada."""
+    x0, y0, x1, y1 = box
+    w, h = x1 - x0, y1 - y0
+    draw.line([(x0 + w * 0.22, y0 + h * 0.52), (x0 + w * 0.42, y0 + h * 0.72),
+               (x0 + w * 0.78, y0 + h * 0.30)], fill=colour, width=width, joint="curve")
+
+
+def draw_checklist(spec, theme, width, base):
+    """Casillas que se marcan hasta `done` (por defecto, todas).
+
+    La versión animada las va marcando una a una, que es lo que hace que valga
+    la pena: una lista de pasos que se van cumpliendo se sigue con la vista.
+    """
+    title_font = load_font(int(base * 0.82))
+    item_font = load_font(int(base * 0.74), "Medium")
+    image = Image.new("RGBA", (width, width * 2), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    items = spec.get("items") or spec.get("body", "").split("\n")
+    done = int(spec.get("done", len(items)))
+    card_width = int(width * 0.80)
+    left = (width - card_width) // 2
+
+    title = spec.get("title", "")
+    title_height = text_size(draw, title, title_font)[1] if title else 0
+    header_height = title_height + PAD if title else 0
+    line_height = int(base * 1.25)
+    card_height = header_height + len(items) * line_height + PAD
+
+    panel(image, (left, 0, left + card_width, card_height), theme)
+    if title:
+        draw.text((left + PAD, PAD // 2 + 2), title, font=title_font, fill=theme["accent"])
+        draw.line((left + PAD, header_height, left + card_width - PAD, header_height),
+                  fill=theme["line"], width=2)
+
+    side = int(base * 0.72)
+    stroke = max(3, side // 8)
+    center_y = header_height + PAD // 2 + line_height // 2
+    for index, item in enumerate(items):
+        box = (left + PAD, center_y - side // 2, left + PAD + side, center_y + side // 2)
+        ticked = index < done
+        if ticked:
+            draw.rounded_rectangle(box, side // 4, fill=theme["accent"])
+            check_mark(draw, box, theme["bg"][:3] + (255,), stroke)
+        else:
+            draw.rounded_rectangle(box, side // 4, outline=theme["line"], width=stroke)
+        colour = theme["fg"] if ticked else theme["fg"][:3] + (150,)
+        draw.text((left + PAD + int(side * 1.55), center_y), item,
+                  font=item_font, fill=colour, anchor="lm")
+        center_y += line_height
+    return image.crop((0, 0, width, card_height + 20))
+
+
+def draw_code(spec, theme, width, base):
+    """Una ventana de terminal con el comando dentro, en monoespaciada."""
+    head_font = load_font(int(base * 0.56), "Medium")
+    image = Image.new("RGBA", (width, width * 2), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    lines = spec.get("lines") or spec.get("body", "").split("\n")
+    prompt = spec.get("prompt", "$")
+    card_width = int(width * 0.86)
+    left = (width - card_width) // 2
+
+    # Un comando no se parte: partido deja de poder copiarse de la pantalla y se
+    # lee como dos órdenes. Se encoge la letra hasta que quepa la línea más larga.
+    size = int(base * 0.66)
+    while True:
+        code_font = load_mono(size)
+        widest = max(text_size(draw, f"{prompt} {line}" if prompt else line,
+                               code_font)[0] for line in lines)
+        if widest <= card_width - PAD * 2 or size <= int(base * 0.36):
+            break
+        size -= 2
+
+    bar = int(base * 1.05)
+    line_height = round(size * 1.48)     # sigue a la letra, no a base: se encoge con ella
+    card_height = bar + PAD // 2 + len(lines) * line_height + PAD // 2 + PAD // 2
+
+    panel(image, (left, 0, left + card_width, card_height), theme)
+    # Barra de ventana: los tres puntos apagados dicen «terminal» sin robarle
+    # protagonismo al comando, que es lo que se tiene que leer.
+    draw.line((left, bar, left + card_width, bar), fill=theme["line"], width=2)
+    dot = max(8, base // 7)
+    for index, colour in enumerate(((255, 95, 86), (255, 189, 46), (39, 201, 63))):
+        cx = left + PAD + index * int(dot * 2.4)
+        draw.ellipse((cx, bar // 2 - dot // 2, cx + dot, bar // 2 + dot // 2),
+                     fill=colour + (170,))
+    title = spec.get("title", "")
+    if title:
+        draw.text((width // 2, bar // 2), title, font=head_font,
+                  fill=theme["fg"][:3] + (160,), anchor="mm")
+
+    y = bar + PAD // 2 + line_height // 2
+    prompt_width = text_size(draw, prompt + " ", code_font)[0] if prompt else 0
+    for line in lines:
+        x = left + PAD
+        if prompt:
+            draw.text((x, y), prompt, font=code_font, fill=theme["accent"], anchor="lm")
+            x += prompt_width
+        draw.text((x, y), line, font=code_font, fill=theme["fg"], anchor="lm")
+        y += line_height
+    return image.crop((0, 0, width, card_height + 20))
+
+
 KINDS = {"panel": draw_panel, "bullets": draw_bullets, "flow": draw_flow,
-         "title": draw_title,
-         "stat": draw_stat, "chip": draw_chip}
+         "title": draw_title, "stat": draw_stat, "chip": draw_chip,
+         "compare": draw_compare, "checklist": draw_checklist, "code": draw_code}
 
 
 def build_theme(card_settings):
@@ -330,10 +513,11 @@ def render_animated(cards, platform, output_dir):
 
     # staticFile() sólo lee de public/, así que la fuente vive ahí mientras dure
     # el render. Es la misma que usa Pillow: una sola fuente de verdad.
-    font = FONTS / "Roboto-Variable.ttf"
-    if font.exists():
-        (REMOTION / "public").mkdir(exist_ok=True)
-        shutil.copyfile(font, REMOTION / "public" / font.name)
+    for name in ("Roboto-Variable.ttf", "JetBrainsMono-Variable.ttf"):
+        font = FONTS / name
+        if font.exists():
+            (REMOTION / "public").mkdir(exist_ok=True)
+            shutil.copyfile(font, REMOTION / "public" / font.name)
 
     # Un bundle por edición en vez de uno por card: son 3.7 s frente a ~10 s de
     # arranque en cada render. Se rehace siempre, que sale más barato que llevar

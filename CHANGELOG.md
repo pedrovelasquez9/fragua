@@ -8,6 +8,28 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.20.0 — 2026-09-25
+
+### Added
+- **Tres tipos de card nuevos**, en la versión fija y en la animada:
+  - **`compare`** — dos o tres columnas enfrentadas, para cuando el vídeo
+    contrapone cosas. Una lista lo cuenta en serie y obliga a recordar; dos
+    columnas lo ponen lado a lado. Animada, llega columna a columna.
+  - **`checklist`** — casillas que se marcan hasta `done`. Animada, **se marcan
+    solas** una tras otra: una lista que se cumple en vez de una que se lee.
+  - **`code`** — una ventana de terminal en monoespaciada. Animada, **el comando
+    se teclea** con su cursor, y cada `$` aparece sólo al acabar la línea
+    anterior, como en una terminal real.
+- `code` no parte las líneas: un comando partido no se puede copiar de la
+  pantalla. Si no cabe, encoge la letra, y el interlineado la sigue.
+- **JetBrains Mono** (OFL) en el setup, para `code`. Si falta, avisa y sale en
+  Roboto.
+- Una comprobación de que cada tipo existe **en los dos caminos**. Sin ella, un
+  tipo olvidado en `Card.tsx` caía en `?? PanelCard` y salía como un panel
+  cualquiera, sin ningún error.
+
+---
+
 ## 1.19.0 — 2026-09-25
 
 El apartado gráfico tenía una incoherencia que se veía en todos los vídeos: las
