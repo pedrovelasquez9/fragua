@@ -1062,6 +1062,23 @@ def test_sticker_clip():
     print("ok  sticker animado (nace de nada, rebota, se asienta y se recoge)")
 
 
+def test_wipe():
+    """El barrido tapa el plano en su centro, y un corte a pantalla lo trae solo."""
+    from render import cutaway_wipes, wipe_graph
+
+    chunks, label = wipe_graph([{"t": 2.0, "type": "wipe"}, {"t": 5.0, "type": "cut_in"}],
+                               "[v]", 1080, 1920, 30)
+    graph = ";".join(chunks)
+    assert graph.count("overlay=") == 2, "dos paneles por barrido, y nada por el cut_in"
+    assert "color=c=0x" in graph and label != "[v]"
+
+    auto = cutaway_wipes([{"t": 10.0, "dur": 4.0, "file": "p.mp4", "transition": "wipe"},
+                          {"t": 20.0, "dur": 3.0, "file": "clip.mp4"}])
+    # Uno al entrar y otro al salir del plano de pantalla; el clip normal, ninguno.
+    assert [w["t"] for w in auto] == [10.0, 14.0], auto
+    print("ok  barrido (tapa el corte; entrada y salida de pantalla)")
+
+
 def main():
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
@@ -1092,6 +1109,7 @@ def main():
         test_motion_curve()
         test_motion_matches_remotion()
         test_sticker_clip()
+        test_wipe()
         test_icon_words(tmp)
         test_timeline_mapping()
         test_shot_shape()
