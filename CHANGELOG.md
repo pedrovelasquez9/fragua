@@ -8,6 +8,21 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.27.0 — 2026-09-26
+
+### Changed
+- **La línea de 1.26 es la edición por defecto.** Sin escribir nada en el plan:
+  - todo vídeo abre con el **barrido de color** (`"opening_wipe": false` lo
+    quita);
+  - los stickers **llegan viajando** con su estela y se turnan las tres formas
+    —botando, cayendo, deslizándose—, nunca dos seguidas iguales. `"motion"`
+    fija una, y `"pop": 0` sigue dejando un sticker quieto.
+- **El `t` de un sticker que viaja es cuándo aterriza.** El viaje sale antes
+  solo, así que el sticker está en su sitio en la palabra que lo dispara, igual
+  que uno que nace en su sitio. Antes había que adelantarlo a mano.
+
+---
+
 ## 1.26.1 — 2026-09-26
 
 ### Fixed

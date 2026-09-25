@@ -364,7 +364,7 @@ volviendo**, respira mientras está y se recoge en un instante al irse. Nada
 aparece con un fundido suave ni se queda congelado, que es lo que hace que un
 gráfico parezca pegado encima en vez de animado.
 
-Los stickers también pueden **llegar viajando** —botando desde el otro lado,
+Los stickers **llegan viajando** por defecto —botando desde el otro lado,
 cayendo desde arriba o deslizándose desde el borde más cercano— con una estela
 naranja detrás que el ojo sigue, y la fila de logos salta desde abajo uno a uno.
 El vídeo abre con un **barrido de color**, y si alternas cámara y grabación de

@@ -298,14 +298,20 @@ referencia fotograma a fotograma, y el autor la aprobó para todos sus vídeos.
    `code`, `checklist` y `compare` van en la banda de un `pullback`, con
    `y_frac` 0.065 para no pisar la etiqueta de sección de arriba.
 9. **Al menos una card con contenido de verdad**, no sólo chips y etiquetas.
-10. **Un `wipe` en `t: 0`.** El vídeo empieza tapado de color y se descubre: es
-    la apertura del gancho. `{"t": 0, "type": "wipe"}` en `effects`.
+
+Del 10 al 13 son **la línea de Fragua en cualquier vídeo**, vertical o largo: el
+autor la aprobó para todo lo que edite.
+
+10. **Barrido de apertura.** El vídeo empieza tapado de color y se descubre: es
+    la apertura del gancho. `render.py` lo pone solo; no lo escribas en el plan.
+    Sólo si el autor no lo quiere, `"opening_wipe": false`.
 11. **Si el vídeo alterna cámara y pantalla**, cada plano de pantalla lleva
     `"transition": "wipe"` en su `cutaway`: un barrido al entrar y otro al salir,
     y el corte cae debajo. Los clips de recurso normales siguen con fundido.
-12. **Los stickers llegan viajando, y variados.** Alterna `"motion": "bounce"`,
-    `"drop"` y `"slide"`: nunca dos seguidos iguales. Llegan desde fuera con una
-    estela naranja detrás, que es lo que hace que el ojo los siga.
+12. **Los stickers llegan viajando, y variados.** Sin `motion` en el plan,
+    `render.py` los turna —`bounce`, `drop`, `slide`— y nunca salen dos seguidos
+    iguales. Llegan desde fuera con una estela naranja detrás, que es lo que hace
+    que el ojo los siga. Pon su `t` en la palabra: es cuándo **aterriza**.
 13. **Toda secuencia se escribe como cadena**: un `chip` con título
     `"Problema → solución → código"` sale como nodos que aparecen de uno en uno,
     con una flecha que se dibuja hacia el siguiente. Si lo que se dice es un
@@ -854,19 +860,21 @@ La curva vive en `scripts/motion.py` para los stickers y con las mismas
 constantes en `Card.tsx` para las cards; una prueba impide que se separen.
 `"pop": 0` deja un sticker quieto, sólo con un fundido corto.
 
-**Un sticker también puede llegar viajando**, con `"motion"`:
+**Por defecto un sticker llega viajando**, y los stickers se turnan las tres
+formas en orden; `"motion"` fija una:
 
 | `motion` | cómo llega | dura |
 |---|---|---|
-| `pop` | nace en su sitio (por defecto) | 0.25 s |
+| `pop` | nace en su sitio | 0.25 s |
 | `bounce` | cruza desde el lado contrario botando tres veces y rodando | 0.95 s |
 | `drop` | cae desde arriba y rebota dos veces al tocar su sitio | 0.85 s |
 | `slide` | entra por el lado más cercano y se pasa un poco | 0.5 s |
 
 Los tres que viajan dejan una **estela naranja** que engorda hacia el elemento,
 sigue el recorrido hecho y se recoge en 0.3 s al aterrizar; `"trail": false` la
-quita. `x` e `y` son dónde aterriza, igual que con `pop`. Como el viaje dura más,
-ponle el `t` un poco antes de la palabra: con `bounce`, 0.8 s antes.
+quita. `x` e `y` son dónde aterriza, y `t` **cuándo** aterriza: el viaje sale
+antes solo, así que pon el `t` en la palabra igual que con `pop`. `"pop": 0`
+sigue dejándolo quieto.
 
 La fila de `logos` hace lo mismo sola: cada logo **salta desde abajo**, uno tras
 otro, girando un poco y con su estela, y el nombre aparece cuando aterriza.

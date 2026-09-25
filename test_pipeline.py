@@ -1054,7 +1054,8 @@ def test_sticker_clip():
         assert opaco(29) < asentado * 0.3, "no se recoge al salir"
 
         inputs, chunks, _ = sticker_graph(
-            [{"file": str(png), "t": 2.0, "dur": 1.0, "scale": 0.2, "x": "100", "y": "200"}],
+            [{"file": str(png), "t": 2.0, "dur": 1.0, "scale": 0.2, "x": "100", "y": "200",
+              "motion": "pop"}],
             1, 1000, 1920, 30, tmp / "plan.json")
         graph = ";".join(chunks)
         assert "-loop" not in inputs, "el clip ya está animado: no se repite"
@@ -1117,11 +1118,29 @@ def test_trajectories():
             [{"file": str(png), "t": 1.0, "dur": 1.5, "scale": 0.2, "x": "W*0.6",
               "y": "H*0.3", "motion": "bounce"}], 1, 1080, 1920, 30, tmp / "plan.json")
         assert "overlay=x=0:y=0" in ";".join(chunks), "el viaje va dentro del clip, a cuadro completo"
+        # `t` es el aterrizaje: el bote (0.95 s) sale antes para llegar en 1.0.
+        assert "+0.050/TB" in ";".join(chunks), "el viaje no sale antes de su t"
         clip = [a for a in inputs if str(a).endswith(".mov")][0]
         info = sh("ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
                   "stream=width,height", "-of", "csv=p=0", clip)
         assert info.strip() == "1080,1920", info
     print("ok  trayectorias (salen de fuera, llegan a su sitio, estela detrás)")
+
+
+def test_default_line():
+    """Sin pedir nada: barrido de apertura y stickers que viajan turnándose."""
+    from render import opening_wipes, sticker_motion
+
+    assert opening_wipes({}, []) == [{"t": 0.0, "type": "wipe"}]
+    assert opening_wipes({}, [{"t": 0, "type": "wipe", "from": "right"}]) == [], "duplica el del plan"
+    assert opening_wipes({"opening_wipe": False}, []) == []
+
+    turnos = [sticker_motion(i, {"file": "a.png"}) for i in range(4)]
+    assert all(a != b for a, b in zip(turnos, turnos[1:])), f"dos seguidos iguales: {turnos}"
+    assert "pop" not in turnos
+    assert sticker_motion(0, {"file": "a.png", "pop": 0}) == "pop", "pop: 0 deja de ser quieto"
+    assert sticker_motion(0, {"file": "a.png", "motion": "slide"}) == "slide"
+    print("ok  línea por defecto (barrido de apertura, stickers viajando por turnos)")
 
 
 def test_node_chain():
@@ -1178,6 +1197,7 @@ def main():
         test_wipe()
         test_trajectories()
         test_node_chain()
+        test_default_line()
         test_icon_words(tmp)
         test_timeline_mapping()
         test_shot_shape()
