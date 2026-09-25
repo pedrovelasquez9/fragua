@@ -344,6 +344,18 @@ Nada de esto lo eliges tú por su nombre. El agente lee tu transcripción, busca
 las frases que pesan y pone el movimiento en su primera palabra — nunca
 repartido por reloj, que es lo que hace que una edición parezca aleatoria.
 
+### Animaciones Lottie
+
+Flechas que se dibujan, subrayados, destellos, un check que se marca: descarga
+animaciones Lottie a tu carpeta de assets y pídelas como cualquier otra cosa —
+`pon una flecha señalando el comando`—. Son vectoriales, así que se ven nítidas
+al tamaño que sea.
+
+Las gratuitas de LottieFiles se pueden usar en vídeos comerciales **sin citar al
+autor**. El plugin no trae ninguna: las eliges tú, como la música.
+
+Necesita lo mismo que las cards animadas: Node y `/fragua:setup`.
+
 ### Comparativas, listas que se cumplen y comandos
 
 Además de las de siempre, tres cards pensadas para vídeo técnico:

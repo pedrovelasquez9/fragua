@@ -394,7 +394,7 @@ def letterbox_graph(effects, height):
     return "".join(bars)
 
 
-def sticker_graph(stickers, start_index, width, height, fps):
+def sticker_graph(stickers, start_index, width, height, fps, plan_path=None):
     """Returns (extra_inputs, filter_chunks). Each sticker is its own overlay.
 
     Cada sticker se repite en bucle durante su duración para que `fade` y
@@ -405,12 +405,34 @@ def sticker_graph(stickers, start_index, width, height, fps):
     """
     inputs, chunks, label = [], [], "[styled]"
     for i, s in enumerate(stickers):
-        path = asset_path(s["file"], "sticker")
         idx = start_index + i
         t0, dur = float(s["t"]), float(s.get("dur", 2))
+        fade = min(STICKER_FADE, dur / 3)
+
+        if str(s["file"]).lower().endswith(".json"):
+            # Una Lottie ya viene animada, a su tamaño y con alfa desde lottie.py.
+            # Ni bucle ni pop: crecerla encima sería animar la animación. Sí el
+            # fundido, para que no aparezca y desaparezca de golpe.
+            if plan_path is None:
+                sys.exit(f"sticker {i}: es una Lottie y no sé dónde está su clip")
+            clip = Path(plan_path).resolve().parent / "lottie" / f"lottie{i:02d}.mov"
+            if not clip.exists():
+                sys.exit(f"falta {clip} — ejecuta scripts/lottie.py con este plan primero")
+            inputs += ["-i", str(clip)]
+            chunks.append(
+                f"[{idx}:v]format=rgba,"
+                f"fade=t=in:st=0:d={fade:.2f}:alpha=1,"
+                f"fade=t=out:st={dur - fade:.3f}:d={fade:.2f}:alpha=1,"
+                f"setpts=PTS-STARTPTS+{t0:.3f}/TB[s{i}]")
+            nxt = f"[ov{i}]"
+            chunks.append(f"{label}[s{i}]overlay=x={s.get('x', 'W*0.7')}:y={s.get('y', 'H*0.15')}"
+                          f":enable='between(t,{t0},{t0 + dur})'{nxt}")
+            label = nxt
+            continue
+
+        path = asset_path(s["file"], "sticker")
         w = int(width * s.get("scale", 0.2))
         pop = float(s.get("pop", STICKER_POP))
-        fade = min(STICKER_FADE, dur / 3)
         # Sin -framerate, un PNG en bucle entra a 25 fps y zoompan lo reescala:
         # el sticker acaba durando dur*25/fps y el fundido de salida se pierde.
         inputs += ["-loop", "1", "-framerate", f"{fps:g}",
@@ -787,7 +809,7 @@ def build(args, platform, segments, plan, source):
     next_input = 1 + len(plan.get("cutaways", []))
 
     sticker_inputs, sticker_chunks, video_label = sticker_graph(
-        stickers, next_input, width, height, fps)
+        stickers, next_input, width, height, fps, args.plan)
     graph += sticker_chunks
     next_input += len(stickers)
 

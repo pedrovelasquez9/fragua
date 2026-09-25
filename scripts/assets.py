@@ -22,6 +22,7 @@ clasificación es por extensión:
     fonts/     .ttf/.otf propios
 """
 import argparse
+import json
 import struct
 import subprocess
 from pathlib import Path
@@ -35,6 +36,10 @@ AUDIO_EXT = {".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac"}
 IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
 VIDEO_EXT = {".mp4", ".mov", ".mkv", ".webm", ".m4v"}
 FONT_EXT = {".ttf", ".otf", ".ttc"}
+
+# Lo que tiene que traer un .json para ser una animación Lottie y no un fichero
+# de configuración cualquiera que el usuario tenga en la misma carpeta.
+LOTTIE_KEYS = {"v", "fr", "ip", "op", "w", "h", "layers"}
 
 # Un audio por debajo de esto es un efecto puntual; por encima, música de fondo.
 SFX_MAX_SECONDS = 6.0
@@ -156,13 +161,25 @@ def classify(path, root):
     if suffix in FONT_EXT:
         return "fonts", {"family": font_family(path)}
 
+    if suffix == ".json":
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, UnicodeDecodeError):
+            return None, {}
+        if not isinstance(data, dict) or not LOTTIE_KEYS <= data.keys():
+            return None, {}
+        fps = float(data.get("fr") or 30)
+        return "lottie", {"width": data.get("w"), "height": data.get("h"),
+                          "seconds": round((data["op"] - data["ip"]) / fps, 2),
+                          "keyword": keyword_from(path)}
+
     return None, {}
 
 
 def index_directory(root):
     """Walk the library and describe everything usable in it."""
     catalogue = {"music": [], "sfx": [], "clips": [], "stickers": [],
-                 "images": [], "fonts": []}
+                 "images": [], "lottie": [], "fonts": []}
     for path in sorted(root.rglob("*")):
         if not path.is_file() or path.name.startswith("."):
             continue

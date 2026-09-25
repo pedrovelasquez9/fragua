@@ -343,6 +343,18 @@ You never choose any of this by name. The agent reads your transcript, finds the
 lines that carry weight, and puts the movement on the first word of the phrase —
 never spaced evenly by the clock, which is what makes an edit feel random.
 
+### Lottie animations
+
+Arrows that draw themselves, underlines, sparkles, a tick that checks itself:
+drop Lottie animations into your assets folder and ask for them like anything
+else — `put an arrow pointing at the command`. They are vector, so they stay
+sharp at any size.
+
+The free ones on LottieFiles can be used in commercial videos **without crediting
+the author**. The plugin ships none: you pick your own, like the music.
+
+It needs the same as animated cards: Node and `/fragua:setup`.
+
 ### Comparisons, checklists and commands
 
 On top of the usual ones, three cards built for technical videos:
