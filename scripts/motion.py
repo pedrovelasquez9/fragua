@@ -134,20 +134,25 @@ def _ease_out(u):
     return 1 - (1 - u) ** 3
 
 
-def travel_point(style, u, start, target, frame_h):
-    """(x, y, giro) del centro del elemento en la fracción `u` del viaje."""
+def travel_point(style, u, start, target, frame_h, ceiling=None):
+    """(x, y, giro) del centro del elemento en la fracción `u` del viaje.
+
+    `ceiling` topa la altura del bote en px: un elemento que aterriza pegado
+    arriba botaría fuera del cuadro y se vería cortado.
+    """
     (sx, sy), (tx, ty) = start, target
+    hop = HOP * frame_h if ceiling is None else min(HOP * frame_h, max(0.0, ceiling))
     if style == "bounce":
         # Tres botes que menguan mientras cruza, y una vuelta entera rodando.
         x = sx + (tx - sx) * _ease_out(u)
-        y = ty - HOP * frame_h * abs(math.sin(3 * math.pi * u)) * (1 - u) ** 1.6
+        y = ty - hop * abs(math.sin(3 * math.pi * u)) * (1 - u) ** 1.6
         return x, y, 360 * _ease_out(u) * (1 if tx > sx else -1)
     if style == "drop":
         # Cae acelerando y rebota dos veces al tocar su sitio.
         if u < 0.45:
             return tx, sy + (ty - sy) * (u / 0.45) ** 2, 0.0
         v = (u - 0.45) / 0.55
-        y = ty - HOP * 0.7 * frame_h * abs(math.sin(2 * math.pi * v)) * (1 - v) ** 1.5
+        y = ty - min(hop, HOP * 0.7 * frame_h) * abs(math.sin(2 * math.pi * v)) * (1 - v) ** 1.5
         return tx, y, 8 * math.sin(2 * math.pi * v) * (1 - v)
     # slide: entra por el lado más cercano y se pasa un poco, con el resorte. Al
     # acabar el viaje el resorte aún no ha llegado a 1 del todo; se reparte la
@@ -208,6 +213,8 @@ def path_clip(src, width, dur, fps, out_path, frame_size, target_xy, style="boun
     start = travel_start(style, target, (width, height), frame_w)
     travel = TRAVEL[style]
     frames = max(1, round(dur * fps))
+    # Lo que puede subir el bote sin que el elemento asome por arriba.
+    ceiling = target[1] - height / 2 - 12
 
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -220,7 +227,7 @@ def path_clip(src, width, dur, fps, out_path, frame_size, target_xy, style="boun
     for index in range(frames):
         t = index / fps
         u = min(1.0, t / travel)
-        x, y, turn = travel_point(style, u, start, target, frame_h)
+        x, y, turn = travel_point(style, u, start, target, frame_h, ceiling)
         frame = empty.copy()
 
         if trail:
@@ -232,7 +239,7 @@ def path_clip(src, width, dur, fps, out_path, frame_size, target_xy, style="boun
                 # la estela asoma por delante, por donde aún no ha pasado.
                 tail = max(0.0, u - length)
                 points = [travel_point(style, tail + (u - tail) * k / 24,
-                                       start, target, frame_h)[:2] for k in range(25)]
+                                       start, target, frame_h, ceiling)[:2] for k in range(25)]
                 layer = Image.new("RGBA", (frame_w, frame_h), (0, 0, 0, 0))
                 _draw_trail(layer, points, max(4, width * TRAIL_WIDTH), trail_colour)
                 frame.alpha_composite(layer)

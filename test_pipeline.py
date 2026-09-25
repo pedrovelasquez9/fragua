@@ -1098,6 +1098,13 @@ def test_trajectories():
     assert travel_start("bounce", target, size, 1080)[0] < 0
     assert travel_start("slide", target, size, 1080)[0] > 1080
 
+    # Pegado arriba, el bote se topa para no salirse del cuadro.
+    arriba = (900.0, 150.0)
+    inicio = travel_start("bounce", arriba, size, 1080)
+    techo = min(travel_point("bounce", k / 100, inicio, arriba, 1920, arriba[1] - 100 - 12)[1]
+                for k in range(101))
+    assert techo - 100 >= 0, f"el bote se sale por arriba: centro en {techo:.0f}"
+
     assert plan_number("W*0.5", 1080, 1920) == 540 and plan_number(300, 1080, 1920) == 300
     assert set(STYLES) >= {"pop", "bounce", "drop", "slide"}
 
