@@ -668,18 +668,21 @@ lo da por entregado hasta que esto pasa. Falla si:
 | Tags | 5 como mucho |
 | URLs | sólo las de `author_links` |
 
-Lo del canal va en un bloque opcional de `presets.json`, fuera de los presets:
+Lo del canal va en `~/.fragua/channel.json` (junto a `assets.json`, y como él
+sigue a `FRAGUA_CONFIG`): dentro del plugin se perdería en cada actualización.
+`common.channel()` lo lee, y si no existe cae en un bloque `channel` de
+`presets.json`, que `preset()` no cuenta como preset.
 
 ```json
-"channel": {
+{
   "name": "Nombre del canal",
   "playlists": ["IA local para programar: Ollama, OpenCode y VPS"],
   "fixed_hashtags": ["#programacionenespanol"]
 }
 ```
 
-Sin `name`, la regla del nombre del canal no se aplica; sin el bloque, el copy
-omite playlist, pantalla final y SIGUIENTE.
+Sin `name`, la regla del nombre del canal no se aplica; sin archivo ni bloque, el
+copy omite playlist, pantalla final y SIGUIENTE.
 
 ### Cards
 

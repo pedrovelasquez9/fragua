@@ -35,8 +35,10 @@ Sale de analizar el rendimiento real de un canal de programación.
   no se entrega hasta que la comprobación pasa: largos de título, prohibidos,
   capítulos desde 0:00, hashtags sin ñ ni tildes, como mucho 5 tags y ninguna
   URL que no haya dado el autor.
-- **Bloque `channel` opcional en `presets.json`**, con el nombre del canal, sus
-  playlists y los hashtags fijos. Sin él, el copy omite playlist, pantalla final
+- **`~/.fragua/channel.json` opcional**, con el nombre del canal, sus playlists y
+  los hashtags fijos. Vive fuera del plugin, como la biblioteca de assets, para
+  que no se pierda al actualizar. También vale un bloque `channel` en
+  `presets.json`. Sin ninguno de los dos, el copy omite playlist, pantalla final
   y SIGUIENTE.
 
 ---

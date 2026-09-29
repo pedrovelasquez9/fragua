@@ -9,14 +9,15 @@ sin capítulos sin que YouTube avise. Y una URL que no dio el autor es una URL
 inventada.
 
 Las URLs que sí dio el autor van en `author_links` dentro de copy.json. El nombre
-del canal, si está, sale del bloque `channel` de presets.json.
+del canal, si está, sale de ~/.fragua/channel.json (o del bloque `channel` de
+presets.json).
 """
 import argparse
 import re
 import unicodedata
 
 from chapters import MIN_CHAPTERS
-from common import load_presets, read_json
+from common import channel, read_json
 
 MAX_LONG_TITLE = 70
 MAX_SHORT_TITLE = 60
@@ -109,8 +110,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("copy")
     args = parser.parse_args()
-    channel = load_presets().get("channel", {}).get("name")
-    problems = check(read_json(args.copy), channel)
+    problems = check(read_json(args.copy), channel().get("name"))
     if problems:
         raise SystemExit("copy.json no está listo:\n  " + "\n  ".join(problems))
     print("copy.json listo")

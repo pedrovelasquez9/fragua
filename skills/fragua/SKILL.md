@@ -708,16 +708,20 @@ descubrimiento es mínimo, así que no se rellenan.
 Máximo **5 hashtags** por red, **sin ñ ni tildes**. En YouTube Shorts uno de
 ellos es `#Shorts`.
 
-**Lo del canal va en `presets.json`**, no aquí: la skill no sabe de qué canal es.
-El bloque es opcional:
+**Lo del canal va en `~/.fragua/channel.json`**, no aquí: la skill no sabe de qué
+canal es. Vive fuera del plugin, junto a `assets.json`, para que no se pierda al
+actualizar. Es opcional:
 
 ```json
-"channel": {
+{
   "name": "Nombre del canal",
   "playlists": ["IA local para programar: Ollama, OpenCode y VPS", "..."],
   "fixed_hashtags": ["#programacionenespanol"]
 }
 ```
+
+Léelo antes de escribir el copy. Si no existe, vale también un bloque `channel`
+con lo mismo en `presets.json`.
 
 `fixed_hashtags` entran en cada red y cuentan para el máximo de 5. `name` es lo
 que `copy_check.py` busca en los títulos. **Si el bloque no existe**, omite los
@@ -744,7 +748,7 @@ campos Playlist, Pantalla final y SIGUIENTE, sin avisar de nada.
   término de búsqueda, 2) problema que el espectador reconoce, 3) tensión o
   pregunta. Cada una va emparejada con su ficha de miniatura.
 
-**Playlist y pantalla final.** Elige de `channel.playlists` la playlist a la que
+**Playlist y pantalla final.** Elige de `playlists` la playlist a la que
 pertenece el vídeo. La pantalla final lleva el siguiente vídeo de esa playlist y
 la playlist.
 
