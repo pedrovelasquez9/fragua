@@ -1158,6 +1158,9 @@ def test_copy_check():
     falla(lambda c: c["youtube"]["titles"].append("x" * 71), "71 caracteres")
     falla(lambda c: c["shorts"].update(title="y" * 61), "61 caracteres")
     falla(lambda c: c["youtube"]["titles"].append("Ollama local | Mi Canal"), "nombre del canal")
+    # Sin tildes ni ñ sigue siendo el mismo canal.
+    falla(lambda c: c["youtube"]["titles"].append("Ollama | programacion en espanol"),
+          "nombre del canal", canal="Programación en Español")
     falla(lambda c: c["youtube"]["titles"].append("🔥 Ollama local"), "emoji")
     falla(lambda c: c["youtube"]["titles"].append("Ollama #local"), "hashtag")
     falla(lambda c: c["youtube"]["titles"].append("Ollama en 2026"), "año")
