@@ -201,8 +201,10 @@ se corta al final») y él localiza la causa.
 - El vídeo editado, junto al original y con `-EDIT` en el nombre
 - Una carpeta con los archivos del proyecto, por si quieres retocar algo después
   sin repetir todo el proceso
-- El texto de publicación: título, descripción, 15 etiquetas y los pies para
-  Instagram y TikTok
+- El texto de publicación en `copy.json`: tres títulos de YouTube, descripción
+  con capítulos, hasta 5 etiquetas, el título del Short y los pies para
+  Instagram y TikTok — comprobado: largo, años, emoji, hashtags y enlaces
+  inventados
 
 ---
 

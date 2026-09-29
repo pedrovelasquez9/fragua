@@ -197,8 +197,9 @@ audio cuts off at the end») and the agent finds the cause.
 
 - The edited video, next to the original with `-EDIT` in the name
 - A project folder, so you can tweak something later without redoing everything
-- The publishing copy: title, description, 15 tags and the captions for
-  Instagram and TikTok
+- The publishing copy in `copy.json`: three YouTube titles, description with
+  chapters, up to 5 tags, the Shorts title and the captions for Instagram and
+  TikTok — checked for length, years, emoji, hashtags and invented links
 
 ---
 

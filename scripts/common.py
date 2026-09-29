@@ -41,6 +41,18 @@ ASSETS_CONFIG = Path(os.environ.get("FRAGUA_CONFIG",
                                     Path.home() / ".fragua" / "assets.json"))
 
 
+# Lo del canal (nombre, playlists, hashtags fijos) vive junto a assets.json por
+# lo mismo: en presets.json se perdería en cada actualización del plugin.
+CHANNEL_CONFIG = ASSETS_CONFIG.parent / "channel.json"
+
+
+def channel():
+    """El bloque del canal: ~/.fragua/channel.json, o `channel` en presets.json."""
+    if CHANNEL_CONFIG.exists():
+        return read_json(CHANNEL_CONFIG)
+    return load_presets().get("channel", {})
+
+
 def assets_dir():
     """Where the user's music, sfx, stickers and fonts live.
 
@@ -66,8 +78,10 @@ def resolve_asset(path):
 
 
 def preset(name):
-    """One platform preset. Keys starting with '_' are documentation, not presets."""
-    presets = {k: v for k, v in load_presets().items() if not k.startswith("_")}
+    """One platform preset. Keys starting with '_' are documentation, and
+    `channel` is the channel's copy settings (copy_check.py), not a preset."""
+    presets = {k: v for k, v in load_presets().items()
+               if not k.startswith("_") and k != "channel"}
     if name not in presets:
         sys.exit(f"preset desconocido: {name}. Disponibles: {', '.join(presets)}")
     return presets[name]
