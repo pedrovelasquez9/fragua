@@ -1172,6 +1172,18 @@ def test_copy_check():
     malo = _copy.deepcopy(bueno)
     malo["youtube"]["titles"][0] = "Ollama local | Mi Canal"
     assert check(malo, None) == []
+
+    # El nombre del canal sale de ~/.fragua/channel.json, que sobrevive a las
+    # actualizaciones del plugin; FRAGUA_CONFIG apunta a una carpeta de prueba.
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        (tmp / "channel.json").write_text(json.dumps({"name": "Mi Canal"}), encoding="utf-8")
+        (tmp / "copy.json").write_text(json.dumps(malo), encoding="utf-8")
+        env = dict(os.environ, FRAGUA_CONFIG=str(tmp / "assets.json"))
+        run = subprocess.run([sys.executable, str(ROOT / "scripts" / "copy_check.py"),
+                              str(tmp / "copy.json")], env=env, capture_output=True,
+                             text=True, encoding="utf-8", errors="replace")
+        assert run.returncode != 0 and "nombre del canal" in run.stderr, run.stderr
     print("ok  copy_check (límites, prohibidos, capítulos, hashtags y URLs)")
 
 
