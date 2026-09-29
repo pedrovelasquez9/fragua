@@ -8,6 +8,20 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.28.1 — 2026-09-29
+
+### Fixed
+- **El nombre del canal se detectaba sólo escrito igual.** «Programacion en
+  espanol» en un título pasaba la comprobación aunque el canal sea
+  «Programación en Español». Ahora se compara sin tildes, ñ ni mayúsculas.
+
+### Changed
+- **La playlist la elige el autor.** El copy ya no propone playlist ni pantalla
+  final, y en la descripción deja `[PLAYLIST] [ENLACE PLAYLIST]` para rellenar.
+  `playlists` sale de `channel.json`.
+
+---
+
 ## 1.28.0 — 2026-09-29
 
 Sale de analizar el rendimiento real de un canal de programación.

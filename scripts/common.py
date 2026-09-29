@@ -41,7 +41,7 @@ ASSETS_CONFIG = Path(os.environ.get("FRAGUA_CONFIG",
                                     Path.home() / ".fragua" / "assets.json"))
 
 
-# Lo del canal (nombre, playlists, hashtags fijos) vive junto a assets.json por
+# Lo del canal (nombre, hashtags fijos) vive junto a assets.json por
 # lo mismo: en presets.json se perdería en cada actualización del plugin.
 CHANNEL_CONFIG = ASSETS_CONFIG.parent / "channel.json"
 

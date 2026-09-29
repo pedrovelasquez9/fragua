@@ -692,7 +692,7 @@ Un vídeo sin texto de publicación no está entregado. En cuanto el render
 termina, redacta el kit completo a partir de `digest.txt`, que es lo que
 de verdad se oye en el vídeo:
 
-- **YouTube (largo)**: 3 títulos, playlist, pantalla final, descripción y tags
+- **YouTube (largo)**: 3 títulos, descripción y tags
 - **YouTube Shorts**: título, vídeo relacionado y descripción
 - **Instagram**: caption
 - **TikTok**: caption
@@ -715,7 +715,6 @@ actualizar. Es opcional:
 ```json
 {
   "name": "Nombre del canal",
-  "playlists": ["IA local para programar: Ollama, OpenCode y VPS", "..."],
   "fixed_hashtags": ["#programacionenespanol"]
 }
 ```
@@ -724,8 +723,7 @@ Léelo antes de escribir el copy. Si no existe, vale también un bloque `channel
 con lo mismo en `presets.json`.
 
 `fixed_hashtags` entran en cada red y cuentan para el máximo de 5. `name` es lo
-que `copy_check.py` busca en los títulos. **Si el bloque no existe**, omite los
-campos Playlist, Pantalla final y SIGUIENTE, sin avisar de nada.
+que `copy_check.py` busca en los títulos, con tildes o sin ellas.
 
 **Título de YouTube (largo)**
 
@@ -748,9 +746,9 @@ campos Playlist, Pantalla final y SIGUIENTE, sin avisar de nada.
   término de búsqueda, 2) problema que el espectador reconoce, 3) tensión o
   pregunta. Cada una va emparejada con su ficha de miniatura.
 
-**Playlist y pantalla final.** Elige de `playlists` la playlist a la que
-pertenece el vídeo. La pantalla final lleva el siguiente vídeo de esa playlist y
-la playlist.
+**La playlist la decide el autor**, a mano: a cuál va el vídeo o si abre una
+nueva. No la elijas ni la propongas; la pantalla final depende de ella, así que
+tampoco.
 
 **Descripción de YouTube (largo)**, en este orden:
 
@@ -760,8 +758,8 @@ la playlist.
    de salida.
 4. **ENLACES**: sólo los que dé el autor o aparezcan en el vídeo. Si falta uno que
    haría falta, pon `[ENLACE: qué es]` para que el autor lo rellene.
-5. **SIGUIENTE**: la playlist del vídeo con `[ENLACE PLAYLIST]`. No inventes la
-   URL.
+5. **SIGUIENTE**: `[PLAYLIST] [ENLACE PLAYLIST]`, tal cual, para que el autor
+   ponga la que elija. No inventes ni el nombre ni la URL.
 6. **Al final, 3 hashtags**: YouTube muestra los tres primeros encima del título.
 
 **YouTube Shorts**
@@ -797,8 +795,6 @@ tocan —Shorts en un vídeo largo sin corte, por ejemplo— se omiten.
   "author_links": ["https://github.com/autor/repo"],
   "youtube": {
     "titles": ["...", "...", "..."],
-    "playlist": "...",
-    "end_screen": "...",
     "description": "...",
     "tags": ["ollama local", "olama"]
   },
@@ -825,8 +821,6 @@ Luego muéstraselo al usuario así:
 ```
 YOUTUBE (largo)
 Títulos: 1) … (NN) 2) … (NN) 3) … (NN)      ← recuento de caracteres de cada uno
-Playlist: …
-Pantalla final: siguiente vídeo de esa playlist + la playlist
 Descripción: …
 Tags: …
 
