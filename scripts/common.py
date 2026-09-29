@@ -66,8 +66,10 @@ def resolve_asset(path):
 
 
 def preset(name):
-    """One platform preset. Keys starting with '_' are documentation, not presets."""
-    presets = {k: v for k, v in load_presets().items() if not k.startswith("_")}
+    """One platform preset. Keys starting with '_' are documentation, and
+    `channel` is the channel's copy settings (copy_check.py), not a preset."""
+    presets = {k: v for k, v in load_presets().items()
+               if not k.startswith("_") and k != "channel"}
     if name not in presets:
         sys.exit(f"preset desconocido: {name}. Disponibles: {', '.join(presets)}")
     return presets[name]
