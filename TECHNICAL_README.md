@@ -676,13 +676,12 @@ sigue a `FRAGUA_CONFIG`): dentro del plugin se perdería en cada actualización.
 ```json
 {
   "name": "Nombre del canal",
-  "playlists": ["IA local para programar: Ollama, OpenCode y VPS"],
   "fixed_hashtags": ["#programacionenespanol"]
 }
 ```
 
-Sin `name`, la regla del nombre del canal no se aplica; sin archivo ni bloque, el
-copy omite playlist, pantalla final y SIGUIENTE.
+`name` se compara sin tildes ni mayúsculas; sin él, esa regla no se aplica. La
+playlist no está aquí a propósito: la elige el autor a mano en cada vídeo.
 
 ### Cards
 

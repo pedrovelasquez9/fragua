@@ -31,11 +31,17 @@ TIMESTAMP = re.compile(r"^\s*(\d{1,2}:\d{2}(?::\d{2})?)\s", re.M)
 ACCENTED = set("ñÑáéíóúÁÉÍÓÚàèìòùüÜ")
 
 
+def plain(text):
+    """Sin tildes ni mayúsculas: «Programacion en espanol» es el mismo canal."""
+    return "".join(c for c in unicodedata.normalize("NFKD", text.lower())
+                   if not unicodedata.combining(c))
+
+
 def title_problems(title, limit, channel):
     problems = []
     if len(title) > limit:
         problems.append(f"{len(title)} caracteres, el máximo es {limit}")
-    if channel and channel.lower() in title.lower():
+    if channel and plain(channel) in plain(title):
         problems.append("lleva el nombre del canal")
     if title and unicodedata.category(title[0]) == "So":
         problems.append("empieza por emoji")
