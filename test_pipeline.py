@@ -1127,6 +1127,54 @@ def test_trajectories():
     print("ok  trayectorias (salen de fuera, llegan a su sitio, estela detrás)")
 
 
+def test_copy_check():
+    """copy.json: pasa uno bueno, y cada regla salta con su caso."""
+    import copy as _copy
+    from copy_check import check
+
+    bueno = {
+        "author_links": ["https://github.com/autor/repo"],
+        "youtube": {
+            "titles": ["Por qué la IA te da un código distinto cada vez (y cómo evitarlo)",
+                       "Ollama local: tu modelo en casa", "¿Idempotencia o suerte?"],
+            "description": ("Idempotencia al programar con IA, sin misterio.\n\n"
+                            "0:00 El problema\n1:10 La causa\n4:30 Cómo evitarlo\n\n"
+                            "Repo: https://github.com/autor/repo\n#programacion #ia #ollama"),
+            "tags": ["idempotencia", "idempotente"],
+        },
+        "shorts": {"title": "La IA no es determinista", "related": "…",
+                   "description": "Por qué cambia. #Shorts #programacionenespanol"},
+        "instagram": "Gancho. #programacionenespanol",
+        "tiktok": "Gancho con idempotencia.",
+    }
+    assert check(bueno, "Mi Canal") == [], check(bueno, "Mi Canal")
+
+    def falla(cambio, esperado, canal="Mi Canal"):
+        malo = _copy.deepcopy(bueno)
+        cambio(malo)
+        problemas = " | ".join(check(malo, canal))
+        assert esperado in problemas, f"no salta «{esperado}»: {problemas or 'nada'}"
+
+    falla(lambda c: c["youtube"]["titles"].append("x" * 71), "71 caracteres")
+    falla(lambda c: c["shorts"].update(title="y" * 61), "61 caracteres")
+    falla(lambda c: c["youtube"]["titles"].append("Ollama local | Mi Canal"), "nombre del canal")
+    falla(lambda c: c["youtube"]["titles"].append("🔥 Ollama local"), "emoji")
+    falla(lambda c: c["youtube"]["titles"].append("Ollama #local"), "hashtag")
+    falla(lambda c: c["youtube"]["titles"].append("Ollama en 2026"), "año")
+    falla(lambda c: c["youtube"].update(description="Sin capítulos."), "capítulos")
+    falla(lambda c: c["youtube"].update(
+        description="0:05 a\n1:00 b\n2:00 c"), "no en 0:00")
+    falla(lambda c: c.update(instagram="#a #b #c #d #e #f"), "6 hashtags")
+    falla(lambda c: c.update(tiktok="Gancho #programaciónenespañol"), "ñ o tilde")
+    falla(lambda c: c["youtube"].update(tags=list("abcdef")), "6 tags")
+    falla(lambda c: c.update(tiktok="Mira https://inventada.dev/x"), "no viene del autor")
+    # Sin nombre de canal configurado, esa regla no se aplica.
+    malo = _copy.deepcopy(bueno)
+    malo["youtube"]["titles"][0] = "Ollama local | Mi Canal"
+    assert check(malo, None) == []
+    print("ok  copy_check (límites, prohibidos, capítulos, hashtags y URLs)")
+
+
 def test_default_line():
     """Sin pedir nada: barrido de apertura y stickers que viajan turnándose."""
     from render import opening_wipes, sticker_motion
@@ -1198,6 +1246,7 @@ def main():
         test_trajectories()
         test_node_chain()
         test_default_line()
+        test_copy_check()
         test_icon_words(tmp)
         test_timeline_mapping()
         test_shot_shape()

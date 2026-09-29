@@ -692,17 +692,146 @@ Un vídeo sin texto de publicación no está entregado. En cuanto el render
 termina, redacta el kit completo a partir de `digest.txt`, que es lo que
 de verdad se oye en el vídeo:
 
-- **YouTube**: un título principal + 2 alternativas para testear, descripción y
-  **15 tags** separadas por coma
+- **YouTube (largo)**: 3 títulos, playlist, pantalla final, descripción y tags
+- **YouTube Shorts**: título, vídeo relacionado y descripción
 - **Instagram**: caption
 - **TikTok**: caption
 - **En vídeo largo, además: 3 fichas de miniatura** (ver más abajo)
 
-**El título y las 15 tags no son opcionales.** Van siempre, incluso si el
-usuario pide «sólo las descripciones» o «sólo el copy»: sin título no se puede
-publicar en YouTube y sin tags se pierde descubrimiento. Entrégalos igual.
+**El título no es opcional.** Va siempre, incluso si el usuario pide «sólo las
+descripciones» o «sólo el copy»: sin título no se puede publicar en YouTube.
 
-Máximo **5 hashtags** por red. En YouTube Shorts uno de ellos es `#Shorts`.
+**Tags: hasta 5, opcionales.** Sólo variantes y errores ortográficos del término
+principal —`ollama local`, `olama`—: YouTube documenta que su peso en el
+descubrimiento es mínimo, así que no se rellenan.
+
+Máximo **5 hashtags** por red, **sin ñ ni tildes**. En YouTube Shorts uno de
+ellos es `#Shorts`.
+
+**Lo del canal va en `presets.json`**, no aquí: la skill no sabe de qué canal es.
+El bloque es opcional:
+
+```json
+"channel": {
+  "name": "Nombre del canal",
+  "playlists": ["IA local para programar: Ollama, OpenCode y VPS", "..."],
+  "fixed_hashtags": ["#programacionenespanol"]
+}
+```
+
+`fixed_hashtags` entran en cada red y cuentan para el máximo de 5. `name` es lo
+que `copy_check.py` busca en los títulos. **Si el bloque no existe**, omite los
+campos Playlist, Pantalla final y SIGUIENTE, sin avisar de nada.
+
+**Título de YouTube (largo)**
+
+- **Máximo 70 caracteres**, y el término de búsqueda **en los primeros 40**, con
+  el nombre exacto que la gente teclea —i18n, feature flags, 1FN/2FN/3FN, API
+  REST—, nunca una paráfrasis. Si el vídeo describe un concepto con nombre
+  propio, el título lo nombra.
+- Dice **lo que consigue quien lo ve o un problema que reconoce**, no un
+  concepto abstracto.
+  Mal: «Determinismo e idempotencia: dos conceptos que importan más programando con IA».
+  Bien: «Por qué la IA te da un código distinto cada vez (y cómo evitarlo)».
+- **Prohibido**: el nombre del canal como sufijo, emoji al principio, hashtags
+  dentro del título, palabras en mayúsculas de reclamo y años —salvo que el
+  contenido caduque de verdad: un año en el título lo deja viejo en enero—.
+- Si el vídeo presenta **una herramienta del propio autor**, el título habla del
+  resultado, no de la herramienta: «Mis vídeos se editan solos con IA local», no
+  «Mi plugin para editar vídeos».
+- Si el vídeo es **de actualidad**: persona + conflicto + pregunta.
+- **Las 3 opciones con ángulos distintos**, no variaciones: 1) resultado o
+  término de búsqueda, 2) problema que el espectador reconoce, 3) tensión o
+  pregunta. Cada una va emparejada con su ficha de miniatura.
+
+**Playlist y pantalla final.** Elige de `channel.playlists` la playlist a la que
+pertenece el vídeo. La pantalla final lleva el siguiente vídeo de esa playlist y
+la playlist.
+
+**Descripción de YouTube (largo)**, en este orden:
+
+1. **Primera línea**: el término principal dentro de una frase natural.
+2. **De 2 a 4 líneas** que abren la tensión sin contar la conclusión.
+3. **CAPÍTULOS**: la salida de `chapters.py` tal cual, con los tiempos en la línea
+   de salida.
+4. **ENLACES**: sólo los que dé el autor o aparezcan en el vídeo. Si falta uno que
+   haría falta, pon `[ENLACE: qué es]` para que el autor lo rellene.
+5. **SIGUIENTE**: la playlist del vídeo con `[ENLACE PLAYLIST]`. No inventes la
+   URL.
+6. **Al final, 3 hashtags**: YouTube muestra los tres primeros encima del título.
+
+**YouTube Shorts**
+
+- **Título de 60 caracteres como máximo**: gancho + término de búsqueda, con las
+  mismas prohibiciones que el largo.
+- **Vídeo relacionado**: el título del vídeo largo del que sale el corte (YouTube
+  deja enlazarlo desde el Short). Si el usuario no lo ha dicho, **pregúntalo**; no
+  lo supongas.
+- **Descripción**: 1 o 2 líneas + hashtags, uno de ellos `#Shorts`.
+- **Sin llamadas a salir del vídeo** —«link en la bio»—: el Short vive de la
+  retención.
+
+**Instagram y TikTok**
+
+- **Instagram**: el gancho y el término principal caben en los **primeros 125
+  caracteres**, que es lo que se ve antes de «más».
+- **TikTok**: la primera línea es el gancho y lleva el término en lenguaje
+  natural, porque TikTok se busca por texto.
+- **La pregunta para comentarios se responde con un número o una palabra** —«¿cuál
+  te ha pasado a ti, la 1 o la 3?»—, y convive con pedir una anécdota concreta
+  (ver «Audiencia nueva del nicho»).
+- **Nada de «link en la bio»** en reels.
+
+**copy.json y cómo se entrega**
+
+Escribe el copy en `copy.json`, junto a `plan.json`. Las URLs que haya dado el
+autor van en `author_links`: cualquier otra es inventada. Las secciones que no
+tocan —Shorts en un vídeo largo sin corte, por ejemplo— se omiten.
+
+```json
+{
+  "author_links": ["https://github.com/autor/repo"],
+  "youtube": {
+    "titles": ["...", "...", "..."],
+    "playlist": "...",
+    "end_screen": "...",
+    "description": "...",
+    "tags": ["ollama local", "olama"]
+  },
+  "shorts": {"title": "...", "related": "...", "description": "..."},
+  "instagram": "...",
+  "tiktok": "..."
+}
+```
+
+**El paso 6 no está terminado hasta que pase la comprobación**:
+
+```bash
+python scripts/copy_check.py copy.json
+```
+
+Falla si un título de largo pasa de 70 caracteres o uno de Short de 60; si un
+título lleva el nombre del canal, empieza por emoji, contiene `#` o un año; si la
+descripción del largo no lleva los capítulos o no empiezan en 0:00; si una red
+pasa de 5 hashtags o alguno lleva ñ o tilde; si hay más de 5 tags; o si aparece
+una URL que no esté en `author_links`.
+
+Luego muéstraselo al usuario así:
+
+```
+YOUTUBE (largo)
+Títulos: 1) … (NN) 2) … (NN) 3) … (NN)      ← recuento de caracteres de cada uno
+Playlist: …
+Pantalla final: siguiente vídeo de esa playlist + la playlist
+Descripción: …
+Tags: …
+
+YOUTUBE SHORTS
+Título: … · Vídeo relacionado: … · Descripción: …
+
+INSTAGRAM · caption
+TIKTOK · caption
+```
 
 **Miniaturas — obligatorias en vídeo largo**
 

@@ -8,6 +8,39 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.28.0 — 2026-09-29
+
+Sale de analizar el rendimiento real de un canal de programación.
+
+### Changed
+- **Tags: hasta 5, opcionales**, y sólo variantes y errores ortográficos del
+  término principal. Antes eran 15 obligatorias, pero YouTube documenta que su
+  peso en el descubrimiento es mínimo.
+- **Títulos de YouTube con reglas medibles.** Máximo 70 caracteres, con el término
+  que se teclea en los primeros 40. Dicen lo que consigue quien lo ve, no un
+  concepto abstracto. Nada de nombre del canal, emoji al principio, hashtags,
+  mayúsculas de reclamo ni años. Las 3 opciones tienen ángulos distintos:
+  resultado, problema que se reconoce y tensión.
+- **La descripción del largo lleva un orden fijo**: término en la primera línea,
+  tensión sin conclusión, CAPÍTULOS, ENLACES (sólo los del autor, o
+  `[ENLACE: qué es]`), SIGUIENTE con la playlist y 3 hashtags al final.
+- **Instagram y TikTok**: gancho y término en los primeros 125 caracteres, y una
+  pregunta que se responde con un número o una palabra. Nada de «link en la
+  bio».
+
+### Added
+- **Copy para YouTube Shorts**: título de 60 caracteres, el vídeo largo
+  relacionado (se pregunta si no se sabe) y una descripción con `#Shorts`.
+- **`copy.json` y `scripts/copy_check.py`.** El copy se guarda junto al plan y
+  no se entrega hasta que la comprobación pasa: largos de título, prohibidos,
+  capítulos desde 0:00, hashtags sin ñ ni tildes, como mucho 5 tags y ninguna
+  URL que no haya dado el autor.
+- **Bloque `channel` opcional en `presets.json`**, con el nombre del canal, sus
+  playlists y los hashtags fijos. Sin él, el copy omite playlist, pantalla final
+  y SIGUIENTE.
+
+---
+
 ## 1.27.0 — 2026-09-26
 
 ### Changed

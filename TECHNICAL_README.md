@@ -649,6 +649,38 @@ que descarte la lista sin avisar: primero en 0:00, mínimo tres, y ninguno de
 menos de diez segundos. Y se avisa si alguno se sale del montaje, que delata
 tiempos de la grabación original.
 
+### Copy de publicación
+
+```bash
+python scripts/copy_check.py copy.json
+```
+
+El copy va en `copy.json` junto a `plan.json` (secciones `youtube`, `shorts`,
+`instagram`, `tiktok` y `author_links`; las que no tocan se omiten), y la skill no
+lo da por entregado hasta que esto pasa. Falla si:
+
+| Regla | Límite |
+|---|---|
+| Título de largo / de Short | 70 / 60 caracteres |
+| Cualquier título | sin nombre del canal, sin emoji al principio, sin `#`, sin año |
+| Descripción del largo | lleva los capítulos, desde 0:00 (mínimo 3) |
+| Hashtags por red | 5 como mucho, ninguno con ñ o tilde |
+| Tags | 5 como mucho |
+| URLs | sólo las de `author_links` |
+
+Lo del canal va en un bloque opcional de `presets.json`, fuera de los presets:
+
+```json
+"channel": {
+  "name": "Nombre del canal",
+  "playlists": ["IA local para programar: Ollama, OpenCode y VPS"],
+  "fixed_hashtags": ["#programacionenespanol"]
+}
+```
+
+Sin `name`, la regla del nombre del canal no se aplica; sin el bloque, el copy
+omite playlist, pantalla final y SIGUIENTE.
+
 ### Cards
 
 | `kind` | Forma | Para qué |
@@ -853,7 +885,9 @@ fragua/
 │   ├── motion.py          entrada con rebote, vida y salida de los elementos
 │   ├── cards.py           plan.json → cards/*.png
 │   ├── subtitles.py       words.json → subs.ass
-│   └── render.py          todo junto → salida.mp4
+│   ├── render.py          todo junto → salida.mp4
+│   ├── chapters.py        plan.json → capítulos de YouTube
+│   └── copy_check.py      comprueba copy.json antes de entregarlo
 ├── assets/                tu música, stickers y SFX (opcional)
 └── vendor/                whisper.cpp, modelo y fuentes (lo crea el setup)
 ```
