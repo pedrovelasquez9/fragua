@@ -683,6 +683,37 @@ sigue a `FRAGUA_CONFIG`): dentro del plugin se perdería en cada actualización.
 `name` se compara sin tildes ni mayúsculas; sin él, esa regla no se aplica. La
 playlist no está aquí a propósito: la elige el autor a mano en cada vídeo.
 
+### Portada
+
+```bash
+python scripts/cover.py entrada.mp4 --cuts cuts.json --at 3.2        --title "Deja de hacer ramas a lo loco" --emphasis ramas -o portada.jpg
+```
+
+Fotograma de la grabación original (el montado lleva subtítulos y cards
+quemados), con `--at` en la línea de salida y llevado al original con `--cuts`,
+encuadrado como `render.py`: llenar y recortar al centro. Si su brillo medio
+baja de 0.42 se sube hasta ahí, como mucho ×1.8. Encima, un degradado oscuro
+desde el 42 % del alto, el título en Anton en mayúsculas —hasta 3 líneas, al
+mayor tamaño que quepa en el 86 % del ancho— con `--emphasis` en `#FF8A3D`, y
+una pastilla naranja con un triángulo de play y `--cta` («Mira el vídeo»). El
+bloque acaba en el 78 % del alto: dentro del recorte 4:5 de la cuadrícula de
+Instagram y por encima de la interfaz de TikTok.
+
+### Entrega
+
+```bash
+W=$(python scripts/deliver.py start entrada.mp4)      # al empezar
+python scripts/deliver.py finish entrada-EDIT.mp4 --work "$W"   # al terminar
+```
+
+`start` crea `<temporal del sistema>/fragua/<nombre del vídeo>/`, vacía; todo lo
+intermedio se escribe ahí, y los clips que `render.py` y `lottie.py` dejan junto
+al plan caen dentro solos. `finish` exige `subs.srt` y `copy.json` (que pase
+`copy_check.check`), y `portada.jpg` si el vídeo es vertical; copia junto al
+vídeo `-EDIT.srt`, `-EDIT-portada.jpg` y `-EDIT-copy.txt` (el copy en texto) y
+borra la carpeta. Si falta algo no borra nada, y se niega a borrar una carpeta
+que no esté bajo `<temporal>/fragua/`.
+
 ### Cards
 
 | `kind` | Forma | Para qué |
@@ -889,7 +920,9 @@ fragua/
 │   ├── subtitles.py       words.json → subs.ass
 │   ├── render.py          todo junto → salida.mp4
 │   ├── chapters.py        plan.json → capítulos de YouTube
-│   └── copy_check.py      comprueba copy.json antes de entregarlo
+│   ├── copy_check.py      comprueba copy.json antes de entregarlo
+│   ├── cover.py           portada de un vídeo corto
+│   └── deliver.py         carpeta de trabajo temporal y entrega limpia
 ├── assets/                tu música, stickers y SFX (opcional)
 └── vendor/                whisper.cpp, modelo y fuentes (lo crea el setup)
 ```

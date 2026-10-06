@@ -8,6 +8,32 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.29.0 — 2026-10-06
+
+### Changed
+- **Cada edición entrega sólo lo que se publica.** Junto al original quedan el
+  vídeo (`-EDIT.mp4`), los subtítulos (`-EDIT.srt`), el copy listo para pegar
+  (`-EDIT-copy.txt`) y, en vídeo corto, la portada (`-EDIT-portada.jpg`). Los
+  cortes, la transcripción, el plan, las cards y los clips de movimiento se
+  hacen en una carpeta del temporal del sistema y se borran al terminar; antes
+  se quedaban en una carpeta de proyecto junto a los vídeos.
+- **El `.srt` va siempre**, también en vertical con los subtítulos quemados.
+
+### Added
+- **Portada por defecto en los vídeos cortos** (`scripts/cover.py`). Un
+  fotograma limpio de la grabación original —sin subtítulos ni cards—, con el
+  brillo subido si está oscuro, el gancho en grande con la palabra clave en
+  naranja y una pastilla «▶ Mira el vídeo». Todo lo que se lee cae dentro del
+  recorte 4:5 de la cuadrícula de Instagram.
+- **`scripts/deliver.py`**: `start` crea la carpeta de trabajo y `finish`
+  comprueba que estén subtítulos, copy (que pase `copy_check.py`) y portada,
+  deja los archivos finales y borra la carpeta. Si falta algo no borra nada, y
+  nunca borra una carpeta que no sea de trabajo.
+- Las fichas de miniatura del vídeo largo pueden ir en `copy.json`
+  (`thumbnails`) y se entregan dentro del copy.
+
+---
+
 ## 1.28.1 — 2026-09-29
 
 ### Fixed

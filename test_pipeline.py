@@ -1190,6 +1190,56 @@ def test_copy_check():
     print("ok  copy_check (límites, prohibidos, capítulos, hashtags y URLs)")
 
 
+def test_delivery():
+    """Junto al vídeo queda sólo lo publicable, y la carpeta de trabajo se va."""
+    from PIL import Image, ImageStat
+    from cover import cover
+    from deliver import WORK_ROOT, finish, start
+
+    oscuro = Image.new("RGB", (1080, 1920), (20, 20, 24))
+    portada = cover(oscuro, "Deja de hacer ramas a lo loco", "ramas")
+    assert portada.size == (1080, 1920)
+    # Lo que se lee cae dentro del 4:5 del centro (y 285-1635), no en los bordes.
+    franja = portada.crop((0, 285, 1080, 1635)).convert("L")
+    assert ImageStat.Stat(franja).extrema[0][1] > 200, "no hay texto en la zona del 4:5"
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        video = tmp / "reel-EDIT.mp4"
+        sh("ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i", "color=c=gray:s=108x192:d=1",
+           "-pix_fmt", "yuv420p", video)
+        work = start(tmp / "reel prueba.mp4")
+        assert WORK_ROOT in work.parents and work.is_dir()
+
+        (work / "subs.srt").write_text("1\n00:00:00,000 --> 00:00:01,000\nhola\n", encoding="utf-8")
+        (work / "copy.json").write_text(json.dumps({"tiktok": "Gancho #programacionenespanol"}),
+                                        encoding="utf-8")
+        (work / "plan.json").write_text("{}", encoding="utf-8")
+        # Vertical sin portada: se niega y no borra nada.
+        try:
+            finish(video, work)
+            raise AssertionError("entregó un vertical sin portada")
+        except SystemExit as error:
+            assert "portada.jpg" in str(error) and work.is_dir()
+        portada.save(work / "portada.jpg")
+
+        # Una carpeta que no es de trabajo no se borra nunca.
+        try:
+            finish(video, tmp)
+            raise AssertionError("aceptó borrar una carpeta que no es de trabajo")
+        except SystemExit as error:
+            assert "no la borro" in str(error) and tmp.is_dir()
+
+        entregado = finish(video, work)
+        nombres = sorted(p.name for p in entregado)
+        assert nombres == ["reel-EDIT-copy.txt", "reel-EDIT-portada.jpg", "reel-EDIT.mp4",
+                           "reel-EDIT.srt"], nombres
+        assert not work.exists(), "la carpeta de trabajo sigue ahí"
+        assert "TIKTOK" in (tmp / "reel-EDIT-copy.txt").read_text(encoding="utf-8")
+        assert sorted(p.name for p in tmp.iterdir()) == nombres, "quedó algo más junto al vídeo"
+    print("ok  entrega (vídeo, .srt, copy y portada; el resto se borra)")
+
+
 def test_default_line():
     """Sin pedir nada: barrido de apertura y stickers que viajan turnándose."""
     from render import opening_wipes, sticker_motion
@@ -1262,6 +1312,7 @@ def main():
         test_node_chain()
         test_default_line()
         test_copy_check()
+        test_delivery()
         test_icon_words(tmp)
         test_timeline_mapping()
         test_shot_shape()
