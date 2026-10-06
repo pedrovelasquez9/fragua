@@ -15,14 +15,22 @@ import argparse
 import subprocess
 import sys
 
-from PIL import Image, ImageDraw, ImageEnhance, ImageFont, ImageStat
+import math
+
+from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont, ImageStat
 
 from common import FONTS, output_to_source, preset, read_json
 
 ACCENT = (255, 138, 61)         # el naranja del barrido y los números de sección
 INK = (8, 8, 12)
-TARGET_LIGHT = 0.42             # brillo medio al que se sube un fotograma oscuro
-MAX_LIFT = 1.8
+# Look de la portada: oscuro y con contraste, no «iluminado». Subir la luz a un
+# fotograma grabado en penumbra lo deja lavado y con ruido, y se ve barato; en
+# tema oscuro la cara sale de la sombra y el texto blanco es lo más brillante.
+EXPOSURE = 0.27                 # brillo medio al que se lleva el fotograma
+GAIN_RANGE = (0.6, 1.35)        # cuánto se puede bajar o subir para llegar
+SATURATION = 0.86
+VIGNETTE = 0.62                 # oscuridad de las esquinas (0 = nada)
+FACE_Y = 0.36                   # centro de la viñeta: donde suele estar la cara
 CTA = "Mira el vídeo"
 
 
@@ -39,12 +47,51 @@ def grab(video, seconds, width, height):
     return Image.open(io.BytesIO(raw)).convert("RGB")
 
 
-def lift(frame):
-    """Este material se graba oscuro a propósito; en miniatura eso es una cara negra."""
+def _curve(shadows, highlights):
+    """LUT de un canal: contraste en S, con las sombras y las altas desplazadas."""
+    lut = []
+    for i in range(256):
+        u = i / 255
+        s = 0.5 - 0.5 * math.cos(math.pi * u)          # S suave
+        v = (0.55 * s + 0.45 * u) ** 1.12               # negros aplastados
+        v += shadows * (1 - u) ** 3 + highlights * u ** 2
+        lut.append(max(0, min(255, round(255 * v))))
+    return lut
+
+
+# Sombras frías y luces cálidas: casa con el contraluz azul del set y deja la
+# piel en su sitio.
+CURVES = (_curve(-0.010, 0.025), _curve(0.0, 0.0), _curve(0.035, -0.030))
+
+
+def _vignette(size):
+    """Máscara que oscurece hacia los bordes, centrada en la cara."""
+    small = Image.new("L", (54, 96))
+    for y in range(96):
+        for x in range(54):
+            dx, dy = (x / 53 - 0.5) / 0.62, (y / 95 - FACE_Y) / 0.78
+            small.putpixel((x, y), round(255 * VIGNETTE * min(1.0, (dx * dx + dy * dy) ** 1.2)))
+    return small.resize(size, Image.BICUBIC)
+
+
+def grade(frame):
+    """Exposición a tema oscuro, contraste, tono frío/cálido, viñeta y nitidez."""
     light = ImageStat.Stat(frame.convert("L")).mean[0] / 255
-    if light >= TARGET_LIGHT:
-        return frame
-    return ImageEnhance.Brightness(frame).enhance(min(MAX_LIFT, TARGET_LIGHT / max(light, 0.05)))
+    low, high = GAIN_RANGE
+    image = ImageEnhance.Brightness(frame).enhance(
+        min(high, max(low, EXPOSURE / max(light, 0.05))))
+    image = image.point(CURVES[0] + CURVES[1] + CURVES[2])
+    image = ImageEnhance.Color(image).enhance(SATURATION)
+    image = Image.composite(Image.new("RGB", image.size, INK), image, _vignette(image.size))
+    # Afilado fino: a 1080 px se lee como «alta resolución», sin halo.
+    return image.filter(ImageFilter.UnsharpMask(radius=2.0, percent=70, threshold=2))
+
+
+def _shadow(size, draw_fn, blur):
+    """Una sombra suave detrás del texto: lo separa del fondo sin caja."""
+    layer = Image.new("RGBA", size, (0, 0, 0, 0))
+    draw_fn(ImageDraw.Draw(layer))
+    return layer.filter(ImageFilter.GaussianBlur(blur))
 
 
 def font(name, size):
@@ -73,12 +120,12 @@ def fit_lines(draw, words, max_width, max_lines=3, start=170, floor=80):
 
 def cover(frame, title, emphasis=None, cta=CTA):
     width, height = frame.size
-    image = lift(frame).convert("RGBA")
+    image = grade(frame).convert("RGBA")
 
     # Degradado oscuro desde abajo: agarra el texto sin la caja que lo haría plantilla.
     shade = Image.new("L", (1, height))
     for y in range(height):
-        shade.putpixel((0, y), int(235 * max(0.0, (y / height - 0.42) / 0.58) ** 1.3))
+        shade.putpixel((0, y), int(248 * min(1.0, max(0.0, (y / height - 0.36) / 0.5)) ** 1.2))
     dark = Image.new("RGBA", (width, height), INK + (255,))
     dark.putalpha(shade.resize((width, height)))
     image.alpha_composite(dark)
@@ -96,6 +143,18 @@ def cover(frame, title, emphasis=None, cta=CTA):
     cta_h = 100
     bottom = int(height * 0.78)
     y = bottom - cta_h - 36 - line_h * len(lines)
+    top_y = y
+
+    def title_ink(target, fill=None):
+        yy = top_y
+        for line in lines:
+            x = (width - target.textlength(" ".join(line), font=face)) / 2
+            target.text((x, yy), " ".join(line), font=face,
+                        fill=fill, stroke_width=stroke, stroke_fill=fill)
+            yy += line_h
+
+    image.alpha_composite(_shadow(image.size, lambda d: title_ink(d, (0, 0, 0, 230)),
+                                  face.size * 0.14))
     for line in lines:
         x = (width - draw.textlength(" ".join(line), font=face)) / 2
         for word in line:
@@ -111,6 +170,8 @@ def cover(frame, title, emphasis=None, cta=CTA):
     icon = 34
     pill_w = int(label_w + icon + 30 + 2 * 44)
     left, top = (width - pill_w) // 2, bottom - cta_h
+    image.alpha_composite(_shadow(image.size, lambda d: d.rounded_rectangle(
+        (left, top + 10, left + pill_w, bottom + 10), radius=cta_h // 2, fill=(0, 0, 0, 200)), 18))
     draw.rounded_rectangle((left, top, left + pill_w, bottom), radius=cta_h // 2, fill=ACCENT)
     cx, cy = left + 44, top + cta_h // 2
     draw.polygon([(cx, cy - icon // 2), (cx, cy + icon // 2), (cx + icon * 0.9, cy)], fill=INK)
@@ -135,7 +196,7 @@ def main():
     seconds = (output_to_source(args.at, read_json(args.cuts)["segments"])
                if args.cuts else args.at)
     frame = grab(args.video, seconds, platform["width"], platform["height"])
-    cover(frame, args.title, args.emphasis, args.cta).save(args.output, quality=92)
+    cover(frame, args.title, args.emphasis, args.cta).save(args.output, quality=95, subsampling=0)
     print(f"portada -> {args.output}")
 
 
