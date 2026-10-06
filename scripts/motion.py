@@ -74,6 +74,39 @@ def _even(value):
     return max(2, int(math.ceil(value / 2)) * 2)
 
 
+def load_art(src, width):
+    """(alto, fotograma(i)): el sticker a `width * HEADROOM`, quieto o animado.
+
+    Un PNG es el mismo en cada fotograma. Un clip (.mov, el logo 3D de
+    three_d.py) se lee entero y da su fotograma `i`; si se acaba, se queda en el
+    último. Así todo el movimiento —viaje, estela, respiración, salida— es el
+    mismo para los dos.
+    """
+    from PIL import Image
+
+    src = Path(src)
+    if src.suffix.lower() not in (".mov", ".webm", ".mp4"):
+        art = Image.open(src).convert("RGBA")
+        height = max(1, round(art.height * width / art.width))
+        base = art.resize((round(width * HEADROOM), round(height * HEADROOM)), Image.LANCZOS)
+        return height, lambda index: base
+
+    probe = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+                            "stream=width,height", "-of", "csv=p=0", str(src)],
+                           capture_output=True, text=True).stdout.strip().split(",")
+    cw, ch = int(probe[0]), int(probe[1])
+    height = max(1, round(ch * width / cw))
+    size = (round(width * HEADROOM), round(height * HEADROOM))
+    raw = subprocess.run(["ffmpeg", "-v", "error", "-i", str(src), "-f", "rawvideo",
+                          "-pix_fmt", "rgba", "-"], capture_output=True).stdout
+    step = cw * ch * 4
+    frames = [Image.frombytes("RGBA", (cw, ch), raw[i:i + step]).resize(size, Image.LANCZOS)
+              for i in range(0, len(raw) - step + 1, step)]
+    if not frames:
+        raise SystemExit(f"no pude leer el clip del sticker {src}")
+    return height, lambda index: frames[min(index, len(frames) - 1)]
+
+
 def sticker_clip(src, width, dur, fps, out_path, animate=True):
     """El sticker animado, ya compuesto, en un clip con alfa.
 
@@ -84,9 +117,7 @@ def sticker_clip(src, width, dur, fps, out_path, animate=True):
     """
     from PIL import Image
 
-    art = Image.open(src).convert("RGBA")
-    height = max(1, round(art.height * width / art.width))
-    base = art.resize((round(width * HEADROOM), round(height * HEADROOM)), Image.LANCZOS)
+    height, art_at = load_art(src, width)
     cw, ch = _even(width * HEADROOM * 1.05), _even(height * HEADROOM * 1.05)
     frames = max(1, round(dur * fps))
 
@@ -103,7 +134,7 @@ def sticker_clip(src, width, dur, fps, out_path, animate=True):
         frame = empty.copy()
         w, h = round(width * scale), round(height * scale)
         if w >= 2 and h >= 2 and opacity > 0:
-            piece = base.resize((w, h), Image.BICUBIC)
+            piece = art_at(index).resize((w, h), Image.BICUBIC)
             if turn:
                 piece = piece.rotate(turn, resample=Image.BICUBIC, expand=True)
             if opacity < 1:
@@ -206,9 +237,7 @@ def path_clip(src, width, dur, fps, out_path, frame_size, target_xy, style="boun
     from PIL import Image
 
     frame_w, frame_h = frame_size
-    art = Image.open(src).convert("RGBA")
-    height = max(1, round(art.height * width / art.width))
-    base = art.resize((round(width * HEADROOM), round(height * HEADROOM)), Image.LANCZOS)
+    height, art_at = load_art(src, width)
     target = (target_xy[0] + width / 2, target_xy[1] + height / 2)
     start = travel_start(style, target, (width, height), frame_w)
     travel = TRAVEL[style]
@@ -252,7 +281,7 @@ def path_clip(src, width, dur, fps, out_path, frame_size, target_xy, style="boun
         turn += IDLE_TURN * math.sin(phase * 0.5) * min(1.0, settled / 0.3)
         w, h = round(width * scale), round(height * scale)
         if w >= 2 and h >= 2:
-            piece = base.resize((w, h), Image.BICUBIC)
+            piece = art_at(index).resize((w, h), Image.BICUBIC)
             if turn:
                 piece = piece.rotate(-turn, resample=Image.BICUBIC, expand=True)
             _paste(frame, piece, round(x - piece.width / 2), round(y - piece.height / 2))

@@ -1247,6 +1247,74 @@ def test_delivery():
     print("ok  entrega (vídeo, .srt, copy y portada; el resto se borra)")
 
 
+def test_three_d_wiring():
+    """3D: logo con SVG al lado → clip 3D; sin él, sin Remotion o con 3d:false → plano.
+
+    No se renderiza con Remotion (necesita Node y Chrome): se comprueba el
+    cableado, como con las cards animadas y las Lottie.
+    """
+    import cards
+    import render
+    import three_d
+    from motion import load_art
+    from PIL import Image
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        png, svg = tmp / "git.png", tmp / "git.svg"
+        Image.new("RGBA", (64, 64), (240, 80, 50, 255)).save(png)
+        plano = tmp / "foto.png"
+        Image.new("RGBA", (64, 64), (0, 0, 0, 255)).save(plano)
+        svg.write_text('<svg fill="#F05032" viewBox="0 0 24 24"><path d="M0 0h24v24H0z"/></svg>',
+                       encoding="utf-8")
+
+        hechos = []
+        real_available, real_clip = three_d.available, three_d.logo_clip
+        three_d.logo_clip = lambda s, size, dur, fps, out: hechos.append((s, size)) or out
+        try:
+            three_d.available = lambda: True
+            assert render.sticker_art(png, {}, 0, 200, 2, 30, tmp).name == "logo3d00.mov"
+            assert hechos[0][0] == svg and abs(hechos[0][1] - 200 * render.HEADROOM) < 1
+            assert render.sticker_art(png, {"3d": False}, 0, 200, 2, 30, tmp) == png
+            assert render.sticker_art(plano, {}, 0, 200, 2, 30, tmp) == plano, "sin SVG es una imagen"
+            three_d.available = lambda: False
+            assert render.sticker_art(png, {}, 0, 200, 2, 30, tmp) == png, "sin Remotion, plano"
+        finally:
+            three_d.available, three_d.logo_clip = real_available, real_clip
+
+        # La fila de logos lleva el SVG en las props para dibujarlo en 3D.
+        spec = {"kind": "logos", "items": [{"file": str(png)}, {"file": str(plano)}]}
+        real_ready = cards.three_d_ready
+        try:
+            cards.three_d_ready = lambda: True
+            items = cards.with_inline_images(spec)["items"]
+            assert "M0 0h24" in items[0]["svg"] and "svg" not in items[1]
+            assert "svg" not in cards.with_inline_images({**spec, "3d": False})["items"][0]
+            cards.three_d_ready = lambda: False
+            assert "svg" not in cards.with_inline_images(spec)["items"][0]
+        finally:
+            cards.three_d_ready = real_ready
+
+        # Un sticker animado (el clip 3D) da un fotograma distinto por índice.
+        clip = tmp / "giro.mov"
+        sh("ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i",
+           "color=c=red:s=40x40:r=30:d=0.5,format=rgba", "-c:v", "png", clip)
+        alto, art_at = load_art(clip, 100)
+        assert alto == 100 and art_at(0).size == (round(100 * render.HEADROOM),) * 2
+        assert art_at(999).size == art_at(0).size, "pasado el final se queda en el último"
+
+    # El fondo del pullback: la máscara pasa por el MISMO zoompan que el vídeo.
+    motion = render.motion_graph([{"t": 2.0, "type": "pullback", "dur": 3}], 30, 1080, 1920)
+    graph = ";".join(render.backdrop_graph("fps=30", motion, [(1, 2.0, 6.1)],
+                                           1080, 1920, 30, 10.0))
+    assert graph.count(motion) == 2, "la máscara no sigue al vídeo"
+    assert "alphamerge" in graph and "[1:v]setpts=PTS-STARTPTS+2.000/TB" in graph
+    assert graph.endswith("[prepolish]")
+    assert render.backdrop_clips({"backdrop": False}, [{"t": 1, "type": "pullback"}],
+                                 1080, 1920, 30, None) == []
+    print("ok  3D (logos con SVG, fila de logos, clip animado y fondo del pullback)")
+
+
 def test_default_line():
     """Sin pedir nada: barrido de apertura y stickers que viajan turnándose."""
     from render import opening_wipes, sticker_motion
@@ -1320,6 +1388,7 @@ def main():
         test_default_line()
         test_copy_check()
         test_delivery()
+        test_three_d_wiring()
         test_icon_words(tmp)
         test_timeline_mapping()
         test_shot_shape()

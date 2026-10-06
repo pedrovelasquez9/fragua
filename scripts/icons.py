@@ -247,6 +247,10 @@ def main():
             continue
         salida = destino / f"{palabra}.png"
         imagen.save(salida)
+        # El SVG al lado, en el color de marca: es lo que render.py y las cards
+        # animadas convierten en un logo 3D. Sin Remotion se usa el PNG.
+        salida.with_suffix(".svg").write_text(pinta(svg, legible(icono["hex"])),
+                                              encoding="utf-8")
         hechos += 1
         print(f"  {icono['title']:22} -> {salida.name}")
 

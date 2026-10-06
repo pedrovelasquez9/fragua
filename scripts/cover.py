@@ -14,6 +14,7 @@ la cuadrícula de Instagram, y por encima de la interfaz de TikTok.
 import argparse
 import subprocess
 import sys
+from pathlib import Path
 
 import math
 
@@ -118,9 +119,44 @@ def fit_lines(draw, words, max_width, max_lines=3, start=170, floor=80):
     return face, lines
 
 
-def cover(frame, title, emphasis=None, cta=CTA):
+def logo_art(logo, size, workdir):
+    """El logo de la herramienta para la portada: en 3D si se puede, si no plano.
+
+    `logo` es un .svg o un .png de icons.py (que deja su .svg al lado).
+    """
+    import three_d
+
+    logo = Path(logo)
+    svg = logo if logo.suffix.lower() == ".svg" else three_d.svg_for(logo)
+    if svg and three_d.available():
+        return Image.open(three_d.logo_still(svg, size, Path(workdir) / "logo3d.png")).convert("RGBA")
+    if svg:
+        three_d.warn_once("el logo de la portada")
+    if logo.suffix.lower() == ".png":
+        art = Image.open(logo).convert("RGBA")
+        return art.resize((size, round(art.height * size / art.width)), Image.LANCZOS)
+    return None
+
+
+def place_logo(image, art, side="left"):
+    """Arriba, en una esquina y dentro del 4:5: ahí no tapa ni la cara ni el título."""
+    width, height = image.size
+    x = int(width * 0.06) if side == "left" else int(width * 0.94) - art.width
+    y = int(height * 0.165)
+    # Sombra de contacto: el logo se posa sobre la imagen en vez de flotar pegado.
+    shadow = Image.new("RGBA", image.size, (0, 0, 0, 0))
+    ImageDraw.Draw(shadow).ellipse((x + art.width * 0.12, y + art.height * 0.80,
+                                    x + art.width * 0.88, y + art.height * 0.98),
+                                   fill=(0, 0, 0, 170))
+    image.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(art.width * 0.06)))
+    image.alpha_composite(art, (x, y))
+
+
+def cover(frame, title, emphasis=None, cta=CTA, logo=None, logo_side="left"):
     width, height = frame.size
     image = grade(frame).convert("RGBA")
+    if logo is not None:
+        place_logo(image, logo, logo_side)
 
     # Degradado oscuro desde abajo: agarra el texto sin la caja que lo haría plantilla.
     shade = Image.new("L", (1, height))
@@ -188,6 +224,10 @@ def main():
     parser.add_argument("--title", required=True, help="el gancho, 3-7 palabras")
     parser.add_argument("--emphasis", default=None, help="la palabra que va en color")
     parser.add_argument("--cta", default=CTA)
+    parser.add_argument("--logo", default=None,
+                        help="el .svg o .png (de icons.py) de la herramienta del vídeo: sale en 3D")
+    parser.add_argument("--logo-side", choices=("left", "right"), default="left",
+                        help="esquina de arriba para el logo: la que no tape la cara")
     parser.add_argument("--preset", default="tiktok")
     parser.add_argument("-o", "--output", default="portada.jpg")
     args = parser.parse_args()
@@ -196,7 +236,11 @@ def main():
     seconds = (output_to_source(args.at, read_json(args.cuts)["segments"])
                if args.cuts else args.at)
     frame = grab(args.video, seconds, platform["width"], platform["height"])
-    cover(frame, args.title, args.emphasis, args.cta).save(args.output, quality=95, subsampling=0)
+    logo = None
+    if args.logo:
+        logo = logo_art(args.logo, int(platform["width"] * 0.27), Path(args.output).resolve().parent)
+    cover(frame, args.title, args.emphasis, args.cta, logo, args.logo_side).save(
+        args.output, quality=95, subsampling=0)
     print(f"portada -> {args.output}")
 
 

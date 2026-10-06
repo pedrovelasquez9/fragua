@@ -380,6 +380,11 @@ recording, every switch is hidden under one. A title written as a chain —
 *Problem → fix → code* — appears node by node, each arrow drawing towards the
 next step.
 
+The logos of the tools you mention come out **in 3D**: extruded, with
+reflections and your set's lighting, spinning in. And when the video shrinks to
+make room for a title, what's behind it is no longer black but a backdrop of
+out-of-focus lights with depth.
+
 ### How it edits by default
 
 Without being asked, every reel comes out like this:
