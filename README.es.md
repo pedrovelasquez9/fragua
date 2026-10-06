@@ -198,13 +198,19 @@ se corta al final») y él localiza la causa.
 
 ### Qué te devuelve
 
-- El vídeo editado, junto al original y con `-EDIT` en el nombre
-- Una carpeta con los archivos del proyecto, por si quieres retocar algo después
-  sin repetir todo el proceso
-- El texto de publicación en `copy.json`: tres títulos de YouTube, descripción
-  con capítulos, hasta 5 etiquetas, el título del Short y los pies para
-  Instagram y TikTok — comprobado: largo, años, emoji, hashtags y enlaces
-  inventados
+Junto al original, y nada más:
+
+- `-EDIT.mp4`: el vídeo editado
+- `-EDIT.srt`: los subtítulos, para subirlos como pista
+- `-EDIT-copy.txt`: el texto de publicación, listo para pegar —tres títulos de
+  YouTube, descripción con capítulos, hasta 5 etiquetas, el título del Short y
+  los pies para Instagram y TikTok—, comprobado: largo, años, emoji, hashtags y
+  enlaces inventados
+- `-EDIT-portada.jpg`, en los vídeos cortos: un fotograma tuyo con el gancho en
+  grande y una pastilla «▶ Mira el vídeo»
+
+Los archivos de trabajo —cortes, transcripción, cards— se hacen en una carpeta
+temporal y se borran al terminar. Si luego quieres un retoque, se rehace.
 
 ---
 

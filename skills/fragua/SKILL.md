@@ -30,8 +30,19 @@ python test_pipeline.py
 Cada etapa escribe un JSON que puedes leer y editar antes de la siguiente. No se
 renderiza nada hasta el final, así que iterar es gratis.
 
+**Al usuario sólo le llega lo que publica**: el vídeo, los subtítulos, el copy y,
+en vertical, la portada. Todo lo demás —cortes, transcripción, plan, cards,
+clips— vive en una carpeta de trabajo del temporal del sistema, **nunca junto a
+sus vídeos**, y se borra al entregar. Lo primero de cada edición es crearla, y
+todo lo intermedio se escribe dentro:
+
+```bash
+W=$(python scripts/deliver.py start entrada.mp4)
 ```
-vídeo → analyze.py    → cuts.json    (segmentos a conservar, vía silencedetect)
+
+```
+vídeo → deliver.py start → carpeta de trabajo W (todo lo de abajo va dentro)
+      → analyze.py    → cuts.json    (segmentos a conservar, vía silencedetect)
       → transcribe.py --cuts cuts.json → words.json + digest.txt
       → [lees digest.txt, editas cuts.json si hace falta y escribes plan.json]
       → assets.py --auto → reindexa la biblioteca (SIEMPRE, antes de plan.json)
@@ -40,6 +51,8 @@ vídeo → analyze.py    → cuts.json    (segmentos a conservar, vía silencede
       → render.py     → salida.mp4   (un solo pase de ffmpeg desde el original)
       → chapters.py    → capítulos     (obligatorio en vídeo largo)
       → [copy: título, descripción, tags, captions y 3 fichas de miniatura]
+      → cover.py       → portada.jpg   (obligatoria en vertical)
+      → deliver.py finish → vídeo, .srt, copy y portada; W se borra
 
 `assets.py --auto` se ejecuta en **cada edición**, sin que nadie lo pida: así
 una imagen o una pista añadida esta mañana ya está disponible esta tarde. El
@@ -604,8 +617,11 @@ sigue siendo el karaoke, que además va en `.srt` aparte.
 
 
 ```bash
-python scripts/subtitles.py words.json -o subs.ass --preset tiktok --plan plan.json
+python scripts/subtitles.py words.json -o subs.ass --srt subs.srt --preset tiktok --plan plan.json
 ```
+
+**`--srt subs.srt` va siempre**, también en vertical con los subtítulos quemados:
+el `.srt` es parte de lo que se entrega, para subirlo como pista.
 
 `words.json` ya está en la línea de tiempo de salida, del paso 2. `subtitles.py`
 rechaza un `words.json` sin cortar, precisamente para que no se cuele una
@@ -613,8 +629,8 @@ transcripción del original — si lo hace, es que has editado `cuts.json` y no 
 repetido el paso 2.
 
 **En vídeo largo horizontal, no los quemes.** Tapan el código y el espectador
-no puede quitarlos. Genera `--srt salida.srt` y que se suba a YouTube como
-pista: se activa y se desactiva, y además YouTube **indexa** ese texto, así que
+no puede quitarlos. No le pases `--subs` a `render.py`, y que el `.srt` se suba a
+YouTube como pista: se activa y se desactiva, y además YouTube **indexa** ese texto, así que
 el vídeo aparece en búsquedas por lo que se dice dentro.
 
 **Sobre una grabación de pantalla, encógelos y bájalos.** El sitio por defecto
@@ -786,7 +802,7 @@ tampoco.
 
 **copy.json y cómo se entrega**
 
-Escribe el copy en `copy.json`, junto a `plan.json`. Las URLs que haya dado el
+Escribe el copy en `copy.json`, en la carpeta de trabajo. Las URLs que haya dado el
 autor van en `author_links`: cualquier otra es inventada. Las secciones que no
 tocan —Shorts en un vídeo largo sin corte, por ejemplo— se omiten.
 
@@ -800,9 +816,13 @@ tocan —Shorts en un vídeo largo sin corte, por ejemplo— se omiten.
   },
   "shorts": {"title": "...", "related": "...", "description": "..."},
   "instagram": "...",
-  "tiktok": "..."
+  "tiktok": "...",
+  "thumbnails": ["ficha 1 entera, en texto", "ficha 2", "ficha 3"]
 }
 ```
+
+`thumbnails` lleva las tres fichas de miniatura del vídeo largo, para que se
+entreguen con el copy y no sólo en el chat.
 
 **El paso 6 no está terminado hasta que pase la comprobación**:
 
@@ -935,6 +955,45 @@ pasado X?» genera hilos entre comentaristas; «¿qué opinas?» genera emojis.
   `#programacionenespanol`.
 - Avisa al usuario de cualquier término que hayas corregido de la transcripción
   y de cualquier afirmación del vídeo que sea atacable sin datos.
+
+### 7. Portada — obligatoria en vídeo corto
+
+Todo vídeo vertical se entrega con su portada: un fotograma del autor, el gancho
+en grande con la palabra clave en naranja y una pastilla **«▶ Mira el vídeo»**
+que pide el play.
+
+```bash
+python scripts/cover.py entrada.mp4 --cuts cuts.json --at 3.2        --title "Deja de hacer ramas a lo loco" --emphasis ramas -o portada.jpg
+```
+
+- **El fotograma sale de la grabación original**, no del montado, que lleva
+  subtítulos y cards quemados. `--at` va en la línea de salida, como el plan.
+- **Elige el momento por la cara**: la expresión que acompaña al gancho, no un
+  parpadeo ni la boca a medio decir. Saca dos o tres candidatos y míralos antes.
+- **`--title` es el gancho en 3-7 palabras**, el mismo concepto que el título del
+  Short; `--emphasis`, la palabra que lo carga.
+- `cover.py` sube el brillo de un fotograma oscuro y deja todo lo legible dentro
+  del recorte 4:5 que enseña la cuadrícula de Instagram.
+
+### 8. Entrega — y limpieza
+
+```bash
+python scripts/deliver.py finish entrada-EDIT.mp4 --work "$W"
+```
+
+Comprueba que en la carpeta de trabajo estén `subs.srt`, `copy.json` —y que pase
+`copy_check.py`— y, en vertical, `portada.jpg`. Si falta algo, no borra nada.
+Luego deja junto al vídeo montado:
+
+```
+entrada-EDIT.mp4          el vídeo
+entrada-EDIT.srt          los subtítulos
+entrada-EDIT-copy.txt     el copy de cada red, listo para pegar
+entrada-EDIT-portada.jpg  la portada (vertical)
+```
+
+y **borra la carpeta de trabajo**. La edición no está entregada hasta que esto
+pasa. Si después el autor pide un retoque, se rehace desde `deliver.py start`.
 
 ## Biblioteca de assets
 

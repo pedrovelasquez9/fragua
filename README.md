@@ -195,11 +195,19 @@ audio cuts off at the end») and the agent finds the cause.
 
 ### What you get back
 
-- The edited video, next to the original with `-EDIT` in the name
-- A project folder, so you can tweak something later without redoing everything
-- The publishing copy in `copy.json`: three YouTube titles, description with
-  chapters, up to 5 tags, the Shorts title and the captions for Instagram and
-  TikTok — checked for length, years, emoji, hashtags and invented links
+Next to the original, and nothing else:
+
+- `-EDIT.mp4`: the edited video
+- `-EDIT.srt`: the subtitles, to upload as a track
+- `-EDIT-copy.txt`: the publishing copy, ready to paste — three YouTube titles,
+  description with chapters, up to 5 tags, the Shorts title and the captions for
+  Instagram and TikTok — checked for length, years, emoji, hashtags and invented
+  links
+- `-EDIT-portada.jpg`, for short videos: a frame of you with the hook in big
+  letters and a "▶ Mira el vídeo" pill
+
+The working files — cuts, transcript, cards — live in a temporary folder that is
+deleted when the edit is done. If you want a tweak later, it is redone.
 
 ---
 
