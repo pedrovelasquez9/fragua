@@ -13,7 +13,8 @@ import subprocess
 import sys
 import tempfile
 
-from motion import STYLES, TRAVEL, path_clip, sticker_clip
+import three_d
+from motion import HEADROOM, STYLES, TRAVEL, path_clip, sticker_clip
 from pathlib import Path
 
 from common import (FONTS, ROOT, assets_dir, atempo_chain, ff_path, output_duration,
@@ -423,6 +424,21 @@ def opening_wipes(plan, effects):
     return [{"t": 0.0, "type": "wipe"}]
 
 
+def sticker_art(path, sticker, index, width, dur, fps, folder):
+    """El PNG del sticker, o el logo girando en 3D si icons.py dejó su SVG al lado.
+
+    Sin Remotion se queda el PNG plano y se avisa una vez. `"3d": false` en el
+    sticker lo deja plano a propósito.
+    """
+    svg = three_d.svg_for(path)
+    if svg is None or sticker.get("3d") is False:
+        return path
+    if not three_d.available():
+        three_d.warn_once("el logo")
+        return path
+    return three_d.logo_clip(svg, width * HEADROOM, dur, fps, folder / f"logo3d{index:02d}.mov")
+
+
 def sticker_graph(stickers, start_index, width, height, fps, plan_path=None):
     """Returns (extra_inputs, filter_chunks). Each sticker is its own overlay.
 
@@ -471,9 +487,10 @@ def sticker_graph(stickers, start_index, width, height, fps, plan_path=None):
             # que el elemento esté en su sitio en la palabra que lo dispara.
             launch = max(0.0, t0 - TRAVEL[style])
             dur, t0 = dur + (t0 - launch), launch
+            art = sticker_art(path, s, i, w, dur, fps, folder)
             # Llega viajando: el clip ocupa todo el cuadro porque el viaje lo
             # cruza, así que se superpone en 0:0 y la posición va dentro.
-            path_clip(path, w, dur, fps, clip, (width, height),
+            path_clip(art, w, dur, fps, clip, (width, height),
                       (plan_number(x, width, height), plan_number(y, width, height)),
                       style, trail=s.get("trail", True))
             inputs += ["-i", str(clip)]
@@ -488,7 +505,8 @@ def sticker_graph(stickers, start_index, width, height, fps, plan_path=None):
         # respiración mientras está y salida en 5 fotogramas (ver motion.py).
         # `"pop": 0` lo deja quieto, sólo con un fundido corto.
         animate = float(s.get("pop", 1)) > 0
-        _, _, dx, dy = sticker_clip(path, w, dur, fps, clip, animate)
+        art = sticker_art(path, s, i, w, dur, fps, folder)
+        _, _, dx, dy = sticker_clip(art, w, dur, fps, clip, animate)
         inputs += ["-i", str(clip)]
         chunks.append(f"[{idx}:v]format=rgba,setpts=PTS-STARTPTS+{t0:.3f}/TB[s{i}]")
         # El clip es más grande que el sticker para que quepan el rebote y el
@@ -810,7 +828,49 @@ def graphic_gaps(plan, duration, limit=GRAPHIC_GAP):
     return [(a, b) for a, b in zip(marks, marks[1:]) if b - a > limit]
 
 
-def video_graph(args, platform, effects, plan, cutaway_index):
+def backdrop_clips(plan, effects, width, height, fps, plan_path):
+    """[(clip, t0, t1)]: el fondo 3D de cada pullback, o [] si no toca o no se puede.
+
+    Al encogerse el vídeo se abre un hueco que antes era negro plano. Ahora es
+    un fondo de luces desenfocadas con profundidad (three_d.py). `"backdrop":
+    false` en el plan, o en un pullback, deja el negro.
+    """
+    spans = [effect_span(e) for e in effects
+             if e["type"] == "pullback" and e.get("backdrop", True) is not False]
+    if not spans or plan.get("backdrop") is False:
+        return []
+    if not three_d.available():
+        three_d.warn_once("el fondo del pullback")
+        return []
+    folder = (Path(plan_path).resolve().parent / "motion" if plan_path
+              else Path(tempfile.mkdtemp(prefix="fragua-motion-")))
+    return [(three_d.backdrop_clip(width, height, t1 - t0, fps, folder / f"backdrop{k:02d}.mov"),
+             t0, t1) for k, (t0, t1) in enumerate(spans)]
+
+
+def backdrop_graph(framing, motion, backdrops, width, height, fps, duration):
+    """El vídeo encogido sobre su fondo 3D, a [prepolish].
+
+    La máscara es un cuadro blanco que pasa por el MISMO pad + zoompan que el
+    vídeo, así que su recorte coincide al píxel con el del vídeo en cada
+    fotograma, sin recalcular la geometría del retroceso. `backdrops` es
+    [(índice de entrada, t0, t1)].
+    """
+    chunks = [f"[vc]{framing}{motion}[fg]",
+              f"color=white:s={width}x{height}:r={fps}:d={duration:.3f},format=gray{motion}[mask]",
+              "[fg][mask]alphamerge[fga]",
+              f"color=c=black:s={width}x{height}:r={fps}:d={duration:.3f}[bd0]"]
+    label = "[bd0]"
+    for k, (index, t0, t1) in enumerate(backdrops):
+        chunks.append(f"[{index}:v]setpts=PTS-STARTPTS+{t0:.3f}/TB[bdc{k}]")
+        chunks.append(f"{label}[bdc{k}]overlay=eof_action=pass"
+                      f":enable='between(t,{t0:.3f},{t1:.3f})'[bd{k + 1}]")
+        label = f"[bd{k + 1}]"
+    chunks.append(f"{label}[fga]overlay=shortest=1,format=yuv420p[prepolish]")
+    return chunks
+
+
+def video_graph(args, platform, effects, plan, cutaway_index, backdrops=(), duration=None):
     """Frame -> motion -> polish -> look -> cutaways -> subtitles, at [styled]."""
     # Por defecto la imagen sale como entró: sin denoise, sin afilado y sin
     # color. Se pedía a mano en cada edición; ahora hay que pedir lo contrario.
@@ -822,9 +882,12 @@ def video_graph(args, platform, effects, plan, cutaway_index):
                f"scale={width}:{height}:force_original_aspect_ratio=increase:flags=lanczos,"
                f"crop={width}:{height}")
     framing += deglare_graph(plan.get("deglare"))   # source fix: before grading it
-    framing += motion_graph(effects, fps, width, height)
+    motion = motion_graph(effects, fps, width, height)
 
-    chunks = [f"[vc]{framing}[prepolish]"]
+    if backdrops:
+        chunks = backdrop_graph(framing, motion, backdrops, width, height, fps, duration)
+    else:
+        chunks = [f"[vc]{framing}{motion}[prepolish]"]
     if polish:
         chunks += polish_graph("[prepolish]", "[polished]")
     else:
@@ -910,13 +973,19 @@ def build(args, platform, segments, plan, source):
     width, height, fps = platform["width"], platform["height"], platform["fps"]
 
     graph = [cut_graph(segments)]
-    # Los cutaways se numeran primero porque se componen dentro de video_graph,
-    # antes que las cards: el orden de los índices sigue al de los -i.
-    video_chunks, cutaway_inputs = video_graph(args, platform, effects, plan, 1)
+    # Los fondos del pullback y los cutaways se numeran primero porque se
+    # componen dentro de video_graph: el orden de los índices sigue al de los -i.
+    backdrops = backdrop_clips(plan, effects, width, height, fps, args.plan)
+    backdrop_inputs = [arg for clip, _, _ in backdrops for arg in ("-i", str(clip))]
+    first_cutaway = 1 + len(backdrops)
+    video_chunks, cutaway_inputs = video_graph(
+        args, platform, effects, plan, first_cutaway,
+        [(1 + k, t0, t1) for k, (_, t0, t1) in enumerate(backdrops)],
+        output_duration(segments))
     graph += video_chunks
 
     stickers, cards = plan.get("stickers", []), plan.get("cards", [])
-    next_input = 1 + len(plan.get("cutaways", []))
+    next_input = first_cutaway + len(plan.get("cutaways", []))
 
     sticker_inputs, sticker_chunks, video_label = sticker_graph(
         stickers, next_input, width, height, fps, args.plan)
@@ -954,7 +1023,7 @@ def build(args, platform, segments, plan, source):
     graph += audio_chunks
 
     return (["ffmpeg", "-y", "-hide_banner", "-i", str(source)]
-            + cutaway_inputs + sticker_inputs + card_inputs + broll_inputs + music_input
+            + backdrop_inputs + cutaway_inputs + sticker_inputs + card_inputs + broll_inputs + music_input
             + ["-filter_complex_script", graph_file(";".join(graph)),
                "-map", video_label, "-map", "[aout]"]
             + encoder_flags(platform, args.output))
