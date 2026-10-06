@@ -1,6 +1,7 @@
 import { Composition } from "remotion";
 import { Card, CardProps } from "./Card";
 import { LottieClip, LottieProps } from "./LottieClip";
+import { Backdrop, BackdropProps, Logo3D, Logo3DProps } from "./Three";
 
 // One composition for every kind. cards.py passes the plan.json entry straight
 // through as props, so there is nothing to keep in sync between the two.
@@ -44,6 +45,37 @@ export const Root: React.FC = () => (
       } as unknown as LottieProps}
       calculateMetadata={({ props }) => ({
         durationInFrames: Math.max(2, Math.round(props.dur * 30)),
+        width: props.width,
+        height: props.height,
+      })}
+    />
+    {/* 3D: tamaño, duración y fps los manda three_d.py. */}
+    <Composition
+      id="Logo3D"
+      component={Logo3D}
+      fps={30}
+      width={400}
+      height={400}
+      durationInFrames={60}
+      defaultProps={{ svg: "<svg/>", dur: 2, size: 400, fps: 30, pop: false } satisfies Logo3DProps}
+      calculateMetadata={({ props }) => ({
+        fps: props.fps,
+        durationInFrames: Math.max(1, Math.round(props.dur * props.fps)),
+        width: props.size,
+        height: props.size,
+      })}
+    />
+    <Composition
+      id="Backdrop"
+      component={Backdrop}
+      fps={30}
+      width={1080}
+      height={1920}
+      durationInFrames={90}
+      defaultProps={{ dur: 3, width: 1080, height: 1920, fps: 30 } satisfies BackdropProps}
+      calculateMetadata={({ props }) => ({
+        fps: props.fps,
+        durationInFrames: Math.max(2, Math.round(props.dur * props.fps)),
         width: props.width,
         height: props.height,
       })}

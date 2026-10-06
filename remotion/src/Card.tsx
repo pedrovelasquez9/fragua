@@ -3,6 +3,7 @@ import {
   AbsoluteFill, Img, interpolate, spring, staticFile,
   useCurrentFrame, useVideoConfig,
 } from "remotion";
+import { LogoCanvas } from "./Three";
 
 export type Theme = { bg: string; bgAlpha: number; fg: string; accent: string };
 export type CardProps = {
@@ -551,7 +552,7 @@ const Section: React.FC<CardProps> = ({ base, width, spec }) => {
   );
 };
 
-type LogoItem = { src?: string; label?: string; check?: boolean };
+type LogoItem = { src?: string; svg?: string; label?: string; check?: boolean };
 
 // Resorte del salto: más flojo que POP para que al llegar rebote de verdad, que
 // es lo que se ve como «juguetón» en vez de «correcto».
@@ -597,8 +598,13 @@ const Logo: React.FC<{
                          : "0 10px 24px rgba(0,0,0,0.6)",
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
-          {item.src ? <Img src={item.src} style={{ width: s * 0.62, height: s * 0.62,
-                                                   objectFit: "contain" }} /> : null}
+          {item.svg ? (
+            // El logo en 3D dentro de su plato: el salto lo pone la card y él
+            // entra girando con el mismo retraso que su salto.
+            <LogoCanvas svg={item.svg} width={Math.round(s * 0.78)} height={Math.round(s * 0.78)}
+                        pop={false} fit={3.2} delay={HEADING + i * 5} />
+          ) : item.src ? <Img src={item.src} style={{ width: s * 0.62, height: s * 0.62,
+                                                     objectFit: "contain" }} /> : null}
         </div>
         {item.check ? (
           <div style={{

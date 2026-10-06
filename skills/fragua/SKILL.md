@@ -281,7 +281,7 @@ resultado limpio que ningún filtro iguala.
 | `shake` | vibración con caída | 4–14 (px) | en un remate o un dato impactante |
 | `whip_pan` | barrido lateral con desenfoque | — | entre dos ideas distintas |
 | `wipe` | barrido de color: dos paneles cruzan el plano en 0.36 s | `from` left/right/up/down | **en `t: 0`, siempre**; y donde se pasa de cámara a pantalla |
-| `pullback` | el vídeo se encoge sobre negro y vuelve | `scale` 0.72–0.82 | **donde cambia el tema** |
+| `pullback` | el vídeo se encoge sobre un fondo 3D de luces y vuelve | `scale` 0.72–0.82 | **donde cambia el tema** |
 | `dip` | bajón a negro | −0.4 a −0.7 | un golpe seco, sin rótulo |
 | `flash` | destello a blanco | 0.3–0.6 | en un corte duro o un beat |
 | `letterbox` | barras negras cine | 0.08–0.15 | en el hook o un momento dramático |
@@ -386,7 +386,8 @@ algo («y por supuesto», «y es que», «y si quieres») o si sólo continúa u
 enumeración. En una enumeración, ninguna transición.
 
 **Para un cambio de tema, usa `pullback`, no un fundido.** El vídeo se encoge
-sobre negro, en el hueco que se abre arriba entra un rótulo con lo que se está
+sobre un fondo con profundidad —penumbra con luces desenfocadas que flotan—, en
+el hueco que se abre arriba entra un rótulo con lo que se está
 diciendo en ese momento, y vuelve a su tamaño. Ese es el recurso que aguanta
 tres o cuatro veces en un vídeo sin cansar, porque no interrumpe: **aporta**.
 Un fundido a negro, por muy bien hecho que esté, sólo tapa.
@@ -963,7 +964,9 @@ en grande con la palabra clave en naranja y una pastilla **«▶ Mira el vídeo�
 que pide el play.
 
 ```bash
-python scripts/cover.py entrada.mp4 --cuts cuts.json --at 3.2        --title "Deja de hacer ramas a lo loco" --emphasis ramas -o portada.jpg
+python scripts/cover.py entrada.mp4 --cuts cuts.json --at 3.2 \
+       --title "Deja de hacer ramas a lo loco" --emphasis ramas \
+       --logo iconos/git.png -o portada.jpg
 ```
 
 - **El fotograma sale de la grabación original**, no del montado, que lleva
@@ -978,6 +981,9 @@ python scripts/cover.py entrada.mp4 --cuts cuts.json --at 3.2        --title "De
   en penumbra subido de luz se ve lavado y barato.
 - Todo lo legible cae dentro del recorte 4:5 que enseña la cuadrícula de
   Instagram.
+- **Si el vídeo va de una herramienta, `--logo` con su icono** (el `.png` de
+  `icons.py` o su `.svg`): sale en 3D en una esquina de arriba. `--logo-side`
+  elige la esquina; usa la que no tape la cara.
 
 ### 8. Entrega — y limpieza
 
@@ -1070,6 +1076,19 @@ La fila de `logos` hace lo mismo sola: cada logo **salta desde abajo**, uno tras
 otro, girando un poco y con su estela, y el nombre aparece cuando aterriza.
 `"enter": "pop"` la deja como antes.
 
+**Los logos de marca salen en 3D**, solos: extruidos con bisel, con reflejos de
+estudio y la luz del set —principal cálida, contraluz azul—, entrando con media
+vuelta y luego en un vaivén lento. Pasa con todo logo que venga de `icons.py`,
+que deja un `.svg` junto a cada PNG: como sticker (con su viaje, su estela y su
+salida de siempre) y dentro de la fila de `logos` de una card animada. Una foto
+o un sticker sin SVG al lado sigue siendo plano. `"3d": false` en el sticker o
+en la card lo deja plano a propósito.
+
+Lo hace `three_d.py` con three.js dentro de Remotion, así que necesita las
+dependencias de `remotion/`; sin ellas sale plano y se avisa una vez. **El 3D es
+un acento**: logos y fondo del `pullback`, nada más. Ni texto en 3D ni todo en
+3D: mal dosificado se ve como WordArt.
+
 **`sfx`** son golpes puntuales que se mezclan sobre la voz sin bajarla. Úsalos
 para acompañar lo que ya hace la imagen: un whoosh en un `whip_pan`, un pop
 cuando entra una card, un riser antes de un dato. Un efecto que no coincide con
@@ -1140,6 +1159,9 @@ vea**. Es una corrección medida, no un capricho: GitHub es `#181717` y sobre el
 plato del icono da 1.08 de contraste WCAG — el logo desaparece entero. Las
 marcas monocromas oscuras salen en blanco, como en sus propias guías; las que ya
 contrastan se quedan con su color exacto.
+
+Junto a cada PNG deja **el `.svg` en el color de marca**: es lo que hace que ese
+logo salga en 3D en el vídeo y en la portada.
 
 Cada icono lleva detrás un plato oscuro redondeado. Sin él, un logo claro se
 pierde sobre una grabación de pantalla blanca y uno oscuro sobre un plano de

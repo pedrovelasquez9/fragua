@@ -700,6 +700,11 @@ def remotion_ready():
     return bool(shutil.which("npx")) and (REMOTION / "node_modules").is_dir()
 
 
+def three_d_ready():
+    """El 3D necesita además @remotion/three, que llegó después que las cards."""
+    return (REMOTION / "node_modules" / "@remotion" / "three").is_dir()
+
+
 def with_inline_images(spec):
     """Los logos entran en las props como data URL: Remotion no ve el disco."""
     if spec.get("kind") != "logos":
@@ -714,6 +719,11 @@ def with_inline_images(spec):
             path = Path(resolve_asset(item["file"]))
             mime = mimetypes.guess_type(path.name)[0] or "image/png"
             item["src"] = f"data:{mime};base64," + base64.b64encode(path.read_bytes()).decode()
+            # Con el SVG que deja icons.py al lado, el logo sale en 3D dentro de
+            # su plato. `"3d": false` en la card lo deja plano.
+            svg = path.with_suffix(".svg")
+            if svg.exists() and spec.get("3d") is not False and three_d_ready():
+                item["svg"] = svg.read_text(encoding="utf-8")
         items.append(item)
     return {**spec, "items": items}
 
@@ -764,7 +774,10 @@ def render_animated(cards, platform, output_dir):
                            "theme": theme, "spec": with_inline_images(spec)})
         result = subprocess.run(
             [npx, "remotion", "render", "build", "Card",
-             str(path.resolve()), f"--props={props.resolve()}", "--log=error"],
+             str(path.resolve()), f"--props={props.resolve()}", "--log=error",
+             # GPU para los logos 3D de la fila de logos; Chrome cae solo a
+             # software si no hay.
+             "--gl=angle"],
             cwd=REMOTION, capture_output=True, text=True, encoding="utf-8", errors="replace")
         if result.returncode != 0:
             raise SystemExit(f"card {index} ({kind}) falló en remotion:\n"

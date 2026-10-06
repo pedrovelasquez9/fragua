@@ -686,7 +686,9 @@ playlist no está aquí a propósito: la elige el autor a mano en cada vídeo.
 ### Portada
 
 ```bash
-python scripts/cover.py entrada.mp4 --cuts cuts.json --at 3.2        --title "Deja de hacer ramas a lo loco" --emphasis ramas -o portada.jpg
+python scripts/cover.py entrada.mp4 --cuts cuts.json --at 3.2 \
+       --title "Deja de hacer ramas a lo loco" --emphasis ramas \
+       --logo iconos/git.png -o portada.jpg
 ```
 
 Fotograma de la grabación original (el montado lleva subtítulos y cards
@@ -701,6 +703,39 @@ mayor tamaño que quepa en el 86 % del ancho— con `--emphasis` en `#FF8A3D`, y
 una pastilla naranja con un triángulo de play y `--cta` («Mira el vídeo»). El
 bloque acaba en el 78 % del alto: dentro del recorte 4:5 de la cuadrícula de
 Instagram y por encima de la interfaz de TikTok.
+
+### 3D
+
+`scripts/three_d.py` renderiza con three.js dentro de Remotion
+(`remotion/src/Three.tsx`, vía `@remotion/three`) tres cosas:
+
+| Qué | Composición | Quién la pide |
+|---|---|---|
+| Logo girando, clip con alfa | `Logo3D` | `render.py`, para los stickers con `.svg` al lado |
+| Logo asentado, PNG con alfa | `Logo3D` (fotograma 36) | `cover.py --logo` |
+| Fondo de luces desenfocadas | `Backdrop` | `render.py`, uno por `pullback` |
+
+El logo es el SVG de Simple Icons extruido (profundidad 12 % del lado, bisel),
+girado en X para pasar de la y del SVG a la de three.js —escalar en negativo
+invierte las normales y sale negro—, con `MeshPhysicalMaterial`, reflejos de un
+`RoomEnvironment` generado al montar (sin HDR que descargar) y la luz del set.
+Entra con media vuelta (`SWING`) y queda en un vaivén; **no crece**: el pop, la
+respiración, el viaje y la salida los pone `motion.py`, que ahora acepta un clip
+además de un PNG (`load_art`). En la fila de `logos`, `cards.py` mete el SVG en
+las props (`item.svg`) y `Card.tsx` lo dibuja con `LogoCanvas` dentro del plato.
+
+El fondo son tres capas de puntos con textura suave y mezcla aditiva (azul del
+contraluz, naranja de acento, motas blancas) a distintas profundidades, con
+semilla fija y la cámara avanzando despacio. En `render.py` el vídeo se compone
+encima con una máscara: un cuadro blanco que pasa por **el mismo** pad +
+zoompan que el vídeo, de modo que el recorte coincide al píxel sin recalcular
+la geometría del retroceso. Los clips del fondo entran como `-i` justo detrás de
+la grabación, antes que los cutaways. `"backdrop": false` en el plan o en el
+pullback deja el negro.
+
+Todo pide `--gl=angle` (GPU). Medido en una RTX 4060: 2 s de logo en 9 s y 3 s
+de fondo a 1080×1920 en 10 s, con el empaquetado incluido; sin GPU, unas 2.5
+veces más. Sin `@remotion/three` instalado todo cae a plano y negro con un aviso.
 
 ### Entrega
 
@@ -925,6 +960,7 @@ fragua/
 │   ├── chapters.py        plan.json → capítulos de YouTube
 │   ├── copy_check.py      comprueba copy.json antes de entregarlo
 │   ├── cover.py           portada de un vídeo corto
+│   ├── three_d.py         logos 3D y fondo del pullback (three.js en Remotion)
 │   └── deliver.py         carpeta de trabajo temporal y entrega limpia
 ├── assets/                tu música, stickers y SFX (opcional)
 └── vendor/                whisper.cpp, modelo y fuentes (lo crea el setup)

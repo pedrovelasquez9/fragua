@@ -8,6 +8,33 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.30.0 — 2026-10-06
+
+### Added
+- **Logos de marca en 3D.** Todo logo que venga de `icons.py` sale extruido,
+  con bisel, reflejos de estudio y la luz del set (principal cálida, contraluz
+  azul). Entra con media vuelta y se queda en un vaivén lento. Como sticker
+  conserva su viaje, su estela, la respiración y la salida; en la fila de
+  `logos` de una card animada gira dentro de su plato. `"3d": false` lo deja
+  plano.
+- **Fondo con profundidad en el `pullback`.** Al encogerse el vídeo, el hueco ya
+  no es negro plano: es una penumbra con luces desenfocadas que flotan a varias
+  profundidades. `"backdrop": false` vuelve al negro.
+- **Logo 3D en la portada**: `cover.py --logo` con el icono de la herramienta lo
+  pone en una esquina de arriba (`--logo-side`).
+- `scripts/three_d.py`: three.js dentro de Remotion (`@remotion/three`), con GPU.
+  Sin esas dependencias todo cae a plano y negro, con un aviso.
+
+### Changed
+- `icons.py` deja junto a cada PNG su `.svg` en el color de marca, que es lo que
+  activa el 3D.
+
+### Fixed
+- En el comando de ejemplo de `cover.py` de la skill se había perdido la barra
+  de continuación de línea.
+
+---
+
 ## 1.29.1 — 2026-10-06
 
 ### Changed

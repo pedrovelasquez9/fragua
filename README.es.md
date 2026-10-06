@@ -380,6 +380,11 @@ pantalla, cada cambio queda tapado por uno. Un título escrito como cadena
 —*Problema → solución → código*— aparece nodo a nodo, con cada flecha
 dibujándose hacia el siguiente paso.
 
+Los logos de las herramientas que nombras salen **en 3D**: extruidos, con
+reflejos y la luz de tu set, girando al entrar. Y cuando el vídeo se encoge para
+dar paso a un rótulo, detrás no queda negro sino un fondo de luces desenfocadas
+con profundidad.
+
 ### Cómo edita por defecto
 
 Sin que se lo pidas, cada reel sale así:
