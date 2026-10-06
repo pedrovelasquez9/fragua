@@ -691,9 +691,12 @@ python scripts/cover.py entrada.mp4 --cuts cuts.json --at 3.2        --title "De
 
 Fotograma de la grabación original (el montado lleva subtítulos y cards
 quemados), con `--at` en la línea de salida y llevado al original con `--cuts`,
-encuadrado como `render.py`: llenar y recortar al centro. Si su brillo medio
-baja de 0.42 se sube hasta ahí, como mucho ×1.8. Encima, un degradado oscuro
-desde el 42 % del alto, el título en Anton en mayúsculas —hasta 3 líneas, al
+encuadrado como `render.py`: llenar y recortar al centro. Luego `grade()` le da
+el look de tema oscuro: lleva el brillo medio a 0.27 (bajando hasta ×0.6 o
+subiendo hasta ×1.35), contraste en S con los negros aplastados, sombras frías y
+luces cálidas por curvas de canal, saturación al 86 %, una viñeta centrada en la
+cara y un `UnsharpMask` fino. Encima, un degradado oscuro desde el 36 % del alto,
+el título con una sombra difusa detrás en Anton en mayúsculas —hasta 3 líneas, al
 mayor tamaño que quepa en el 86 % del ancho— con `--emphasis` en `#FF8A3D`, y
 una pastilla naranja con un triángulo de play y `--cta` («Mira el vídeo»). El
 bloque acaba en el 78 % del alto: dentro del recorte 4:5 de la cuadrícula de

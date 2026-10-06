@@ -972,8 +972,12 @@ python scripts/cover.py entrada.mp4 --cuts cuts.json --at 3.2        --title "De
   parpadeo ni la boca a medio decir. Saca dos o tres candidatos y míralos antes.
 - **`--title` es el gancho en 3-7 palabras**, el mismo concepto que el título del
   Short; `--emphasis`, la palabra que lo carga.
-- `cover.py` sube el brillo de un fotograma oscuro y deja todo lo legible dentro
-  del recorte 4:5 que enseña la cuadrícula de Instagram.
+- **El look es oscuro y cinematográfico**, lo hace `cover.py` solo: exposición
+  baja, contraste, sombras frías, viñeta y afilado fino. La cara sale de la
+  sombra y el texto es lo más brillante del cuadro. No lo aclares: un fotograma
+  en penumbra subido de luz se ve lavado y barato.
+- Todo lo legible cae dentro del recorte 4:5 que enseña la cuadrícula de
+  Instagram.
 
 ### 8. Entrega — y limpieza
 
