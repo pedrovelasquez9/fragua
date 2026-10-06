@@ -8,6 +8,18 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.29.1 — 2026-10-06
+
+### Changed
+- **La portada tiene un look oscuro y cinematográfico.** Antes subía la luz de
+  los fotogramas oscuros, y la portada salía lavada. Ahora baja la exposición,
+  aplasta los negros, enfría las sombras, añade viñeta y un afilado fino. La
+  cara sale de la sombra y el título, con una sombra difusa detrás, es lo más
+  brillante del cuadro. Se guarda en JPEG al 95 % sin submuestreo de color, para
+  que el texto naranja no se emborrone.
+
+---
+
 ## 1.29.0 — 2026-10-06
 
 ### Changed

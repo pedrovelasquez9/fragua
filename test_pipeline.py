@@ -1193,10 +1193,17 @@ def test_copy_check():
 def test_delivery():
     """Junto al vídeo queda sólo lo publicable, y la carpeta de trabajo se va."""
     from PIL import Image, ImageStat
-    from cover import cover
+    from cover import EXPOSURE, cover, grade
     from deliver import WORK_ROOT, finish, start
 
+    # Tema oscuro: un fotograma claro baja y uno en penumbra no se lava.
+    def brillo(im):
+        return ImageStat.Stat(im.convert("L")).mean[0] / 255
+    claro = Image.new("RGB", (1080, 1920), (190, 185, 180))
+    assert brillo(grade(claro)) < 0.35, f"la portada sale clara: {brillo(grade(claro)):.2f}"
     oscuro = Image.new("RGB", (1080, 1920), (20, 20, 24))
+    assert brillo(grade(oscuro)) <= EXPOSURE, "un fotograma oscuro se aclara de más"
+
     portada = cover(oscuro, "Deja de hacer ramas a lo loco", "ramas")
     assert portada.size == (1080, 1920)
     # Lo que se lee cae dentro del 4:5 del centro (y 285-1635), no en los bordes.
