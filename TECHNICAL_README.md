@@ -478,7 +478,7 @@ horizontal y sólo en el tramo central del barrido, por lo mismo.
 | `grade` | Cadena de filtros para igualar su color al del vídeo |
 | `fade` | Fundido de entrada y salida en segundos (0.35; 0 = corte seco) |
 | `transition` | `"wipe"`: entra y sale en seco con un barrido de color en cada corte |
-| `wipe_from`, `wipe_color` | Lado desde el que cruza el barrido y su color (`left`, `#FF8A3D`) |
+| `wipe_from`, `wipe_color` | Lado desde el que cruza el barrido y su color (`left`, el acento del canal) |
 
 El clip se lleva a la resolución de salida con lanczos y un `unsharp` suave —el
 `polish` del vídeo principal queda antes en la cadena y no le llega— y se compone
@@ -630,8 +630,10 @@ Rasterizar el SVG necesita `skia-python`, opcional y de rueda de pip.
 
 **Conceptos.** Con `--words`, una palabra que está en `CONCEPTOS` (≈110 en
 español, sin tildes: bombilla, cerebro, rama, commit…) o un `ph:nombre` sale de
-**Phosphor Icons** (MIT, variante de relleno, versión fijada a 2.1.1) en
-`#FF8A3D` en vez de buscarse como marca. Relleno y no de línea: un trazo fino
+**Phosphor Icons** (MIT, variante de relleno, versión fijada a 2.1.1) en vez de
+buscarse como marca, cada uno en su color de la paleta `NEON` —por significado
+en `COLOR_DE` (dinero verde, error rojo…), o fijo por un crc32 del nombre— con un
+halo y un filo del mismo color en el plato. Relleno y no de línea: un trazo fino
 desaparece a tamaño de sticker, y extruido en 3D un relleno es un objeto y un
 trazo, un alambre. Lo detectado con `--from` son siempre marcas. Como los
 logos, deja el `.svg` al lado y por tanto sale en 3D.
@@ -684,9 +686,14 @@ sigue a `FRAGUA_CONFIG`): dentro del plugin se perdería en cada actualización.
 ```json
 {
   "name": "Nombre del canal",
+  "accent": "#1E88FF",
   "fixed_hashtags": ["#programacionenespanol"]
 }
 ```
+
+`accent` (`common.accent()`, naranja `#FF8A3D` si falta) colorea el barrido, las
+estelas (`motion.path_clip`), los números de sección (`theme.brand` en las cards
+animadas), la portada y las luces del fondo 3D.
 
 `name` se compara sin tildes ni mayúsculas; sin él, esa regla no se aplica. La
 playlist no está aquí a propósito: la elige el autor a mano en cada vídeo.
@@ -707,8 +714,8 @@ subiendo hasta ×1.35), contraste en S con los negros aplastados, sombras frías
 luces cálidas por curvas de canal, saturación al 86 %, una viñeta centrada en la
 cara y un `UnsharpMask` fino. Encima, un degradado oscuro desde el 36 % del alto,
 el título con una sombra difusa detrás en Anton en mayúsculas —hasta 3 líneas, al
-mayor tamaño que quepa en el 86 % del ancho— con `--emphasis` en `#FF8A3D`, y
-una pastilla naranja con un triángulo de play y `--cta` («Mira el vídeo»). El
+mayor tamaño que quepa en el 86 % del ancho— con `--emphasis` en el acento del
+canal, y una pastilla de ese color (texto blanco si es oscuro) con un triángulo de play y `--cta` («Mira el vídeo»). El
 bloque acaba en el 78 % del alto: dentro del recorte 4:5 de la cuadrícula de
 Instagram y por encima de la interfaz de TikTok.
 
@@ -733,7 +740,7 @@ además de un PNG (`load_art`). En la fila de `logos`, `cards.py` mete el SVG en
 las props (`item.svg`) y `Card.tsx` lo dibuja con `LogoCanvas` dentro del plato.
 
 El fondo son tres capas de puntos con textura suave y mezcla aditiva (azul del
-contraluz, naranja de acento, motas blancas) a distintas profundidades, con
+contraluz, el acento del canal, motas blancas) a distintas profundidades, con
 semilla fija y la cámara avanzando despacio. En `render.py` el vídeo se compone
 encima con una máscara: un cuadro blanco que pasa por **el mismo** pad +
 zoompan que el vídeo, de modo que el recorte coincide al píxel sin recalcular

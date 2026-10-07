@@ -936,7 +936,7 @@ def test_icon_slugs():
 
 def test_concept_icons():
     """Los conceptos salen de Phosphor, con o sin tildes, y nunca de un emoji."""
-    from icons import ACENTO, CONCEPTOS, PHOSPHOR, concepto, pinta
+    from icons import COLOR_DE, CONCEPTOS, NEON, PHOSPHOR, color_concepto, concepto, pinta
 
     assert concepto("Código") == concepto("codigo") == "code"
     assert concepto("base de datos") == "database"
@@ -947,10 +947,35 @@ def test_concept_icons():
              or v.endswith("-fill")]
     assert not malos, f"nombres de Phosphor mal escritos: {malos}"
     assert "@phosphor-icons/core@2" in PHOSPHOR and "/fill/" in PHOSPHOR
-    # Phosphor pinta con currentColor: tiene que salir en el acento.
+    # Phosphor pinta con currentColor: tiene que salir en el color del icono.
     svg = '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M0 0h1"/></svg>'
-    assert f'fill="{ACENTO}"' in pinta(svg, ACENTO)
-    print(f"ok  iconos de concepto (Phosphor, {len(CONCEPTOS)} palabras)")
+    assert f'fill="{NEON["verde"]}"' in pinta(svg, color_concepto("money"))
+
+    # Variados, no monótonos: el dinero verde, el error rojo, y entre todos los
+    # conceptos al menos 6 colores distintos.
+    assert color_concepto("money") == NEON["verde"] and color_concepto("x-circle") == NEON["rojo"]
+    assert color_concepto("ph-desconocido") == color_concepto("ph-desconocido"), "no es estable"
+    assert set(COLOR_DE.values()) <= set(NEON)
+    colores = {color_concepto(v) for v in CONCEPTOS.values()}
+    assert len(colores) >= 6, f"sólo {len(colores)} colores en el paquete"
+    print(f"ok  iconos de concepto (Phosphor, {len(CONCEPTOS)} palabras, {len(colores)} colores)")
+
+
+def test_channel_accent():
+    """El acento sale del canal; sin configurar, el de por defecto."""
+    import common
+
+    real = common.CHANNEL_CONFIG
+    with tempfile.TemporaryDirectory() as tmp:
+        try:
+            common.CHANNEL_CONFIG = Path(tmp) / "channel.json"
+            common.CHANNEL_CONFIG.write_text('{"accent": "#1E88FF"}', encoding="utf-8")
+            assert common.accent() == "#1E88FF" and common.hex_rgb(common.accent()) == (30, 136, 255)
+            common.CHANNEL_CONFIG.write_text("{}", encoding="utf-8")
+            assert common.accent() == common.DEFAULT_ACCENT
+        finally:
+            common.CHANNEL_CONFIG = real
+    print("ok  acento del canal (channel.json, o el de por defecto)")
 
 
 def test_graphics_beside_captions():
@@ -1396,6 +1421,7 @@ def main():
         test_impact_captions()
         test_icon_slugs()
         test_concept_icons()
+        test_channel_accent()
         test_graphics_beside_captions()
         test_graphic_gaps()
         test_original_picture_by_default()

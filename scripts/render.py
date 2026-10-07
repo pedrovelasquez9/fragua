@@ -17,9 +17,9 @@ import three_d
 from motion import HEADROOM, STYLES, TRAVEL, path_clip, sticker_clip
 from pathlib import Path
 
-from common import (FONTS, ROOT, assets_dir, atempo_chain, ff_path, output_duration,
+from common import (FONTS, ROOT, accent, assets_dir, atempo_chain, ff_path, output_duration,
                     probe_duration,
-                    preset, probe_stream, read_json, resolve_asset)
+                    preset, probe_stream, read_json, resolve_asset, hex_rgb)
 
 # ponytail: one filtergraph per segment stops scaling somewhere past here, so we
 # fall back to a cut pass + a style pass. Two encodes, but it finishes.
@@ -492,7 +492,7 @@ def sticker_graph(stickers, start_index, width, height, fps, plan_path=None):
             # cruza, así que se superpone en 0:0 y la posición va dentro.
             path_clip(art, w, dur, fps, clip, (width, height),
                       (plan_number(x, width, height), plan_number(y, width, height)),
-                      style, trail=s.get("trail", True))
+                      style, trail=s.get("trail", True), trail_colour=hex_rgb(accent()))
             inputs += ["-i", str(clip)]
             chunks.append(f"[{idx}:v]format=rgba,setpts=PTS-STARTPTS+{t0:.3f}/TB[s{i}]")
             nxt = f"[ov{i}]"
@@ -635,7 +635,7 @@ def cutaway_graph(items, start_index, base_label, width, height, fps, polish=Tru
 # delante y el de color encima y un poco detrás, así que lo que domina es el
 # color con un filo oscuro en el borde que avanza.
 WIPE_DUR = 0.36
-WIPE_COLOR = "#FF8A3D"      # el naranja de los números de sección: un solo acento
+# El color del barrido es el acento del canal (common.accent()): un solo acento.
 WIPE_EDGE = "#14161F"
 WIPE_LAG = 0.07             # s que el panel de color va detrás del oscuro
 
@@ -653,7 +653,7 @@ def cutaway_wipes(items):
         t0, dur = float(item["t"]), float(item.get("dur", 3.0))
         for mid in (t0, t0 + dur):
             wipes.append({"t": mid, "type": "wipe", "from": item.get("wipe_from", "left"),
-                          "color": item.get("wipe_color", WIPE_COLOR)})
+                          "color": item.get("wipe_color", accent())})
     return wipes
 
 
@@ -671,7 +671,7 @@ def wipe_graph(wipes, base_label, width, height, fps):
         span = height if side in ("up", "down") else width
         sign = -1 if side in ("right", "down") else 1
         for layer, (colour, lag) in enumerate(((wipe.get("edge", WIPE_EDGE), 0.0),
-                                               (wipe.get("color", WIPE_COLOR), WIPE_LAG))):
+                                               (wipe.get("color", accent()), WIPE_LAG))):
             start = mid - dur / 2 + lag
             u = f"clip((t-{start:.3f})/{dur:.3f},0,1)"
             # De fuera por un lado a fuera por el otro, pasando por 0 en su centro.

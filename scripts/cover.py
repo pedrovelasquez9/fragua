@@ -20,9 +20,8 @@ import math
 
 from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont, ImageStat
 
-from common import FONTS, output_to_source, preset, read_json
+from common import FONTS, accent, hex_rgb, output_to_source, preset, read_json
 
-ACCENT = (255, 138, 61)         # el naranja del barrido y los números de sección
 INK = (8, 8, 12)
 # Look de la portada: oscuro y con contraste, no «iluminado». Subir la luz a un
 # fotograma grabado en penumbra lo deja lavado y con ruido, y se ve barato; en
@@ -167,6 +166,11 @@ def cover(frame, title, emphasis=None, cta=CTA, logo=None, logo_side="left"):
     image.alpha_composite(dark)
 
     draw = ImageDraw.Draw(image)
+    brand = hex_rgb(accent())      # la palabra clave y la pastilla, en el color del canal
+    # Sobre un acento oscuro (el azul del canal) el texto de la pastilla va en
+    # blanco; sobre uno claro (naranja, amarillo), en tinta.
+    light = sum(c * w for c, w in zip(brand, (0.2126, 0.7152, 0.0722))) / 255
+    pill_ink = (255, 255, 255) if light < 0.45 else INK
     words = title.upper().split()
     marked = {w.upper().strip(".,¿?¡!") for w in (emphasis or "").split()}
     face, lines = fit_lines(draw, words, width * 0.86)
@@ -194,7 +198,7 @@ def cover(frame, title, emphasis=None, cta=CTA, logo=None, logo_side="left"):
     for line in lines:
         x = (width - draw.textlength(" ".join(line), font=face)) / 2
         for word in line:
-            colour = ACCENT if word.strip(".,¿?¡!") in marked else (255, 255, 255)
+            colour = brand if word.strip(".,¿?¡!") in marked else (255, 255, 255)
             draw.text((x, y), word, font=face, fill=colour,
                       stroke_width=stroke, stroke_fill=INK)
             x += draw.textlength(word + " ", font=face)
@@ -208,10 +212,10 @@ def cover(frame, title, emphasis=None, cta=CTA, logo=None, logo_side="left"):
     left, top = (width - pill_w) // 2, bottom - cta_h
     image.alpha_composite(_shadow(image.size, lambda d: d.rounded_rectangle(
         (left, top + 10, left + pill_w, bottom + 10), radius=cta_h // 2, fill=(0, 0, 0, 200)), 18))
-    draw.rounded_rectangle((left, top, left + pill_w, bottom), radius=cta_h // 2, fill=ACCENT)
+    draw.rounded_rectangle((left, top, left + pill_w, bottom), radius=cta_h // 2, fill=brand)
     cx, cy = left + 44, top + cta_h // 2
-    draw.polygon([(cx, cy - icon // 2), (cx, cy + icon // 2), (cx + icon * 0.9, cy)], fill=INK)
-    draw.text((cx + icon + 30, cy), cta, font=cta_face, fill=INK, anchor="lm")
+    draw.polygon([(cx, cy - icon // 2), (cx, cy + icon // 2), (cx + icon * 0.9, cy)], fill=pill_ink)
+    draw.text((cx + icon + 30, cy), cta, font=cta_face, fill=pill_ink, anchor="lm")
     return image.convert("RGB")
 
 

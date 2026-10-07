@@ -28,14 +28,13 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-from common import FONTS, ROOT, preset, read_json, resolve_asset, write_json
+from common import FONTS, ROOT, accent, hex_rgb, preset, read_json, resolve_asset, write_json
 
 RADIUS = 26
 
 # Colores propios de estos tres tipos, fuera del tema del preset: el número de
 # sección es naranja y el sello rojo en cualquier canal, igual que el verde de
 # un check no depende del color de acento.
-SECTION_NUMBER = (255, 138, 61, 255)
 SECTION_TEXT = (240, 228, 205, 255)
 STAMP_RED = (240, 52, 58, 255)
 CHECK_GREEN = (52, 199, 89, 255)
@@ -547,7 +546,7 @@ def draw_section(spec, theme, width, base):
 
     x = left
     if number:
-        x = tracked(draw, (x, baseline), number, num_font, SECTION_NUMBER, 2)
+        x = tracked(draw, (x, baseline), number, num_font, hex_rgb(accent()) + (255,), 2)
         x += int(base * 0.28)
     tracked(draw, (x, baseline), title, title_font, SECTION_TEXT, int(base * 0.07))
     return image
@@ -758,7 +757,9 @@ def render_animated(cards, platform, output_dir):
 
     settings = platform["card"]
     theme = {"bg": settings["bg"], "bgAlpha": settings["bg_alpha"],
-             "fg": settings["fg"], "accent": settings["accent"]}
+             "fg": settings["fg"], "accent": settings["accent"],
+             # El color del canal, para los números de sección y las estelas.
+             "brand": accent()}
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 

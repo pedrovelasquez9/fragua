@@ -272,8 +272,9 @@ white, the way their own brand guidelines do it. The rest keep their exact
 colour.
 
 For ideas — a lightbulb, a brain, a clock, a rocket — **no emojis**: it uses an
-icon pack from **Phosphor Icons** (free, MIT) in the channel's orange, all in
-the same stroke, and in the video they come out in 3D like the logos. About 110
+icon pack from **Phosphor Icons** (free, MIT), all in the same stroke but each
+in its own neon colour — money green, errors red, ideas yellow — glowing on
+black, and in the video they come out in 3D like the logos. About 110
 Spanish concept words are ready, and any of Phosphor's 1,500 can be requested.
 
 ### Images that appear when you mention something
@@ -378,7 +379,7 @@ Nothing fades in softly or sits frozen, which is what makes a graphic look paste
 on rather than animated.
 
 Stickers **travel in** by default — bouncing across from the far side, dropping
-from the top, or sliding in from the nearest edge — with an orange trail behind
+from the top, or sliding in from the nearest edge — with a trail in your channel colour behind
 them that the eye follows, and the row of logos jumps up one by one. The video
 opens with a **colour wipe**, and if you switch between camera and screen
 recording, every switch is hidden under one. A title written as a chain —

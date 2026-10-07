@@ -14,7 +14,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from common import ROOT, write_json
+from common import ROOT, accent, write_json
 
 REMOTION = ROOT / "remotion"
 _bundled = False
@@ -93,4 +93,5 @@ def logo_still(svg_path, size, out):
 def backdrop_clip(width, height, dur, fps, out):
     """El fondo de luces desenfocadas para la banda de un pullback."""
     return _render("render", "Backdrop",
-                   {"dur": dur, "width": width, "height": height, "fps": fps}, out)
+                   {"dur": dur, "width": width, "height": height, "fps": fps,
+                    "accent": accent()}, out)

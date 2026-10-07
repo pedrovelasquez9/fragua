@@ -8,6 +8,24 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.32.0 — 2026-10-07
+
+### Changed
+- **Los iconos de concepto ya no son todos del mismo color.** Todos iguales se
+  veían monótonos. Mismo trazo de Phosphor, pero cada uno con su color de una
+  paleta neón sobre negro, con significado cuando lo tiene (el dinero verde, el
+  error rojo, la idea amarilla, el código azul) y fijo por nombre cuando no.
+  Llevan además un halo y un filo del mismo color, como los trazos que brillan
+  en las portadas del canal.
+- **Los iconos 3D salen saturados.** El tone mapping cinematográfico de three.js
+  los dejaba en tonos pastel; ahora el lienzo va sin él.
+- **El color del canal se configura**: `accent` en `~/.fragua/channel.json`. Lo
+  usan el barrido, las estelas, los números de sección, la palabra clave y la
+  pastilla de la portada (texto blanco sobre un color oscuro) y las luces del
+  fondo 3D. Antes era un naranja fijo, que sigue siendo el de por defecto.
+
+---
+
 ## 1.31.0 — 2026-10-07
 
 ### Added
