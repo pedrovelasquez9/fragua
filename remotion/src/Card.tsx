@@ -5,7 +5,7 @@ import {
 } from "remotion";
 import { LogoCanvas } from "./Three";
 
-export type Theme = { bg: string; bgAlpha: number; fg: string; accent: string };
+export type Theme = { bg: string; bgAlpha: number; fg: string; accent: string; brand?: string };
 export type CardProps = {
   kind: string;
   dur: number;
@@ -514,7 +514,8 @@ const Code: React.FC<CardProps> = ({ theme, base, width, spec, dur }) => {
   );
 };
 
-const SECTION_NUMBER = "#FF8A3D";
+// El color del canal (accent en channel.json, lo pasa cards.py como theme.brand).
+const brand = (theme: Theme) => theme.brand ?? "#FF8A3D";
 const SECTION_TEXT = "#F0E4CD";
 const STAMP_RED = "#F0343A";
 const CHECK_GREEN = "#34C759";
@@ -522,7 +523,7 @@ const CHECK_GREEN = "#34C759";
 /** «02 · TÍTULO» arriba a la izquierda. El número entra deslizándose y el
     título letra a letra: una etiqueta que se escribe se lee como estructura, una
     que aparece entera de golpe se lee como un rótulo más. */
-const Section: React.FC<CardProps> = ({ base, width, spec }) => {
+const Section: React.FC<CardProps> = ({ theme, base, width, spec }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const number = spec.number != null ? String(spec.number).padStart(2, "0") : "";
@@ -535,7 +536,7 @@ const Section: React.FC<CardProps> = ({ base, width, spec }) => {
     }}>
       {number ? (
         <span style={{
-          fontSize: base * 0.62, fontWeight: 900, color: SECTION_NUMBER, letterSpacing: 2,
+          fontSize: base * 0.62, fontWeight: 900, color: brand(theme), letterSpacing: 2,
           marginRight: base * 0.28, opacity: t, display: "inline-block",
           transform: `translateX(${interpolate(t, [0, 1], [-20, 0])}px)`,
         }}>{number}</span>
@@ -587,7 +588,7 @@ const Logo: React.FC<{
           <div style={{
             position: "absolute", left: s / 2 - s * 0.06, top: s * 0.7, width: s * 0.12,
             height: side * 1.9 * streak, borderRadius: s,
-            background: `linear-gradient(to bottom, ${alpha(SECTION_NUMBER, 230)}, ${alpha(SECTION_NUMBER, 0)})`,
+            background: `linear-gradient(to bottom, ${alpha(brand(theme), 230)}, ${alpha(brand(theme), 0)})`,
           }} />
         ) : null}
         <div style={{
