@@ -329,6 +329,16 @@ autor la aprobó para todo lo que edite.
     `"Problema → solución → código"` sale como nodos que aparecen de uno en uno,
     con una flecha que se dibuja hacia el siguiente. Si lo que se dice es un
     proceso de pasos, va así y no como una frase.
+14. **Las cards van con luz**, que es su aspecto por defecto en la versión
+    animada: cristal oscuro con borde de neón, un halo que ilumina lo que tienen
+    detrás y un destello que las cruza al llegar. Lo que se enumera toma un color
+    por elemento —el primero el del canal, luego la paleta neón de los iconos—.
+    En una cadena y en un `flow` la luz **viaja**: cada nodo se enciende al
+    llegar, cede la luz al siguiente, y por las conexiones corren datos. No hay
+    que pedir nada: sale así con `--animated`.
+15. **Si el vídeo recorre las piezas de algo** —una arquitectura, un harness, un
+    flujo con partes—, una card `diagram` con el mapa completo cada vez que se
+    pasa a una pieza nueva, con esa pieza encendida (ver más abajo).
 
 **Si el encuadre es muy cerrado, díselo al autor.** La fila de `logos` y el sello
 van a la altura del pecho, y con la cara ocupando del 15% al 80% del alto no hay
@@ -485,6 +495,7 @@ defecto y cae a las estáticas sólo si no hay Node.**
 | `section` | «02 · TÍTULO» arriba a la izquierda | estructura: fija toda la sección |
 | `logos` | fila de logos (círculo) o iconos (cuadrado) | las herramientas de las que se habla |
 | `stamp` | sello rojo en diagonal | un veredicto: EQUIVOCADA, NO SIRVE |
+| `diagram` | mapa de piezas alrededor de un núcleo, a pantalla completa | **recorrer una arquitectura** pieza a pieza |
 
 ```json
 {"kind": "compare", "title": "¿Cuál uso?",
@@ -522,6 +533,42 @@ fallo de señal. Más de dos en un reel y deja de golpear.
 
 Estos tres, igual que `chip` y `title`, **conviven con los subtítulos**: van a
 otra altura y acompañan a lo que se dice en vez de sustituirlo.
+
+**`diagram` es el mapa de las piezas de algo**, a pantalla completa sobre un
+telón oscuro: un núcleo en el centro, las piezas alrededor por grupos de color y
+una conexión de cada una al núcleo. En cada aparición **se enciende la pieza de
+la que se habla**: se rellena de su color, su conexión brilla y lleva datos
+viajando hacia el núcleo, y las que ya se explicaron quedan con su visto. Se
+pone una vez por pieza, en la palabra que la nombra, y el mismo `nodes` en todas
+para que el mapa no cambie de sitio.
+
+```json
+{"kind": "diagram", "t": 125.6, "dur": 4.5,
+ "heading": "Las piezas del harness", "title": "01 · Config",
+ "sub": "config.ts · proveedor, modelo y API key",
+ "hub": 3, "active": "Config",
+ "nodes": [{"label": "Config",    "group": "modelo",       "icon": "ajustes"},
+           {"label": "Adaptador", "group": "modelo",       "icon": "enlace"},
+           {"label": "Registro",  "group": "herramientas", "icon": "lista"},
+           {"label": "Loop",      "group": "núcleo",       "icon": "bucle"},
+           {"label": "Memoria",   "group": "contexto",     "icon": "cerebro"}]}
+```
+
+- `active` es el índice o el texto de la pieza; sin él sale el **resumen**
+  (las piezas entran una a una, ninguna encendida). `"mode": "finale"` las
+  enciende todas en ola, para el cierre: «todo cableado».
+- Las piezas anteriores a `active` en `nodes` cuentan como explicadas: ordénalas
+  como se recorren en el vídeo.
+- `hub` es el índice del núcleo (0 por defecto). Cada `group` toma un color, el
+  primero el del canal.
+- `icon`: un concepto de `stickers/iconos/` (`ajustes`, `cerebro`, `bucle`…), un
+  logo de `images/` o la ruta de un `.svg`.
+- La colocación es automática, en horizontal y en vertical: hasta 17 piezas
+  más el núcleo. En vertical van en dos columnas, arriba y abajo del núcleo,
+  unidas por un bus central.
+- Ocupa el fotograma entero —`y_frac` es 0 solo— y oculta los subtítulos.
+  Dura 4.5 s por defecto: suficiente para ver qué se ha encendido sin perder a
+  quien habla.
 
 **Los tres ganan de verdad animados**, y por eso existen: la comparación llega
 columna a columna en el orden en que se construye; las casillas **se marcan

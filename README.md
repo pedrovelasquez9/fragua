@@ -430,6 +430,20 @@ which is how most people see it while scrolling.
 If you prefer the old style, where the line lights up word by word, ask for it:
 `use karaoke captions`.
 
+### Cards with light, and the parts diagram
+
+Animated cards come lit by default: dark glass with a neon edge, a halo that
+lights up whatever is behind them and a shine that sweeps across as they land.
+Whatever is listed gets one colour per item — your channel's first, then the
+neon palette — and in a chain of steps the light **travels**: each node lights
+up as it arrives, hands the light to the next one, and data runs along the
+connections.
+
+For videos that walk through the parts of something — an architecture, a
+harness — there is a **diagram**: the whole map full screen, with the part being
+talked about lighting up each time. Ask for it: `show the parts diagram and
+light up each one as I talk about it`.
+
 ### Comparisons, checklists and commands
 
 On top of the usual ones, three cards built for technical videos:

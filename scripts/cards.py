@@ -650,10 +650,227 @@ def draw_stamp(spec, theme, width, base):
     return image
 
 
+# --- diagrama ----------------------------------------------------------------
+# Un mapa de piezas alrededor de un núcleo que se enciende pieza a pieza. La
+# colocación se calcula aquí y viaja en las props: la versión fija y la animada
+# dibujan exactamente los mismos nodos y las mismas curvas.
+
+# Los grupos toman color en orden de aparición: el primero el del canal y el
+# resto de la paleta neón de los iconos, en un orden sin vecinos parecidos.
+DIAGRAM_NEON = ("#22E584", "#8B5CF6", "#FFD43B", "#FF5C9A", "#22D3EE", "#FF8A3D", "#A3E635")
+SIDES = ("left", "right", "top", "bottom")
+# Piezas por lado en horizontal; en vertical, dos columnas arriba y abajo.
+SIDE_CAPACITY = {"left": 5, "right": 5, "top": 3, "bottom": 4}
+
+
+def diagram_colors(nodes, brand):
+    groups = []
+    for node in nodes:
+        if node.get("group", "") not in groups:
+            groups.append(node.get("group", ""))
+    palette = (brand, *DIAGRAM_NEON)
+    return {g: palette[i % len(palette)] for i, g in enumerate(groups)}
+
+
+def diagram_active(spec, nodes):
+    """`active` admite el índice o el texto de la pieza."""
+    active = spec.get("active")
+    if isinstance(active, str):
+        labels = [n.get("label", "") for n in nodes]
+        if active not in labels:
+            raise SystemExit(f"diagram: active '{active}' no es ninguna pieza ({', '.join(labels)})")
+        return labels.index(active)
+    return -1 if active is None else int(active)
+
+
+def _curve_side(node, hub):
+    """Del lateral del nodo al del núcleo, con tangentes horizontales."""
+    left = node["x"] + node["w"] / 2 < hub["x"] + hub["w"] / 2
+    sx = node["x"] + node["w"] if left else node["x"]
+    ex = hub["x"] if left else hub["x"] + hub["w"]
+    sy, ey = node["y"] + node["h"] / 2, hub["y"] + hub["h"] / 2
+    mx = (sx + ex) / 2
+    return f"M{sx:.0f},{sy:.0f} C{mx:.0f},{sy:.0f} {mx:.0f},{ey:.0f} {ex:.0f},{ey:.0f}", (sx, sy), (ex, ey)
+
+
+def _curve_vertical(node, hub):
+    """De arriba o abajo del nodo al borde del núcleo que le queda enfrente."""
+    above = node["y"] < hub["y"]
+    cx, hx = node["x"] + node["w"] / 2, hub["x"] + hub["w"] / 2
+    sy = node["y"] + node["h"] if above else node["y"]
+    ey = hub["y"] if above else hub["y"] + hub["h"]
+    my = (sy + ey) / 2
+    return f"M{cx:.0f},{sy:.0f} C{cx:.0f},{my:.0f} {hx:.0f},{my:.0f} {hx:.0f},{ey:.0f}", (cx, sy), (hx, ey)
+
+
+def _curve_bus(node, hub, bus_x):
+    """En vertical: del canto interior del nodo a un bus central que llega al
+    núcleo. Una curva directa cruzaría los nodos de su propia columna."""
+    left = node["x"] + node["w"] / 2 < bus_x
+    sx = node["x"] + node["w"] if left else node["x"]
+    sy = node["y"] + node["h"] / 2
+    above = sy < hub["y"]
+    ey = hub["y"] if above else hub["y"] + hub["h"]
+    turn = min(28, abs(ey - sy) / 2) * (1 if above else -1)
+    return (f"M{sx:.0f},{sy:.0f} Q{bus_x:.0f},{sy:.0f} {bus_x:.0f},{sy + turn:.0f} "
+            f"L{bus_x:.0f},{ey:.0f}"), (sx, sy), (bus_x, ey)
+
+
+def _take_side(free, order):
+    side = next((s for s in order if free[s] > 0), None)
+    if side is None:
+        raise SystemExit(f"diagram: demasiadas piezas (máx. {sum(SIDE_CAPACITY.values())} "
+                         "más el núcleo)")
+    free[side] -= 1
+    return side
+
+
+def _assign_sides(groups):
+    """Cada grupo entero al lado menos ocupado donde quepa (a igualdad:
+    izquierda, derecha, arriba, abajo); si no cabe en ninguno, se reparte por
+    donde quede hueco. Con un solo grupo las piezas se turnan los lados: en una
+    columna dejaría el mapa vacío."""
+    free = dict(SIDE_CAPACITY)
+    sides = {s: [] for s in SIDES}
+    for members in groups:
+        fits = [s for s in SIDES if free[s] >= len(members)]
+        side = min(fits, key=lambda s: len(sides[s])) if fits else None
+        if side and len(groups) > 1:
+            sides[side] += members
+            free[side] -= len(members)
+            continue
+        for i, node in enumerate(members):
+            order = SIDES[i % 4:] + SIDES[:i % 4] if len(groups) == 1 else SIDES
+            sides[_take_side(free, order)].append(node)
+    return sides
+
+
+def diagram_layout(spec, width, height, brand):
+    """Posición, tamaño, color y curva de cada pieza, en píxeles del fotograma."""
+    nodes = [dict(n) if isinstance(n, dict) else {"label": str(n)} for n in spec.get("nodes", [])]
+    if len(nodes) < 2:
+        raise SystemExit("diagram: hacen falta al menos 2 piezas en 'nodes'")
+    hub_i = int(spec.get("hub", 0))
+    colors = diagram_colors(nodes, brand)
+    for node in nodes:
+        node["color"] = node.get("color") or colors[node.get("group", "")]
+    others = [n for i, n in enumerate(nodes) if i != hub_i]
+
+    if height > width:
+        s = width / 1080
+        hub = {"w": width * 0.66, "h": 160 * s}
+        hub.update(x=(width - hub["w"]) / 2, y=height * 0.52 - hub["h"] / 2)
+        nw, nh, gap, margin = width * 0.425, 140 * s, 34 * s, 44 * s
+        col_x = (width * 0.05, width * 0.95 - nw)
+        # Arriba deja sitio a la cabecera y abajo a la interfaz de la red.
+        room = min(hub["y"] - margin - height * 0.20,
+                   height * 0.86 - (hub["y"] + hub["h"] + margin))
+        rows = -(-len(others) // 2)
+        rows_top = -(-rows // 2)
+        pitch = min(nh + gap, (room + gap) / max(rows_top, rows - rows_top))
+        nh = pitch - gap
+        upper, lower = others[:rows_top * 2], others[rows_top * 2:]
+        for k, node in enumerate(upper):
+            r, c = divmod(k, 2)
+            node.update(x=col_x[c], w=nw, h=nh,
+                        y=hub["y"] - margin - (rows_top - r) * pitch + gap)
+        for k, node in enumerate(lower):
+            r, c = divmod(k, 2)
+            node.update(x=col_x[c], w=nw, h=nh, y=hub["y"] + hub["h"] + margin + r * pitch)
+        for node in others:
+            node["path"], node["a"], node["b"] = _curve_bus(node, hub, width / 2)
+        header = {"x": width * 0.06, "y": height * 0.085, "scale": s}
+    else:
+        s = height / 1080
+        hub = {"w": 440 * s, "h": 140 * s}
+        hub.update(x=(width - hub["w"]) / 2, y=height * 0.52 - hub["h"] / 2)
+        nw, nh = 320 * s, 84 * s
+        # Las piezas de un grupo van juntas aunque el plan las intercale.
+        groups = {}
+        for node in others:
+            groups.setdefault(node.get("group", ""), []).append(node)
+        groups = list(groups.values())
+        cy = hub["y"] + hub["h"] / 2
+        for side, members in _assign_sides(groups).items():
+            if side in ("left", "right"):
+                pitch = 120 * s
+                x = 90 * s if side == "left" else width - 90 * s - nw
+                y0 = cy - (len(members) * pitch - (pitch - nh)) / 2
+                for k, node in enumerate(members):
+                    node.update(x=x, y=y0 + k * pitch, w=nw, h=nh)
+            else:
+                pitch = nw + 30 * s
+                y = 240 * s if side == "top" else 860 * s
+                x0 = (width - (len(members) * pitch - 30 * s)) / 2
+                for k, node in enumerate(members):
+                    node.update(x=x0 + k * pitch, y=y, w=nw, h=nh)
+        for node in others:
+            dx = abs(node["x"] + nw / 2 - width / 2)
+            dy = abs(node["y"] + nh / 2 - cy)
+            curve = _curve_side if dx > dy * 1.6 else _curve_vertical
+            node["path"], node["a"], node["b"] = curve(node, hub)
+        header = {"x": 96 * s, "y": 62 * s, "scale": s}
+
+    nodes[hub_i].update(hub)
+    nodes[hub_i]["path"] = ""
+    active = diagram_active(spec, nodes)
+    return {"nodes": nodes, "hub": hub_i, "header": header, "active": active,
+            "mode": spec.get("mode") or ("piece" if active >= 0 else "overview")}
+
+
+def draw_diagram(spec, theme, width, base):
+    """La versión fija: el mapa con la pieza activa rellena y las anteriores con
+    su color. Sin Node no hay luz ni datos viajando, pero sí la estructura."""
+    height = int(spec.get("_height") or width * 9 / 16)
+    layout = diagram_layout(spec, width, height, accent())
+    image = Image.new("RGBA", (width, height), (8, 10, 18, 240))
+    draw = ImageDraw.Draw(image)
+    s = layout["header"]["scale"]
+    hx, hy = layout["header"]["x"], layout["header"]["y"]
+    draw.text((hx, hy), spec.get("heading", ""), font=load_font(int(26 * s), "Bold"),
+              fill=hex_rgba(accent()))
+    draw.text((hx, hy + 32 * s), spec.get("title", ""), font=load_font(int(58 * s)),
+              fill=(244, 246, 251, 255))
+    draw.text((hx, hy + 104 * s), spec.get("sub", ""), font=load_mono(int(25 * s)),
+              fill=(154, 163, 181, 255))
+    active, mode = layout["active"], layout["mode"]
+    lit = [mode == "finale" or i == active for i in range(len(layout["nodes"]))]
+    for i, node in enumerate(layout["nodes"]):
+        if node["path"]:
+            draw.line((*node["a"], *node["b"]), width=max(2, round((5 if lit[i] else 2.5) * s)),
+                      fill=hex_rgba(node["color"], 255 if lit[i] else 90))
+    for i, node in enumerate(layout["nodes"]):
+        box = (node["x"], node["y"], node["x"] + node["w"], node["y"] + node["h"])
+        draw.rounded_rectangle(box, int(node["h"] / 2 if i == layout["hub"] else 20 * s),
+                               fill=hex_rgba(node["color"], 235) if lit[i] else (20, 23, 33, 235),
+                               outline=hex_rgba(node["color"], 230 if lit[i] or i < active else 90),
+                               width=max(2, round(2 * s)))
+        draw.text((node["x"] + node["h"] * 0.35, node["y"] + node["h"] / 2), node.get("label", ""),
+                  font=load_font(int(node["h"] * 0.32)), anchor="lm",
+                  fill=(11, 13, 20, 255) if lit[i] else (238, 241, 247, 255))
+    return image
+
+
+def diagram_icon(name):
+    """El SVG de una pieza: una ruta, o un concepto de stickers/iconos, o un logo
+    de images/ (los que deja icons.py)."""
+    if not name:
+        return None
+    candidates = ([name] if name.endswith(".svg")
+                  else [f"stickers/iconos/{name}.svg", f"images/{name}.svg"])
+    for candidate in candidates:
+        path = Path(resolve_asset(candidate))
+        if path.exists():
+            return path.read_text(encoding="utf-8")
+    print(f"  aviso: icono '{name}' no encontrado; la pieza sale sin icono")
+    return None
+
+
 KINDS = {"panel": draw_panel, "bullets": draw_bullets, "flow": draw_flow,
          "title": draw_title, "stat": draw_stat, "chip": draw_chip,
          "compare": draw_compare, "checklist": draw_checklist, "code": draw_code,
-         "section": draw_section, "logos": draw_logos, "stamp": draw_stamp}
+         "section": draw_section, "logos": draw_logos, "stamp": draw_stamp,
+         "diagram": draw_diagram}
 
 
 def build_theme(card_settings):
@@ -673,7 +890,8 @@ def render_all(cards, platform, output_dir):
     render.py finds them by that index, so the numbering is the contract between
     the two scripts: reorder plan.json and you must re-run this.
     """
-    theme = build_theme(platform["card"])
+    # Mismo color que la animada: el del canal, no el acento del preset.
+    theme = build_theme({**platform["card"], "accent": accent()})
     base_size = platform["card"]["base_size"]
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -683,6 +901,9 @@ def render_all(cards, platform, output_dir):
         kind = spec.get("kind", "panel")
         if kind not in KINDS:
             raise SystemExit(f"card {index}: kind '{kind}' desconocido. Usa: {', '.join(KINDS)}")
+        if kind == "diagram":
+            # El diagrama ocupa el fotograma entero, no una franja.
+            spec = {**spec, "_height": platform["height"]}
         image = KINDS[kind](spec, theme, platform["width"], base_size)
         path = output_dir / f"card{index:02d}.png"
         image.save(path)
@@ -692,6 +913,7 @@ def render_all(cards, platform, output_dir):
 
 
 REMOTION = ROOT / "remotion"
+CARD_HEIGHT = 760   # el lienzo de una card animada; el de Root.tsx por defecto
 
 
 def remotion_ready():
@@ -702,6 +924,14 @@ def remotion_ready():
 def three_d_ready():
     """El 3D necesita además @remotion/three, que llegó después que las cards."""
     return (REMOTION / "node_modules" / "@remotion" / "three").is_dir()
+
+
+def with_diagram(spec, platform):
+    """El diagrama viaja ya colocado y con sus iconos dentro."""
+    layout = diagram_layout(spec, platform["width"], platform["height"], accent())
+    for node in layout["nodes"]:
+        node["svg"] = diagram_icon(node.get("icon"))
+    return {**spec, "layout": layout}
 
 
 def with_inline_images(spec):
@@ -770,9 +1000,14 @@ def render_animated(cards, platform, output_dir):
             raise SystemExit(f"card {index}: kind '{kind}' desconocido. Usa: {', '.join(KINDS)}")
         path = output_dir / f"card{index:02d}.mov"
         props = output_dir / f"card{index:02d}.props.json"
-        write_json(props, {"kind": kind, "dur": float(spec.get("dur", 3)),
+        diagram = kind == "diagram"
+        write_json(props, {"kind": kind, "dur": float(spec.get("dur", 4.5 if diagram else 3)),
                            "width": platform["width"], "base": settings["base_size"],
-                           "theme": theme, "spec": with_inline_images(spec)})
+                           # El diagrama ocupa el fotograma; el resto, una franja.
+                           "height": platform["height"] if diagram else CARD_HEIGHT,
+                           "theme": theme,
+                           "spec": with_diagram(spec, platform) if diagram
+                                   else with_inline_images(spec)})
         result = subprocess.run(
             [npx, "remotion", "render", "build", "Card",
              str(path.resolve()), f"--props={props.resolve()}", "--log=error",
