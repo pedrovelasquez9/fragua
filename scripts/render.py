@@ -704,6 +704,10 @@ def check_cutaways(items, effects):
                          f"el clip taparía el vídeo encogido y su rótulo.")
 
 
+# Margen que deja Card.tsx encima de cada card animada (GLOW_ROOM) para el halo.
+CARD_GLOW_ROOM = 48
+
+
 def card_graph(cards, paths, start_index, base_label, height):
     """Overlay each pre-rendered card at its cue.
 
@@ -713,14 +717,17 @@ def card_graph(cards, paths, start_index, base_label, height):
     inputs, chunks, label = [], [], base_label
     for i, (spec, path) in enumerate(zip(cards, paths)):
         t0, dur = float(spec["t"]), float(spec.get("dur", 3))
-        top = int(height * spec.get("y_frac", 0.60))
+        # El diagrama ocupa el fotograma entero: se ancla arriba del todo.
+        top = int(height * spec.get("y_frac", 0 if spec.get("kind") == "diagram" else 0.60))
         if path.suffix == ".mov":
             # The clip already carries its entrance and exit, so adding a fade
             # and a slide here would animate the animation.
             inputs += ["-i", str(path)]
             chunks.append(f"[{start_index + i}:v]format=rgba,"
                           f"setpts=PTS-STARTPTS+{t0:.3f}/TB[c{i}]")
-            y = str(top)
+            # La card animada trae margen arriba para que su halo no se corte en
+            # seco: se descuenta para que el panel caiga donde dice y_frac.
+            y = str(top if spec.get("kind") == "diagram" else top - CARD_GLOW_ROOM)
         else:
             rise = int(height * 0.018)
             fade = min(CARD_FADE, dur / 3)

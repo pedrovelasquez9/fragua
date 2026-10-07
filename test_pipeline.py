@@ -581,7 +581,10 @@ def test_animated_cards_wiring():
         graph = ";".join(chunks)
         assert "fade=" not in graph, "el clip ya trae su entrada: no se le añade fundido"
         assert "-loop" not in inputs, "un .mov no se repite como si fuera una imagen"
-        assert "y='960'" in graph, f"la card debe quedarse quieta en su sitio: {graph}"
+        from render import CARD_GLOW_ROOM
+        assert f"y='{960 - CARD_GLOW_ROOM}'" in graph, f"la card debe quedarse quieta en su sitio: {graph}"
+        tsx = (ROOT / "remotion" / "src" / "Card.tsx").read_text(encoding="utf-8")
+        assert f"const GLOW_ROOM = {CARD_GLOW_ROOM};" in tsx, "el margen del halo difiere entre render.py y Card.tsx"
 
         # y el PNG sigue con su fundido y su subida de siempre
         (tmp / "card00.mov").unlink()
@@ -1396,6 +1399,38 @@ def test_node_chain():
     print("ok  chip con nodos (se parte igual y cabe)")
 
 
+def test_diagram_layout():
+    """El diagrama coloca sus piezas dentro del fotograma, sin pisarse, en
+    horizontal y en vertical, y cada una lleva su curva hasta el núcleo."""
+    from cards import diagram_layout, draw_diagram, build_theme
+    from common import preset
+
+    grupos = ["modelo"] * 3 + ["herramientas"] * 4 + ["contexto"] * 3 + ["control"] * 4
+    piezas = [{"label": f"Pieza {i}", "group": g} for i, g in enumerate(grupos)]
+    piezas.insert(10, {"label": "Loop", "group": "núcleo"})
+    casos = [(piezas, 10), (piezas[:5], 0), ([{"label": n} for n in "ABCDEF"], 0)]
+    for ancho, alto in ((1920, 1080), (1080, 1920)):
+        for nodos, hub in casos:
+            capa = diagram_layout({"nodes": nodos, "hub": hub, "active": 2}, ancho, alto, "#1E88FF")
+            cajas = [(n["x"], n["y"], n["x"] + n["w"], n["y"] + n["h"]) for n in capa["nodes"]]
+            for i, (x0, y0, x1, y1) in enumerate(cajas):
+                assert 0 <= x0 and x1 <= ancho and 0 <= y0 and y1 <= alto,                     f"{ancho}x{alto}: la pieza {i} se sale: {cajas[i]}"
+                for j in range(i):
+                    a = cajas[j]
+                    assert x1 <= a[0] or a[2] <= x0 or y1 <= a[1] or a[3] <= y0,                         f"{ancho}x{alto}: las piezas {j} y {i} se pisan"
+            assert all(n["path"] for i, n in enumerate(capa["nodes"]) if i != hub)
+            assert capa["active"] == 2 and capa["mode"] == "piece"
+    # El texto de la pieza vale igual que su índice.
+    capa = diagram_layout({"nodes": piezas, "hub": 10, "active": "Loop"}, 1920, 1080, "#1E88FF")
+    assert capa["active"] == 10
+    # Los grupos toman color en orden, el primero el del canal.
+    assert capa["nodes"][0]["color"] == "#1E88FF" and capa["nodes"][3]["color"] != "#1E88FF"
+    imagen = draw_diagram({"nodes": piezas, "hub": 10, "_height": 1920},
+                          build_theme(preset("tiktok")["card"]), 1080, 51)
+    assert imagen.size == (1080, 1920), "la versión fija del diagrama ocupa el fotograma"
+    print("ok  diagrama (piezas dentro, sin pisarse, en horizontal y en vertical)")
+
+
 def main():
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
@@ -1431,6 +1466,7 @@ def main():
         test_wipe()
         test_trajectories()
         test_node_chain()
+        test_diagram_layout()
         test_default_line()
         test_copy_check()
         test_delivery()

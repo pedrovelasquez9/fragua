@@ -8,6 +8,30 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.33.0 — 2026-10-07
+
+### Added
+- **Card `diagram`: el mapa de las piezas de algo, que se va encendiendo.** Un
+  núcleo en el centro, las piezas alrededor por grupos de color y una conexión
+  de cada una al núcleo, a pantalla completa. Cada vez que el vídeo pasa a una
+  pieza, el mapa vuelve con esa pieza encendida: se rellena de su color, su
+  conexión brilla y lleva datos viajando, y las ya explicadas quedan con su
+  visto. Hay un modo resumen (entran una a una) y un cierre con todas
+  encendidas. Se coloca solo, en horizontal y en vertical.
+
+### Changed
+- **Las cards animadas van con luz por defecto.** Cristal oscuro con borde de
+  neón, un halo que ilumina lo que tienen detrás y un destello al llegar, en el
+  color del canal en vez del dorado del preset. Lo que se enumera toma un color
+  por elemento: viñetas, columnas de una comparación, nodos de una cadena.
+- **En una cadena de pasos la luz viaja.** «Problema → solución → código»: cada
+  nodo se enciende al llegar y cede la luz al siguiente, y las flechas son
+  conexiones que brillan y llevan datos. Lo mismo en los nodos de un `flow`, con
+  un pulso de luz bajando por la espina.
+- Las cards fijas (sin Node) también usan el color del canal.
+
+---
+
 ## 1.32.0 — 2026-10-07
 
 ### Changed

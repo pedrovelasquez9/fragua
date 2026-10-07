@@ -4,12 +4,14 @@ import {
   useCurrentFrame, useVideoConfig,
 } from "remotion";
 import { LogoCanvas } from "./Three";
+import { Diagram } from "./Diagram";
 
 export type Theme = { bg: string; bgAlpha: number; fg: string; accent: string; brand?: string };
 export type CardProps = {
   kind: string;
   dur: number;
   width: number;
+  height?: number;
   base: number;
   theme: Theme;
   spec: Record<string, unknown>;
@@ -48,19 +50,96 @@ const listOf = (spec: Record<string, unknown>, key: string): string[] => {
   return String(spec.body ?? "").split("\n").filter(Boolean);
 };
 
-/** Rounded surface with the same hairline border the Pillow cards draw. */
+// El color del canal (accent en channel.json, lo pasa cards.py como theme.brand).
+const brand = (theme: Theme) => theme.brand ?? "#FF8A3D";
+
+// «Luz»: el lenguaje del diagrama de piezas, que es el de todas las cards. Lo
+// que se enumera toma un color por elemento —el primero el del canal, luego la
+// paleta neón de los iconos— y cada superficie brilla con el suyo.
+const NEON = ["#22E584", "#8B5CF6", "#FFD43B", "#FF5C9A", "#22D3EE", "#FF8A3D", "#A3E635"];
+const neon = (theme: Theme, i: number) => (i === 0 ? brand(theme) : NEON[(i - 1) % NEON.length]);
+// El halo sobresale del panel; el lienzo deja este margen arriba para que no se
+// corte en seco, y render.py lo descuenta al colocar el .mov (CARD_GLOW_ROOM).
+const GLOW_ROOM = 48;
+const clamp = { extrapolateLeft: "clamp", extrapolateRight: "clamp" } as const;
+// Late despacio: un resplandor fijo se lee como un borde pintado.
+const usePulse = () => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  return 0.5 + 0.5 * Math.sin((frame / fps) * Math.PI * 1.2);
+};
+
+/** La superficie de todas las cards: cristal oscuro con borde de neón, un halo
+    del mismo color que ilumina lo que tiene detrás y un destello que la cruza al
+    llegar. `fill` (0-1) la enciende entera, como la pieza activa del diagrama. */
 const Panel: React.FC<React.PropsWithChildren<{
   theme: Theme; radius?: number; style?: React.CSSProperties;
-}>> = ({ theme, radius = RADIUS, style, children }) => (
-  <div style={{
-    boxSizing: "border-box",
-    background: alpha(theme.bg, theme.bgAlpha),
-    border: `2px solid ${alpha(theme.accent, 90)}`,
-    borderRadius: radius,
-    boxShadow: "0 18px 40px rgba(0,0,0,0.45)",
-    ...style,
-  }}>{children}</div>
-);
+  glow?: string; delay?: number; fill?: number;
+}>> = ({ theme, radius = RADIUS, style, glow, delay = 0, fill = 0, children }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const pulse = usePulse();
+  const color = glow ?? brand(theme);
+  const on = spring({ frame: frame - delay, fps, config: { damping: 200 } });
+  const sweep = interpolate(frame, [delay + 3, delay + 21], [-1.2, 1.2], clamp);
+  const surface = fill > 0
+    ? `linear-gradient(135deg, ${alpha(color, 90 + 165 * fill)}, ${alpha(color, 50 + 150 * fill)})`
+    : `linear-gradient(160deg, ${alpha(color, 30 * on)} 0%, ${alpha(color, 0)} 46%), `
+      + alpha(theme.bg, theme.bgAlpha);
+  return (
+    <div style={{
+      position: "relative", overflow: "hidden", boxSizing: "border-box",
+      background: surface,
+      border: `2px solid ${alpha(color, 90 + 140 * on)}`,
+      borderRadius: radius,
+      boxShadow: [
+        `0 0 ${(14 + 12 * pulse + 14 * fill) * on}px ${alpha(color, (170 + 60 * fill) * on)}`,
+        `0 0 ${60 * on}px ${alpha(color, (70 + 50 * fill) * on)}`,
+        `inset 0 0 26px ${alpha(color, 40 * on)}`,
+        "0 18px 40px rgba(0,0,0,0.45)",
+      ].join(", "),
+      ...style,
+    }}>
+      {sweep > -1.2 && sweep < 1.2 ? (
+        <div style={{
+          position: "absolute", inset: 0, pointerEvents: "none",
+          background: `linear-gradient(105deg, transparent 38%, ${alpha("#FFFFFF", 46)} 50%, transparent 62%)`,
+          transform: `translateX(${sweep * 100}%)`,
+        }} />
+      ) : null}
+      {children}
+    </div>
+  );
+};
+
+/** Una línea que se dibuja hacia su destino, brilla y lleva datos viajando. */
+// El degradado va en coordenadas del lienzo: en las de la caja del trazo, una
+// línea recta no tiene alto y el navegador no pinta nada.
+const Wire: React.FC<{
+  d: string; from: string; to: string; draw: number; width: number; id: string;
+  span: [number, number, number, number];
+}> = ({ d, from, to, draw, width, id, span }) => {
+  const frame = useCurrentFrame();
+  return (
+    <>
+      <defs>
+        <linearGradient id={id} gradientUnits="userSpaceOnUse"
+                        x1={span[0]} y1={span[1]} x2={span[2]} y2={span[3]}>
+          <stop offset="0" stopColor={from} />
+          <stop offset="1" stopColor={to} />
+        </linearGradient>
+      </defs>
+      <path d={d} fill="none" stroke={`url(#${id})`} strokeWidth={width} strokeLinecap="round"
+            pathLength={1} strokeDasharray="1 1" strokeDashoffset={1 - draw}
+            style={{ filter: `drop-shadow(0 0 ${width * 1.6}px ${to})` }} />
+      {draw > 0.95 ? (
+        <path d={d} fill="none" stroke="#FFFFFF" strokeWidth={width * 0.8} strokeLinecap="round"
+              pathLength={100} strokeDasharray="2 14" strokeDashoffset={-(frame * 1.4)}
+              opacity={0.85} />
+      ) : null}
+    </>
+  );
+};
 
 // El orden de entrada dentro de una card, en fotogramas desde su llegada. El
 // filete detrás del título: dibujar un subrayado antes de que exista lo que
@@ -148,7 +227,8 @@ const Bullet: React.FC<{
         <div style={{ display: "flex", alignItems: "center" }}>
           <div style={{
             width: marker, height: marker, borderRadius: marker / 3,
-            background: theme.accent, marginRight: marker * 0.9,
+            background: neon(theme, i), marginRight: marker * 0.9,
+            boxShadow: `0 0 ${marker * 1.2}px ${neon(theme, i)}`,
             transform: `scale(${pop})`,
           }} />
           <span style={{ fontSize: base * 0.76, fontWeight: 500, color: theme.fg }}>{item}</span>
@@ -183,15 +263,55 @@ const PanelCard: React.FC<CardProps> = ({ theme, base, width, spec }) => {
   );
 };
 
+// Cuándo se enciende el nodo i de una secuencia y cuándo cede la luz al
+// siguiente: la luz viaja por el proceso y el último se queda encendido.
+const useRelay = (i: number, count: number, step: number, start: number) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const on = spring({ frame: frame - start - i * step, fps, config: { damping: 200 } });
+  const off = i < count - 1
+    ? spring({ frame: frame - start - (i + 1) * step, fps, config: { damping: 200 } }) : 0;
+  return { lit: on * (1 - off), done: off };
+};
+
+const FLOW_STEP = 8;
+
+const FlowNode: React.FC<{
+  i: number; count: number; node: string; theme: Theme; base: number;
+}> = ({ i, count, node, theme, base }) => {
+  const color = neon(theme, i + 1);
+  const { lit } = useRelay(i, count, FLOW_STEP, ITEMS + 4);
+  return (
+    <div style={{ display: "flex", alignItems: "center" }}>
+      <div style={{
+        width: 14, height: 14, borderRadius: 7, background: color, marginLeft: -7,
+        boxShadow: `0 0 ${10 + 10 * lit}px ${color}`,
+      }} />
+      <div style={{ width: base * 0.95 - 7, height: 3, background: color,
+                    boxShadow: `0 0 8px ${alpha(color, 200)}` }} />
+      <Panel theme={theme} radius={base} glow={color} delay={ITEMS + i * 5} fill={lit}
+             style={{ padding: `${PAD * 0.8}px ${PAD}px` }}>
+        <span style={{ fontSize: base * 0.68, fontWeight: lit > 0.5 ? 800 : 500,
+                       color: lit > 0.5 ? "#0B0D14" : theme.fg }}>
+          {node}
+        </span>
+      </Panel>
+    </div>
+  );
+};
+
 const Flow: React.FC<CardProps> = ({ theme, base, width, spec }) => {
+  const frame = useCurrentFrame();
   const nodes = listOf(spec, "nodes");
   const root = String(spec.root ?? spec.title ?? "");
   const gap = base * 0.46;
   const spine = useStagger(0, 0, RULE, 200);
+  // Un pulso de luz baja por la espina, de la raíz a las ramas, sin parar.
+  const travel = ((frame - ITEMS) % 40) / 40;
   return (
     <div style={{ width, paddingLeft: width * 0.1, paddingRight: width * 0.1 }}>
       <Enter from={-24} delay={HEADING}>
-        <Panel theme={theme} radius={999} style={{
+        <Panel theme={theme} radius={999} delay={HEADING} style={{
           display: "inline-block", padding: `${PAD * 0.8}px ${PAD}px`,
         }}>
           <span style={{ fontSize: base * 0.8, fontWeight: 800, color: theme.accent }}>{root}</span>
@@ -200,27 +320,23 @@ const Flow: React.FC<CardProps> = ({ theme, base, width, spec }) => {
       <div style={{ position: "relative", marginLeft: base * 0.55 }}>
         {/* The spine draws itself top-down before the nodes arrive. */}
         <div style={{
-          position: "absolute", left: 0, top: 0, bottom: gap, width: 3,
-          background: alpha(theme.accent, 90), transformOrigin: "top center",
-          transform: `scaleY(${spine})`,
+          position: "absolute", left: -1.5, top: 0, bottom: gap, width: 3,
+          background: `linear-gradient(to bottom, ${brand(theme)}, ${neon(theme, nodes.length)})`,
+          boxShadow: `0 0 10px ${alpha(brand(theme), 200)}`,
+          transformOrigin: "top center", transform: `scaleY(${spine})`,
         }} />
+        {spine > 0.95 && frame > ITEMS ? (
+          <div style={{
+            position: "absolute", left: -5, top: `calc(${travel * 100}% - ${gap * travel}px)`,
+            width: 10, height: 26, borderRadius: 5, background: "#FFFFFF",
+            boxShadow: `0 0 14px #FFFFFF, 0 0 24px ${brand(theme)}`,
+            opacity: Math.sin(travel * Math.PI),
+          }} />
+        ) : null}
         {nodes.map((node, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", marginTop: gap }}>
             <Enter i={i} from={-14}>
-              <div style={{ display: "flex", alignItems: "center" }}>
-                <div style={{
-                  width: 14, height: 14, borderRadius: 7, background: theme.accent,
-                  marginLeft: -7,
-                }} />
-                <div style={{
-                  width: base * 0.95 - 7, height: 3, background: alpha(theme.accent, 90),
-                }} />
-                <Panel theme={theme} radius={base} style={{ padding: `${PAD * 0.8}px ${PAD}px` }}>
-                  <span style={{ fontSize: base * 0.68, fontWeight: 500, color: theme.fg }}>
-                    {node}
-                  </span>
-                </Panel>
-              </div>
+              <FlowNode i={i} count={nodes.length} node={node} theme={theme} base={base} />
             </Enter>
           </div>
         ))}
@@ -245,6 +361,7 @@ const Stat: React.FC<CardProps> = ({ theme, base, width, spec }) => {
     <Panel theme={theme} style={{ width: width * 0.72, padding: PAD, textAlign: "center" }}>
       <div style={{
         fontSize: base * 2.1, fontWeight: 900, color: theme.accent, lineHeight: 1.05,
+        textShadow: `0 0 ${base * 0.5 * grow}px ${alpha(theme.accent, 200)}`,
         transform: `scale(${interpolate(grow, [0, 1], [0.86, 1])})`,
       }}>{value}</div>
       <WordsIn text={String(spec.label ?? "")} delay={10}
@@ -260,19 +377,23 @@ const Stat: React.FC<CardProps> = ({ theme, base, width, spec }) => {
 const NODE_STEP = 9;         // fotogramas entre un nodo y el siguiente (0.3 s)
 const NODE_SPLIT = /\s*(?:→|->)\s*/;
 
-const ChipNode: React.FC<{ i: number; text: string; theme: Theme; size: number }> = ({
-  i, text, theme, size,
+// Cada nodo se enciende con su color al llegar y cede la luz al siguiente, que
+// se queda con ella: se ve el proceso avanzar, como las piezas del diagrama.
+const ChipNode: React.FC<{ i: number; count: number; text: string; theme: Theme; size: number }> = ({
+  i, count, text, theme, size,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const pop = spring({ frame: frame - i * NODE_STEP, fps, config: POP });
+  const { lit, done } = useRelay(i, count, NODE_STEP, 2);
+  const color = neon(theme, i);
   return (
-    <div style={{ transform: `scale(${pop})`, opacity: Math.min(1, pop * 3), flexShrink: 0 }}>
-      <Panel theme={theme} radius={999} style={{
-        display: "inline-block", padding: `${size * 0.55}px ${size * 0.8}px`,
-      }}>
-        <span style={{ fontSize: size, fontWeight: 800, color: theme.accent,
-                       whiteSpace: "nowrap" }}>{text}</span>
+    <div style={{ transform: `scale(${pop * (1 + 0.05 * lit)})`, opacity: Math.min(1, pop * 3),
+                  flexShrink: 0 }}>
+      <Panel theme={theme} radius={999} glow={color} delay={i * NODE_STEP} fill={lit}
+             style={{ display: "inline-block", padding: `${size * 0.55}px ${size * 0.8}px` }}>
+        <span style={{ fontSize: size, fontWeight: 800, whiteSpace: "nowrap",
+                       color: lit > 0.5 ? "#0B0D14" : done > 0.5 ? theme.fg : color }}>{text}</span>
       </Panel>
     </div>
   );
@@ -282,16 +403,21 @@ const ChipArrow: React.FC<{ i: number; theme: Theme; size: number }> = ({ i, the
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   // Se dibuja de izquierda a derecha y termina justo cuando llega el nodo al que
-  // apunta: la flecha lleva la mirada al siguiente paso.
+  // apunta: la conexión lleva la mirada al siguiente paso, y luego lleva datos.
   const draw = spring({ frame: frame - i * NODE_STEP + 5, fps, config: { damping: 200 } });
   const w = size * 1.3;
+  const h = size;
+  const from = neon(theme, i - 1);
+  const to = neon(theme, i);
   return (
-    <div style={{ width: w, height: size, flexShrink: 0, overflow: "hidden" }}>
-      <svg viewBox="0 0 26 20" style={{ width: w * draw, height: size, display: "block" }}
-           preserveAspectRatio="none">
-        <line x1="3" y1="10" x2="18" y2="10" stroke={theme.accent} strokeWidth="2.6"
-              strokeLinecap="round" />
-        <polygon points="24,10 17,5.5 17,14.5" fill={theme.accent} />
+    <div style={{ width: w, height: h, flexShrink: 0, overflow: "visible" }}>
+      <svg width={w} height={h} style={{ display: "block", overflow: "visible" }}>
+        <Wire d={`M${w * 0.02},${h / 2} L${w * 0.74},${h / 2}`} from={from} to={to}
+              draw={draw} width={Math.max(4, size * 0.15)} id={`chip-wire-${i}`}
+              span={[0, h / 2, w, h / 2]} />
+        <polygon points={`${w * 1.0},${h / 2} ${w * 0.66},${h * 0.2} ${w * 0.66},${h * 0.8}`}
+                 fill={to} opacity={interpolate(draw, [0.7, 1], [0, 1], clamp)}
+                 style={{ filter: `drop-shadow(0 0 ${size * 0.15}px ${to})` }} />
       </svg>
     </div>
   );
@@ -314,7 +440,7 @@ const Chip: React.FC<CardProps> = (props) => {
         {nodes.map((node, i) => (
           <React.Fragment key={i}>
             {i > 0 ? <ChipArrow i={i} theme={theme} size={size} /> : null}
-            <ChipNode i={i} text={node} theme={theme} size={size} />
+            <ChipNode i={i} count={nodes.length} text={node} theme={theme} size={size} />
           </React.Fragment>
         ))}
       </div>
@@ -341,7 +467,8 @@ const Title: React.FC<CardProps> = ({ theme, base, width, spec }) => (
   <div style={{ width: width * 0.86, textAlign: "center" }}>
     <WordsIn text={String(spec.title ?? spec.body ?? "")} delay={HEADING}
              style={{ fontSize: base * 1.25, fontWeight: 900, color: theme.accent,
-                      lineHeight: `${base * 1.5}px`, display: "inline-block" }} />
+                      lineHeight: `${base * 1.5}px`, display: "inline-block",
+                      textShadow: `0 0 ${base * 0.45}px ${alpha(theme.accent, 170)}` }} />
   </div>
 );
 
@@ -367,10 +494,13 @@ const Compare: React.FC<CardProps> = ({ theme, base, width, spec }) => {
         {columns.map((column, c) => (
           <div key={c} style={{
             flex: 1, textAlign: "center",
-            borderLeft: c ? `2px solid ${alpha(theme.accent, 90)}` : "none",
+            borderLeft: c ? `2px solid ${alpha(neon(theme, c), 170)}` : "none",
+            // Cada columna con su color: lado a lado tienen que verse distintas.
+            boxShadow: c ? `-6px 0 14px -8px ${neon(theme, c)}` : "none",
           }}>
             <Enter i={c * 3} from={0}>
-              <div style={{ fontSize: base * 0.8, fontWeight: 800, color: theme.accent,
+              <div style={{ fontSize: base * 0.8, fontWeight: 800, color: neon(theme, c),
+                            textShadow: `0 0 ${base * 0.35}px ${alpha(neon(theme, c), 170)}`,
                             height: base * 1.2, lineHeight: `${base * 1.2}px` }}>
                 {column.title ?? ""}
               </div>
@@ -514,8 +644,6 @@ const Code: React.FC<CardProps> = ({ theme, base, width, spec, dur }) => {
   );
 };
 
-// El color del canal (accent en channel.json, lo pasa cards.py como theme.brand).
-const brand = (theme: Theme) => theme.brand ?? "#FF8A3D";
 const SECTION_TEXT = "#F0E4CD";
 const STAMP_RED = "#F0343A";
 const CHECK_GREEN = "#34C759";
@@ -692,13 +820,26 @@ const Stamp: React.FC<CardProps> = ({ base, width, spec }) => {
 const KINDS: Record<string, React.FC<CardProps>> = {
   bullets: Bullets, panel: PanelCard, flow: Flow, stat: Stat, chip: Chip,
   title: Title, compare: Compare, checklist: Checklist, code: Code,
-  section: Section, logos: Logos, stamp: Stamp,
+  section: Section, logos: Logos, stamp: Stamp, diagram: Diagram,
 };
 
-export const Card: React.FC<CardProps> = (props) => {
+export const Card: React.FC<CardProps> = (raw) => {
   const frame = useCurrentFrame();
   const { durationInFrames, fps } = useVideoConfig();
+  // Todo lo que brilla lo hace en el color del canal, como el diagrama: el
+  // acento del preset queda para la versión fija.
+  const props = { ...raw, theme: { ...raw.theme, accent: brand(raw.theme) } };
   const Kind = KINDS[props.kind] ?? PanelCard;
+
+  // El diagrama ocupa el fotograma y trae su propia entrada y salida.
+  if (props.kind === "diagram") {
+    return (
+      <AbsoluteFill>
+        <style>{FONT_FACE}</style>
+        <Kind {...props} />
+      </AbsoluteFill>
+    );
+  }
 
   // The whole card arrives first, then its contents fill in. Without this the
   // surface pops in empty and the viewer watches a box wait for its own text.
@@ -719,11 +860,11 @@ export const Card: React.FC<CardProps> = (props) => {
   return (
     <AbsoluteFill style={{
       opacity: Math.min(1, arrive * 3) * exit, fontFamily: "Fragua, sans-serif",
-      alignItems: "center", justifyContent: "flex-start",
+      alignItems: "center", justifyContent: "flex-start", paddingTop: GLOW_ROOM,
       transform: `translateY(${y}px) scale(${scale})`,
       // Crece desde donde está anclado, no desde el centro del lienzo: una
       // etiqueta a la izquierda que crece desde el centro se desplaza al llegar.
-      transformOrigin: props.kind === "section" ? "6.5% 0" : "50% 0",
+      transformOrigin: props.kind === "section" ? `6.5% ${GLOW_ROOM}px` : `50% ${GLOW_ROOM}px`,
     }}>
       <style>{FONT_FACE}</style>
       <Kind {...props} />

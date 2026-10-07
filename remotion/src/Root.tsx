@@ -28,6 +28,8 @@ export const Root: React.FC = () => (
       calculateMetadata={({ props }) => ({
         durationInFrames: Math.max(2, Math.round(props.dur * 30)),
         width: props.width,
+        // El diagrama ocupa el fotograma entero; el resto de cards, una franja.
+        height: props.height ?? 760,
       })}
     />
     {/* Tamaño y duración los manda lottie.py: los del sticker y su hueco en el

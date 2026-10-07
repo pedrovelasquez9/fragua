@@ -564,6 +564,31 @@ En la versión animada, las imágenes de `logos` viajan dentro de las props como
 data URL: Remotion no ve el disco del usuario. Los tres están en
 `ALONGSIDE_CAPTIONS` y no ocultan los subtítulos.
 
+### Card: diagram
+
+| Claves | Animada |
+|---|---|
+| `nodes: [{label, group, icon}]`, `hub`, `active` (índice o texto), `mode` (`piece`/`overview`/`finale`), `heading`, `title`, `sub` | telón oscuro; la pieza activa se rellena, su conexión brilla y lleva datos; las anteriores con visto |
+
+La colocación la calcula `diagram_layout()` en `cards.py` y viaja ya resuelta en
+las props (`spec.layout`): la versión fija (Pillow) y la animada
+(`remotion/src/Diagram.tsx`) dibujan los mismos nodos y las mismas curvas. En
+horizontal, cada grupo va entero al lado menos ocupado donde quepa
+(`SIDE_CAPACITY`: 5 a cada lado, 3 arriba, 4 abajo); en vertical, dos columnas
+arriba y abajo del núcleo con un bus central. Es la única card con el lienzo del
+fotograma entero (`height` en las props); `render.py` la ancla en `y_frac` 0.
+
+### Luz
+
+Todas las cards animadas comparten la superficie de `Panel` en `Card.tsx`:
+borde de neón y halo en el color del canal (`theme.brand`, que sustituye al
+acento del preset), destello al llegar y un pulso lento. `neon(theme, i)` da un
+color por elemento: el del canal y luego `NEON`. En cadenas y `flow`, `useRelay`
+enciende cada nodo al llegar y lo apaga cuando llega el siguiente. El halo
+sobresale del panel, así que el lienzo deja `GLOW_ROOM` (48 px) arriba y
+`render.py` lo descuenta al colocar el `.mov` (`CARD_GLOW_ROOM`); una prueba
+comprueba que coinciden.
+
 ### Movimiento
 
 `scripts/motion.py` define cómo se mueve todo lo que entra en pantalla, con las
