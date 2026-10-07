@@ -53,6 +53,23 @@ def channel():
     return load_presets().get("channel", {})
 
 
+# El color del canal: barridos, estelas, números de sección, portada y fondo 3D.
+# Es identidad, así que lo decide el canal (`accent` en channel.json); el naranja
+# es sólo el de un canal sin configurar.
+DEFAULT_ACCENT = "#FF8A3D"
+
+
+def accent():
+    """El acento del canal en #RRGGBB."""
+    return str(channel().get("accent") or DEFAULT_ACCENT)
+
+
+def hex_rgb(colour):
+    """#RRGGBB -> (r, g, b)."""
+    colour = colour.lstrip("#")
+    return tuple(int(colour[i:i + 2], 16) for i in (0, 2, 4))
+
+
 def assets_dir():
     """Where the user's music, sfx, stickers and fonts live.
 

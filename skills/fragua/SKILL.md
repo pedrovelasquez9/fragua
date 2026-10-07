@@ -323,7 +323,7 @@ autor la aprobó para todo lo que edite.
     y el corte cae debajo. Los clips de recurso normales siguen con fundido.
 12. **Los stickers llegan viajando, y variados.** Sin `motion` en el plan,
     `render.py` los turna —`bounce`, `drop`, `slide`— y nunca salen dos seguidos
-    iguales. Llegan desde fuera con una estela naranja detrás, que es lo que hace
+    iguales. Llegan desde fuera con una estela del color del canal, que es lo que hace
     que el ojo los siga. Pon su `t` en la palabra: es cuándo **aterriza**.
 13. **Toda secuencia se escribe como cadena**: un `chip` con título
     `"Problema → solución → código"` sale como nodos que aparecen de uno en uno,
@@ -732,9 +732,15 @@ actualizar. Es opcional:
 ```json
 {
   "name": "Nombre del canal",
+  "accent": "#1E88FF",
   "fixed_hashtags": ["#programacionenespanol"]
 }
 ```
+
+`accent` es **el color del canal**, el de su logo: lo usan el barrido, las
+estelas, los números de sección, la palabra clave y la pastilla de la portada y
+las luces del fondo 3D. Sin él, naranja `#FF8A3D`. No lo supongas: sácalo del
+logo o de las portadas del autor.
 
 Léelo antes de escribir el copy. Si no existe, vale también un bloque `channel`
 con lo mismo en `presets.json`.
@@ -960,7 +966,7 @@ pasado X?» genera hilos entre comentaristas; «¿qué opinas?» genera emojis.
 ### 7. Portada — obligatoria en vídeo corto
 
 Todo vídeo vertical se entrega con su portada: un fotograma del autor, el gancho
-en grande con la palabra clave en naranja y una pastilla **«▶ Mira el vídeo»**
+en grande con la palabra clave en el color del canal y una pastilla **«▶ Mira el vídeo»**
 que pide el play.
 
 ```bash
@@ -1066,7 +1072,7 @@ formas en orden; `"motion"` fija una:
 | `drop` | cae desde arriba y rebota dos veces al tocar su sitio | 0.85 s |
 | `slide` | entra por el lado más cercano y se pasa un poco | 0.5 s |
 
-Los tres que viajan dejan una **estela naranja** que engorda hacia el elemento,
+Los tres que viajan dejan una **estela del color del canal** que engorda hacia el elemento,
 sigue el recorrido hecho y se recoge en 0.3 s al aterrizar; `"trail": false` la
 quita. `x` e `y` son dónde aterriza, y `t` **cuándo** aterriza: el viaje sale
 antes solo, así que pon el `t` en la palabra igual que con `pop`. `"pop": 0`
@@ -1148,8 +1154,11 @@ Necesita Node y las dependencias de `remotion/`, como las cards animadas.
 Para lo que no es una marca —una idea, un objeto, una emoción— **no uses
 emojis**. Un emoji es el dibujo de otro, cambia de estilo de uno a otro y se lee
 como un chat, no como una edición. Los conceptos salen de **Phosphor Icons**
-(MIT), en relleno y en el naranja del canal: un solo trazo y un solo color, que
-es lo que hace que parezcan un paquete hecho para el canal.
+(MIT), en relleno: un solo trazo, que es lo que los hace un paquete. Pero **no un
+solo color**: todos iguales se ven monótonos. Cada uno lleva el suyo de una
+paleta neón sobre negro —el dinero verde, el error rojo, la idea amarilla, el
+código en el azul del canal— con un halo que brilla, y en 3D salen saturados.
+Dos iconos seguidos en un vídeo casi nunca coinciden de color.
 
 ```bash
 python scripts/icons.py --words bombilla cerebro reloj "base de datos" --outdir stickers/iconos
@@ -1292,7 +1301,7 @@ tiempo a leerlos, más y se pierde a quien habla.
 **Planos de pantalla con barrido.** Si el vídeo alterna cámara y grabación de
 pantalla, cada plano de pantalla va con `"transition": "wipe"`: entra y sale en
 seco, y un barrido de color tapa cada corte. `wipe_from` elige el lado y
-`wipe_color` el color (naranja `#FF8A3D` por defecto). El `t` y el `t + dur` del
+`wipe_color` el color (por defecto, el acento del canal). El `t` y el `t + dur` del
 plano son el centro de cada barrido, el instante en que el cuadro está tapado.
 
 ```json

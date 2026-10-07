@@ -11,7 +11,6 @@ import { AbsoluteFill, spring, useCurrentFrame, useVideoConfig } from "remotion"
 
 const POP = { stiffness: 262, damping: 20.4, mass: 1 };
 const SWING = { stiffness: 90, damping: 9, mass: 1 };
-const ACCENT = "#FF8A3D";
 const RIM = "#5b7cff";
 
 /** Reflejos de un estudio generado al vuelo: el acabado sin descargar un HDR. */
@@ -22,7 +21,7 @@ const Studio: React.FC = () => {
   const pmrem = useMemo(() => {
     const generator = new THREE.PMREMGenerator(gl);
     scene.environment = generator.fromScene(new RoomEnvironment(), 0.04).texture;
-    scene.environmentIntensity = 0.55;
+    scene.environmentIntensity = 0.4;
     return generator;
   }, [gl, scene]);
   useEffect(() => () => pmrem.dispose(), [pmrem]);
@@ -85,7 +84,8 @@ export const LogoMesh: React.FC<{ svg: string; fit?: number; pop?: boolean; dela
       {parts.map(({ geometry, color }, i) => (
         <mesh key={i} geometry={geometry}>
           <meshPhysicalMaterial color={color} metalness={0.35} roughness={0.22}
-                                clearcoat={1} clearcoatRoughness={0.15} />
+                                clearcoat={1} clearcoatRoughness={0.15}
+                                emissive={color} emissiveIntensity={0.14} />
         </mesh>
       ))}
     </group>
@@ -96,7 +96,9 @@ export const LogoMesh: React.FC<{ svg: string; fit?: number; pop?: boolean; dela
 export const LogoCanvas: React.FC<{
   svg: string; width: number; height: number; fit?: number; pop?: boolean; delay?: number;
 }> = ({ svg, width, height, fit, pop, delay }) => (
-  <ThreeCanvas width={width} height={height} gl={{ alpha: true, antialias: true }}
+  // flat: sin el tone mapping cinematográfico por defecto, que lava los colores
+  // saturados y dejaba los iconos neón en pastel.
+  <ThreeCanvas width={width} height={height} gl={{ alpha: true, antialias: true }} flat
                camera={{ position: [0, 0, 6], fov: 35 }}>
     <SetLights />
     <LogoMesh svg={svg} fit={fit} pop={pop} delay={delay} />
@@ -165,12 +167,12 @@ const Bokeh: React.FC<{ seed: number; count: number; color: string; size: number
   );
 };
 
-export type BackdropProps = { dur: number; width: number; height: number; fps: number };
+export type BackdropProps = { dur: number; width: number; height: number; fps: number; accent?: string };
 
 /** El fondo de la banda del pullback: penumbra con luces desenfocadas que
     flotan a distintas profundidades y una cámara que avanza despacio. En vez
     del negro plano que dejaba el vídeo al encogerse. */
-export const Backdrop: React.FC<BackdropProps> = ({ width, height }) => {
+export const Backdrop: React.FC<BackdropProps> = ({ width, height, accent = "#FF8A3D" }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const z = 6 - 0.35 * (frame / fps);
@@ -181,7 +183,7 @@ export const Backdrop: React.FC<BackdropProps> = ({ width, height }) => {
       <ThreeCanvas width={width} height={height} gl={{ alpha: true, antialias: true }}
                    camera={{ position: [0, 0, z], fov: 50 }}>
         <Bokeh seed={11} count={90} color={RIM} size={0.55} opacity={0.32} />
-        <Bokeh seed={23} count={26} color={ACCENT} size={0.7} opacity={0.22} />
+        <Bokeh seed={23} count={26} color={accent} size={0.7} opacity={0.22} />
         <Bokeh seed={37} count={50} color="#ffffff" size={0.12} opacity={0.35} />
       </ThreeCanvas>
     </AbsoluteFill>

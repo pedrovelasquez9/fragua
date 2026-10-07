@@ -47,11 +47,41 @@ MINIMO = 4                # longitud mínima de palabra para buscarla
 # Para lo que no es una marca, nada de emojis: un emoji es el dibujo de otro
 # —Apple, Google—, cambia según quién lo pinte y se lee como un chat, no como una
 # edición. Phosphor Icons (MIT, 1.500 iconos en relleno) tiene un trazo
-# coherente, y en el color de acento del canal parecen hechos para él. Rellenos y
-# no de línea: un trazo fino desaparece a tamaño de sticker, y extruido en 3D un
-# relleno es un objeto y un trazo es un alambre.
+# coherente. Rellenos y no de línea: un trazo fino desaparece a tamaño de
+# sticker, y extruido en 3D un relleno es un objeto y un trazo es un alambre.
 PHOSPHOR = "https://cdn.jsdelivr.net/npm/@phosphor-icons/core@2.1.1/assets/fill/{name}-fill.svg"
-ACENTO = "#FF8A3D"        # el naranja del barrido, las estelas y los números
+
+# El mismo trazo pero NO el mismo color: todos iguales se leen monótonos. Paleta
+# neón sobre negro —la de un canal de programación de azul eléctrico— y cada
+# icono con el color que le corresponde: el dinero verde, el error rojo, la idea
+# amarilla. Los que no tienen un color obvio reciben uno fijo de la paleta.
+NEON = {"azul": "#1E88FF", "cian": "#22D3EE", "violeta": "#8B5CF6", "magenta": "#E14BE8",
+        "rosa": "#FF5C9A", "verde": "#22E584", "lima": "#A3E635", "amarillo": "#FFD43B",
+        "naranja": "#FF8A3D", "rojo": "#FF4757"}
+COLOR_DE = {
+    "money": "verde", "currency-dollar": "verde", "credit-card": "verde",
+    "check-circle": "verde", "thumbs-up": "verde", "shield-check": "verde",
+    "trend-up": "verde", "chart-line-up": "verde", "git-branch": "verde",
+    "x-circle": "rojo", "thumbs-down": "rojo", "bug": "rojo", "bomb": "rojo",
+    "siren": "rojo", "skull": "rojo",
+    "warning": "amarillo", "lightbulb": "amarillo", "star": "amarillo", "trophy": "amarillo",
+    "medal": "amarillo", "lightning": "amarillo", "key": "amarillo", "hourglass": "amarillo",
+    "fire": "naranja", "rocket": "naranja", "coffee": "naranja", "package": "naranja",
+    "brain": "rosa", "heart": "rosa", "mask-happy": "magenta", "smiley-x-eyes": "magenta",
+    "smiley-nervous": "magenta", "ghost": "violeta", "robot": "violeta", "sparkle": "violeta",
+    "cpu": "violeta", "git-merge": "violeta", "code": "azul", "hard-drives": "azul",
+    "lock": "azul", "calendar": "azul", "git-pull-request": "azul", "brackets-curly": "azul",
+    "terminal-window": "lima", "database": "cian", "cloud": "cian", "clock": "cian",
+    "timer": "cian", "magnifying-glass": "cian", "eye": "cian", "git-commit": "cian",
+}
+
+
+def color_concepto(icono):
+    """El color de un icono de Phosphor: el suyo, o uno de la paleta fijo por nombre."""
+    import zlib
+
+    nombre = COLOR_DE.get(icono) or list(NEON)[zlib.crc32(icono.encode()) % len(NEON)]
+    return NEON[nombre]
 CONCEPTOS = {
     # objetos e ideas
     "bombilla": "lightbulb", "idea": "lightbulb", "caja": "package", "paquete": "package",
@@ -198,7 +228,7 @@ def pinta(svg, color):
     return svg
 
 
-def rasteriza(svg, lado, plato):
+def rasteriza(svg, lado, plato, brillo=None):
     """SVG -> PNG RGBA. El plato oscuro detrás es lo que lo hace legible.
 
     Un icono blanco sobre una grabación de pantalla clara desaparece, y sobre un
@@ -229,7 +259,22 @@ def rasteriza(svg, lado, plato):
     fondo = Image.new("RGBA", (lado, lado), (0, 0, 0, 0))
     ImageDraw.Draw(fondo).rounded_rectangle(
         [0, 0, lado - 1, lado - 1], radius=round(lado * PLATE_RADIO), fill=PLATE_COLOR)
-    fondo.alpha_composite(arte, ((lado - dentro) // 2, (lado - dentro) // 2))
+    sitio = ((lado - dentro) // 2, (lado - dentro) // 2)
+    if brillo:
+        # Neón: un halo del color del icono detrás y un filo fino en el plato,
+        # como los trazos que brillan sobre negro en las portadas del canal.
+        from PIL import ImageFilter
+
+        halo = Image.new("RGBA", (lado, lado), brillo + (0,))
+        mascara = Image.new("L", (lado, lado), 0)
+        mascara.paste(arte.getchannel("A"), sitio)
+        halo.putalpha(mascara.filter(ImageFilter.GaussianBlur(lado * 0.045)))
+        fondo.alpha_composite(halo)
+        fondo.alpha_composite(halo)
+        ImageDraw.Draw(fondo).rounded_rectangle(
+            [1, 1, lado - 2, lado - 2], radius=round(lado * PLATE_RADIO),
+            outline=brillo + (110,), width=max(2, round(lado * 0.012)))
+    fondo.alpha_composite(arte, sitio)
     return fondo
 
 
@@ -295,7 +340,7 @@ def main():
         idea = concepto(palabra) if args.words else None
         if idea:
             url, titulo = PHOSPHOR.format(name=idea), f"{idea} (Phosphor)"
-            color = args.color if args.color.startswith("#") else ACENTO
+            color = args.color if args.color.startswith("#") else color_concepto(idea)
             marca = color
         elif icono:
             url, titulo = ICONO.format(slug=icono["slug"]), icono["title"]
@@ -310,7 +355,8 @@ def main():
         except Exception as fallo:                       # noqa: BLE001
             fallos.append(f"{palabra} ({fallo})")
             continue
-        imagen = rasteriza(pinta(svg, color), args.size, not args.no_plate)
+        brillo = tuple(int(color.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4)) if idea else None
+        imagen = rasteriza(pinta(svg, color), args.size, not args.no_plate, brillo)
         if imagen is None:
             fallos.append(f"{palabra} (SVG ilegible)")
             continue

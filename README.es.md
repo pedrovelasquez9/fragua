@@ -274,8 +274,9 @@ GitHub es casi negro y desaparecía del todo, así que las marcas monocromas
 salen en blanco, como en sus propias guías. Las demás conservan su color exacto.
 
 Para las ideas —una bombilla, un cerebro, un reloj, un cohete— **nada de
-emojis**: usa un paquete de iconos de **Phosphor Icons** (libre, MIT) en el
-naranja del canal, todos con el mismo trazo, y en el vídeo salen en 3D como los
+emojis**: usa un paquete de iconos de **Phosphor Icons** (libre, MIT), todos con
+el mismo trazo pero cada uno en su color neón —el dinero verde, el error rojo,
+la idea amarilla— brillando sobre negro, y en el vídeo salen en 3D como los
 logos. Hay unos 110 conceptos en español listos, y cualquiera de los 1.500 de
 Phosphor se puede pedir.
 
@@ -380,7 +381,7 @@ gráfico parezca pegado encima en vez de animado.
 
 Los stickers **llegan viajando** por defecto —botando desde el otro lado,
 cayendo desde arriba o deslizándose desde el borde más cercano— con una estela
-naranja detrás que el ojo sigue, y la fila de logos salta desde abajo uno a uno.
+del color de tu canal detrás que el ojo sigue, y la fila de logos salta desde abajo uno a uno.
 El vídeo abre con un **barrido de color**, y si alternas cámara y grabación de
 pantalla, cada cambio queda tapado por uno. Un título escrito como cadena
 —*Problema → solución → código*— aparece nodo a nodo, con cada flecha
