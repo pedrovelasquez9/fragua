@@ -208,7 +208,7 @@ convertir un tiempo del original usa `source_to_output()` de `scripts/common.py`
      "body": "Cómo destacar\nTu rol con la IA\nConseguir clientes"}
   ],
   "stickers": [
-    {"file": "assets/stickers/fuego.png", "t": 5, "dur": 2, "scale": 0.22,
+    {"file": "assets/stickers/iconos/fuego.png", "t": 5, "dur": 2, "scale": 0.22,
      "x": "W*0.7", "y": "H*0.15"}
   ],
   "music": {"file": "assets/music/beat.mp3", "gain": -18, "duck": true}
@@ -1040,7 +1040,7 @@ En `plan.json`, las rutas se escriben **relativas a la biblioteca**:
   {"t": 5.66, "file": "sfx/whoosh.wav"},
   {"t": 11.4, "file": "sfx/pop.wav", "gain": -3}
 ],
-"stickers": [{"file": "stickers/fuego.png", "t": 5, "dur": 2, "scale": 0.22}]
+"stickers": [{"file": "stickers/iconos/fuego.png", "t": 5, "dur": 2, "scale": 0.22}]
 ```
 
 **Todo lo que entra en pantalla se mueve igual**, stickers y cards: nace de
@@ -1142,6 +1142,26 @@ lo que se enseña, un subrayado bajo un rótulo, un check al confirmar algo. Un
 elemento decorativo sin motivo es ruido, y moviéndose todavía más.
 
 Necesita Node y las dependencias de `remotion/`, como las cards animadas.
+
+## Iconos de conceptos: nunca emojis
+
+Para lo que no es una marca —una idea, un objeto, una emoción— **no uses
+emojis**. Un emoji es el dibujo de otro, cambia de estilo de uno a otro y se lee
+como un chat, no como una edición. Los conceptos salen de **Phosphor Icons**
+(MIT), en relleno y en el naranja del canal: un solo trazo y un solo color, que
+es lo que hace que parezcan un paquete hecho para el canal.
+
+```bash
+python scripts/icons.py --words bombilla cerebro reloj "base de datos" --outdir stickers/iconos
+python scripts/icons.py --words ph:rocket-launch     # cualquier icono de Phosphor por su nombre
+```
+
+El paquete de la biblioteca vive en `stickers/iconos/`: ~110 conceptos en
+español (bombilla, cerebro, reloj, dinero, cohete, código, bug, rama, commit,
+servidor…), cada uno en PNG con plato y en SVG, así que **en el vídeo salen en
+3D** como los logos. Usa esos. Si falta un concepto, genéralo con
+`--words` (la lista está en `CONCEPTOS` de `icons.py`) o pide uno de Phosphor
+por su nombre con `ph:`. Los de `stickers/emoji/` sólo si el autor los pide.
 
 ## Iconos de marca, sin buscarlos a mano
 

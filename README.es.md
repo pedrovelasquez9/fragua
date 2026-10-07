@@ -273,6 +273,12 @@ Con una corrección que importa: un logo oscuro sobre un plano oscuro no se ve.
 GitHub es casi negro y desaparecía del todo, así que las marcas monocromas
 salen en blanco, como en sus propias guías. Las demás conservan su color exacto.
 
+Para las ideas —una bombilla, un cerebro, un reloj, un cohete— **nada de
+emojis**: usa un paquete de iconos de **Phosphor Icons** (libre, MIT) en el
+naranja del canal, todos con el mismo trazo, y en el vídeo salen en 3D como los
+logos. Hay unos 110 conceptos en español listos, y cualquiera de los 1.500 de
+Phosphor se puede pedir.
+
 ### Imágenes que aparecen cuando mencionas algo
 
 Mete en tu carpeta de assets una imagen con el nombre de una palabra

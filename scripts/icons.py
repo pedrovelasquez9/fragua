@@ -3,9 +3,11 @@
     python icons.py --from digest.txt              # los que menciona el vídeo
     python icons.py --words docker postgres redis  # los que le pidas
     python icons.py --from digest.txt --color brand
+    python icons.py --words bombilla cerebro reloj  # conceptos, no marcas
 
-Los saca de Simple Icons (3.300 logos de marca, CC0) y los deja en la carpeta de
-imágenes de tu biblioteca con el nombre de la palabra. Ahí ya funciona el disparo
+Los logos los saca de Simple Icons (3.300 marcas, CC0) y los conceptos —una
+idea, un objeto— de Phosphor Icons (MIT), nunca de emojis. Los deja en la
+carpeta de imágenes de tu biblioteca con el nombre de la palabra. Ahí ya funciona el disparo
 por palabra clave que existía: `docker.png` aparece cuando dices «docker», sin
 configurar nada más.
 
@@ -40,6 +42,63 @@ RUIDO = {"go", "arc", "swift", "rust", "dart", "processing", "element", "gnu",
          "ruby", "expo", "hey", "lens", "max", "monica", "nano", "odin", "pop",
          "quest", "roots", "sky", "spark", "toml", "wire", "zap"}
 MINIMO = 4                # longitud mínima de palabra para buscarla
+
+# --- Conceptos ----------------------------------------------------------------
+# Para lo que no es una marca, nada de emojis: un emoji es el dibujo de otro
+# —Apple, Google—, cambia según quién lo pinte y se lee como un chat, no como una
+# edición. Phosphor Icons (MIT, 1.500 iconos en relleno) tiene un trazo
+# coherente, y en el color de acento del canal parecen hechos para él. Rellenos y
+# no de línea: un trazo fino desaparece a tamaño de sticker, y extruido en 3D un
+# relleno es un objeto y un trazo es un alambre.
+PHOSPHOR = "https://cdn.jsdelivr.net/npm/@phosphor-icons/core@2.1.1/assets/fill/{name}-fill.svg"
+ACENTO = "#FF8A3D"        # el naranja del barrido, las estelas y los números
+CONCEPTOS = {
+    # objetos e ideas
+    "bombilla": "lightbulb", "idea": "lightbulb", "caja": "package", "paquete": "package",
+    "calavera": "skull", "camara": "camera", "carpeta": "folder", "casa": "house",
+    "cerebro": "brain", "check": "check-circle", "ok": "check-circle",
+    "comentario": "chat-circle-dots", "chat": "chat-circle", "corbata": "briefcase",
+    "trabajo": "briefcase", "cruz": "x-circle", "error": "x-circle", "dado": "dice-five",
+    "descarga": "download-simple", "descargar": "download-simple", "subir": "upload-simple",
+    "dinero": "money", "precio": "currency-dollar", "entrevista": "handshake",
+    "acuerdo": "handshake", "explota": "bomb", "bomba": "bomb", "fuego": "fire",
+    "gato": "cat", "llave": "key", "loco": "smiley-x-eyes", "lupa": "magnifying-glass",
+    "buscar": "magnifying-glass", "pantalla": "monitor", "payaso": "mask-happy",
+    "prueba": "flask", "test": "test-tube", "raton": "mouse", "reloj": "clock",
+    "tiempo": "timer", "espera": "hourglass", "repetir": "repeat", "bucle": "infinity",
+    "robot": "robot", "ia": "sparkle", "magia": "sparkle", "sorpresa": "smiley-nervous",
+    "tarjeta": "credit-card", "teclado": "keyboard", "telefono": "device-mobile",
+    "zombi": "ghost", "fantasma": "ghost", "alerta": "warning", "peligro": "siren",
+    "rapido": "lightning", "cohete": "rocket", "objetivo": "target", "meta": "target",
+    "grafico": "chart-line-up", "crecimiento": "trend-up", "usuario": "user",
+    "equipo": "users-three", "libro": "book-open", "aprender": "graduation-cap",
+    "calendario": "calendar", "correo": "envelope", "email": "envelope", "enlace": "link",
+    "ajustes": "gear", "herramienta": "wrench", "estrella": "star", "corazon": "heart",
+    "pregunta": "question", "informacion": "info", "documento": "file-text",
+    "archivo": "file-code", "pausa": "pause", "play": "play", "cafe": "coffee",
+    "premio": "trophy", "medalla": "medal", "bien": "thumbs-up", "mal": "thumbs-down",
+    "ojo": "eye", "ver": "eye", "puzzle": "puzzle-piece", "lista": "list-checks",
+    "detective": "detective", "seguro": "shield-check", "seguridad": "shield-check",
+    "candado": "lock",
+    # programación
+    "codigo": "code", "terminal": "terminal-window", "bug": "bug", "fallo": "bug",
+    "base de datos": "database", "datos": "database", "nube": "cloud",
+    "servidor": "hard-drives", "rama": "git-branch", "branch": "git-branch",
+    "commit": "git-commit", "merge": "git-merge", "pull request": "git-pull-request",
+    "api": "plugs-connected", "procesador": "cpu", "llaves": "brackets-curly",
+    "capas": "stack", "arbol": "tree-structure", "flujo": "flow-arrow",
+}
+
+
+def concepto(palabra):
+    """El icono de Phosphor de una palabra, o None. `ph:nombre` pide uno directo."""
+    import unicodedata
+
+    if palabra.startswith("ph:"):
+        return palabra[3:]
+    plana = "".join(c for c in unicodedata.normalize("NFKD", palabra.lower())
+                    if not unicodedata.combining(c)).strip()
+    return CONCEPTOS.get(plana)
 
 
 def slugify(texto):
@@ -231,12 +290,22 @@ def main():
     hechos, fallos = 0, []
     for palabra, nombre in encontrados:
         icono = tabla.get(nombre)
-        if not icono:
+        # Pedido por nombre y en el diccionario: es un concepto, aunque alguna
+        # marca se llame igual. Lo detectado en el texto son siempre marcas.
+        idea = concepto(palabra) if args.words else None
+        if idea:
+            url, titulo = PHOSPHOR.format(name=idea), f"{idea} (Phosphor)"
+            color = args.color if args.color.startswith("#") else ACENTO
+            marca = color
+        elif icono:
+            url, titulo = ICONO.format(slug=icono["slug"]), icono["title"]
+            color = legible(icono["hex"]) if args.color == "brand" else args.color
+            marca = legible(icono["hex"])
+        else:
             fallos.append(palabra)
             continue
-        color = legible(icono["hex"]) if args.color == "brand" else args.color
         try:
-            with urllib.request.urlopen(ICONO.format(slug=icono["slug"]), timeout=60) as r:
+            with urllib.request.urlopen(url, timeout=60) as r:
                 svg = r.read().decode("utf-8")
         except Exception as fallo:                       # noqa: BLE001
             fallos.append(f"{palabra} ({fallo})")
@@ -249,17 +318,17 @@ def main():
         imagen.save(salida)
         # El SVG al lado, en el color de marca: es lo que render.py y las cards
         # animadas convierten en un logo 3D. Sin Remotion se usa el PNG.
-        salida.with_suffix(".svg").write_text(pinta(svg, legible(icono["hex"])),
-                                              encoding="utf-8")
+        salida.with_suffix(".svg").write_text(pinta(svg, marca), encoding="utf-8")
         hechos += 1
-        print(f"  {icono['title']:22} -> {salida.name}")
+        print(f"  {titulo:22} -> {salida.name}")
 
     print(f"{hechos} iconos en {destino}")
     if fallos:
         print("sin icono: " + ", ".join(fallos))
     if hechos:
         print("Simple Icons es CC0. Los logos siguen siendo marcas de sus dueños: "
-              "úsalos para referirte al producto, no como si fuesen tuyos.")
+              "úsalos para referirte al producto, no como si fuesen tuyos. "
+              "Phosphor Icons es MIT.")
 
 
 if __name__ == "__main__":
