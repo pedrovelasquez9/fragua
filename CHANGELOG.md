@@ -8,6 +8,20 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.31.0 — 2026-10-07
+
+### Added
+- **Paquete de iconos de concepto en vez de emojis.** Para lo que no es una
+  marca —una bombilla, un cerebro, un reloj, un cohete— `icons.py --words` usa
+  **Phosphor Icons** (MIT), en relleno y en el naranja del canal: un solo trazo y
+  un solo color. Antes se tiraba de stickers de emoji, cada uno con su estilo, y
+  se leían como un chat. Hay unos 110 conceptos en español (`CONCEPTOS`), y
+  `ph:nombre` pide cualquiera de los 1.500 de Phosphor.
+- Como los logos, cada concepto deja su `.svg` al lado, así que **en el vídeo
+  sale en 3D**.
+
+---
+
 ## 1.30.0 — 2026-10-06
 
 ### Added

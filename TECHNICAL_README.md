@@ -363,7 +363,7 @@ del vídeo ya cortado, que es la que ves al reproducir el resultado.
   ],
 
   "stickers": [
-    {"file": "assets/stickers/fuego.png", "t": 5, "dur": 2, "scale": 0.22,
+    {"file": "assets/stickers/iconos/fuego.png", "t": 5, "dur": 2, "scale": 0.22,
      "x": "W*0.7", "y": "H*0.15"}
   ],
 
@@ -627,6 +627,14 @@ icono no se ve. Las marcas monocromas oscuras pasan a blanco; las que ya
 contrastan no se tocan, porque corregir lo que no está roto pierde la marca.
 
 Rasterizar el SVG necesita `skia-python`, opcional y de rueda de pip.
+
+**Conceptos.** Con `--words`, una palabra que está en `CONCEPTOS` (≈110 en
+español, sin tildes: bombilla, cerebro, rama, commit…) o un `ph:nombre` sale de
+**Phosphor Icons** (MIT, variante de relleno, versión fijada a 2.1.1) en
+`#FF8A3D` en vez de buscarse como marca. Relleno y no de línea: un trazo fino
+desaparece a tamaño de sticker, y extruido en 3D un relleno es un objeto y un
+trazo, un alambre. Lo detectado con `--from` son siempre marcas. Como los
+logos, deja el `.svg` al lado y por tanto sale en 3D.
 
 ### Capítulos
 

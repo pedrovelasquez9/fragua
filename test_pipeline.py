@@ -934,6 +934,25 @@ def test_icon_slugs():
     print("ok  nombres de icono (C++ y C no se pisan)")
 
 
+def test_concept_icons():
+    """Los conceptos salen de Phosphor, con o sin tildes, y nunca de un emoji."""
+    from icons import ACENTO, CONCEPTOS, PHOSPHOR, concepto, pinta
+
+    assert concepto("Código") == concepto("codigo") == "code"
+    assert concepto("base de datos") == "database"
+    assert concepto("ph:rocket-launch") == "rocket-launch"
+    assert concepto("kubernetes") is None, "una marca no es un concepto"
+    # Nombres de fichero de Phosphor: minúsculas y guiones, sin el sufijo -fill.
+    malos = [v for v in CONCEPTOS.values() if not re.fullmatch(r"[a-z0-9]+(-[a-z0-9]+)*", v)
+             or v.endswith("-fill")]
+    assert not malos, f"nombres de Phosphor mal escritos: {malos}"
+    assert "@phosphor-icons/core@2" in PHOSPHOR and "/fill/" in PHOSPHOR
+    # Phosphor pinta con currentColor: tiene que salir en el acento.
+    svg = '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M0 0h1"/></svg>'
+    assert f'fill="{ACENTO}"' in pinta(svg, ACENTO)
+    print(f"ok  iconos de concepto (Phosphor, {len(CONCEPTOS)} palabras)")
+
+
 def test_graphics_beside_captions():
     """Etiqueta, sello y fila de logos acompañan al subtítulo, no lo apagan."""
     from subtitles import blocked_windows
@@ -1376,6 +1395,7 @@ def main():
         test_captions_beside_band_cards()
         test_impact_captions()
         test_icon_slugs()
+        test_concept_icons()
         test_graphics_beside_captions()
         test_graphic_gaps()
         test_original_picture_by_default()
