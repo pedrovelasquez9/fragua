@@ -271,6 +271,11 @@ GitHub is almost black and vanished completely, so monochrome brands come out
 white, the way their own brand guidelines do it. The rest keep their exact
 colour.
 
+For ideas — a lightbulb, a brain, a clock, a rocket — **no emojis**: it uses an
+icon pack from **Phosphor Icons** (free, MIT) in the channel's orange, all in
+the same stroke, and in the video they come out in 3D like the logos. About 110
+Spanish concept words are ready, and any of Phosphor's 1,500 can be requested.
+
 ### Images that appear when you mention something
 
 Drop an image named after a word into your assets folder — `youtube.png`,
