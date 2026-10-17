@@ -5,6 +5,7 @@ import {
 } from "remotion";
 import { LogoCanvas } from "./Three";
 import { Diagram } from "./Diagram";
+import { countUp } from "./stat";
 
 export type Theme = { bg: string; bgAlpha: number; fg: string; accent: string; brand?: string };
 export type CardProps = {
@@ -351,12 +352,8 @@ const Stat: React.FC<CardProps> = ({ theme, base, width, spec }) => {
   const raw = String(spec.value ?? "");
   // If the figure is a number, count up to it. This is what makes the stat card
   // worth using, and it is exactly what a still PNG cannot do.
-  const numeric = raw.match(/^(\D*)(\d[\d.,]*)(\D*)$/);
   const grow = spring({ frame, fps, config: { damping: 18, mass: 0.8 } });
-  const value = numeric
-    ? `${numeric[1]}${Math.round(Number(numeric[2].replace(/[.,]/g, "")) * grow)
-        .toLocaleString("es-ES")}${numeric[3]}`
-    : raw;
+  const value = countUp(raw, grow);
   return (
     <Panel theme={theme} style={{ width: width * 0.72, padding: PAD, textAlign: "center" }}>
       <div style={{

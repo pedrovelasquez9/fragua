@@ -798,6 +798,25 @@ def test_icon_words(tmp_root):
     print("ok  iconos por palabra (sin repetir, sin falsos como 'go')")
 
 
+def test_stat_count_up():
+    """The stat card keeps decimals: "1.4%" must not count up to "14%"."""
+    import shutil
+    node = shutil.which("node")
+    if not node:
+        print("--  stat count-up skipped (no Node)")
+        return
+    stat = (ROOT / "remotion" / "src" / "stat.ts").as_uri()
+    cases = {"1.4%": "1.4%", "1,4 %": "1,4 %", "30.000": "30.000", "128": "128"}
+    script = (f"import {{ countUp }} from {json.dumps(stat)};"
+              f"console.log(JSON.stringify({json.dumps(list(cases))}.map(v => countUp(v, 1))));"
+              "console.log(countUp('1.4%', 0.5));")
+    out = sh(node, "--experimental-strip-types", "--no-warnings",
+             "--input-type=module", "-e", script).splitlines()
+    assert json.loads(out[0]) == list(cases.values()), out[0]
+    assert out[1] == "0.7%", f"halfway through the count-up: {out[1]}"
+    print("ok  stat card counts up keeping decimals and grouping")
+
+
 def test_card_kinds_match():
     """Cada tipo de card existe en la versión fija y en la animada.
 
@@ -1450,6 +1469,7 @@ def main():
         test_false_starts()
         test_icon_colour()
         test_card_kinds_match()
+        test_stat_count_up()
         test_code_card_fits()
         test_lottie_wiring()
         test_captions_beside_band_cards()

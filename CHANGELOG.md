@@ -8,6 +8,15 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.33.1 — 2026-10-17
+
+### Fixed
+- **Una card `stat` con decimales ya no pierde la coma.** «1.4%» contaba hasta
+  «14%». Ahora cuenta hasta 1.4 y lo escribe como lo pusiste: «1.4%» o «1,4 %».
+  Los miles siguen igual («30.000», «1.000») y conservan tu separador.
+
+---
+
 ## 1.33.0 — 2026-10-07
 
 ### Added
