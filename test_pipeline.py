@@ -557,6 +557,30 @@ def test_silence_at_the_head():
     print("ok  silencio inicial (no fabrica un segmento mudo)")
 
 
+def test_hook_first():
+    """El gancho abre el corto: movido si se entiende solo, duplicado si no."""
+    from hook import lead_with_hook
+
+    # 0-4 · 6-10 (a doble velocidad: 2 s de salida) · 12-15  -> salida 0-4, 4-6, 6-9
+    cut = [{"start": 0.0, "end": 4.0}, {"start": 6.0, "end": 10.0, "speed": 2.0},
+           {"start": 12.0, "end": 15.0}]
+
+    moved, a, b = lead_with_hook(cut, 4.2, 6.0, keep=False)
+    assert (a, b) == (4.0, 6.0), f"no se pegó al borde de segmento: {a}-{b}"
+    assert moved[0] == cut[1], moved
+    assert abs(output_duration(moved) - output_duration(cut)) < 1e-9, "mover cambia la duración"
+
+    kept, _, _ = lead_with_hook(cut, 4.0, 6.0, keep=True)
+    assert kept == [cut[1]] + cut, kept
+
+    # a media frase se respeta el tiempo pedido y se parte el segmento
+    split, _, _ = lead_with_hook(cut, 7.0, 8.0, keep=False)
+    assert split[0] == {"start": 13.0, "end": 14.0}, split[0]
+    assert {"start": 12.0, "end": 13.0} in split and {"start": 14.0, "end": 15.0} in split
+    assert abs(output_duration(split) - 9.0) < 1e-9
+    print("ok  gancho al inicio (mover y duplicar)")
+
+
 def test_animated_cards_wiring():
     """El .mov gana al .png y no se le vuelve a animar encima.
 
@@ -796,6 +820,25 @@ def test_icon_words(tmp_root):
     salida = [clave for _, clave in palabras_del_texto(texto, tabla)]
     assert salida == ["docker", "postgresql", "redis"], salida
     print("ok  iconos por palabra (sin repetir, sin falsos como 'go')")
+
+
+def test_stat_count_up():
+    """The stat card keeps decimals: "1.4%" must not count up to "14%"."""
+    import shutil
+    node = shutil.which("node")
+    if not node:
+        print("--  stat count-up skipped (no Node)")
+        return
+    stat = (ROOT / "remotion" / "src" / "stat.ts").as_uri()
+    cases = {"1.4%": "1.4%", "1,4 %": "1,4 %", "30.000": "30.000", "128": "128"}
+    script = (f"import {{ countUp }} from {json.dumps(stat)};"
+              f"console.log(JSON.stringify({json.dumps(list(cases))}.map(v => countUp(v, 1))));"
+              "console.log(countUp('1.4%', 0.5));")
+    out = sh(node, "--experimental-strip-types", "--no-warnings",
+             "--input-type=module", "-e", script).splitlines()
+    assert json.loads(out[0]) == list(cases.values()), out[0]
+    assert out[1] == "0.7%", f"halfway through the count-up: {out[1]}"
+    print("ok  stat card counts up keeping decimals and grouping")
 
 
 def test_card_kinds_match():
@@ -1447,9 +1490,11 @@ def main():
         test_transitions_keep_colour()
         test_animated_cards_wiring()
         test_silence_at_the_head()
+        test_hook_first()
         test_false_starts()
         test_icon_colour()
         test_card_kinds_match()
+        test_stat_count_up()
         test_code_card_fits()
         test_lottie_wiring()
         test_captions_beside_band_cards()
