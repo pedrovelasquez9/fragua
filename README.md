@@ -174,6 +174,9 @@ All of this works as typed:
 edit this video and give me your opinion on the content
 ```
 ```
+review this video before editing it: what would you cut?
+```
+```
 make it for reels instead of tiktok
 ```
 ```
@@ -188,6 +191,10 @@ just write the youtube title and description
 ```
 use the take at the end, not the first one
 ```
+
+**Ask for an opinion first and it waits for you.** If you ask what it thinks or
+to review the video before editing, it only transcribes, answers your question
+and stops there. Nothing gets cut or rendered until you say go.
 
 If something is off, **say so and it redoes it**. You do not need to know which
 parameter to touch: describe what you see («the shirt looks pixelated», «the
@@ -395,6 +402,9 @@ out-of-focus lights with depth.
 
 Without being asked, every reel comes out like this:
 
+- **It opens with its hook**: the strongest line goes to second 0. If what
+  follows depends on it, the line plays at the start and again in its place;
+  if it stands on its own, it is just moved.
 - **The picture as you shot it**: no colour filters, no sharpening. Ask for them
   if you want them.
 - **Captions in short phrases with the key word in colour.**
@@ -500,8 +510,9 @@ brightness, move it off the camera axis, or tilt the temples slightly.
 one. If you stumble, stop and repeat the whole sentence.
 
 **Put the hook first.** The strongest line of the video belongs in the first
-five seconds, not at second forty. If it lands at the end the agent will tell
-you, but it cannot reorder your argument without it showing.
+five seconds, not at second forty. In a short the agent brings it forward for
+you, but a line that was written to open the video always lands better than one
+pulled out of the middle.
 
 ---
 

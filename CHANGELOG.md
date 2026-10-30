@@ -8,6 +8,23 @@ is this?`, or read `version` in `.claude-plugin/plugin.json`.
 
 ---
 
+## 1.34.0 — 2026-10-30
+
+### Added
+- **Todo corto abre con su frase gancho.** El agente elige la frase más fuerte
+  del corto y la lleva al segundo 0. Si lo que viene después depende de ella, se
+  duplica: suena al inicio y otra vez en su sitio. Si se entiende sola, se mueve
+  y sólo suena al principio. Los bordes se pegan a los silencios, así que el
+  gancho no empieza ni acaba a media palabra.
+
+### Changed
+- **Si pides opinión antes de editar, espera a que confirmes.** «¿Qué te
+  parece?», «revísalo antes»: el agente sólo transcribe, responde a lo que
+  preguntaste y se para. No corta, no renderiza ni escribe el copy hasta que
+  le digas que siga. Antes editaba el vídeo entero y daba la opinión al final.
+
+---
+
 ## 1.33.1 — 2026-10-17
 
 ### Fixed

@@ -30,6 +30,16 @@ python test_pipeline.py
 Cada etapa escribe un JSON que puedes leer y editar antes de la siguiente. No se
 renderiza nada hasta el final, así que iterar es gratis.
 
+**Si piden opinión o revisión antes de editar, primero opinas y después
+editas.** «¿Qué te parece?», «revísalo antes», «¿qué harías?», «dime cómo lo
+editarías»: llega hasta la transcripción (`deliver.py start`, `analyze.py`,
+`transcribe.py`), lee `digest.txt` y responde a lo que se ha preguntado —qué
+cortarías, el gancho, dónde irían los efectos, lo que sobra—. Ahí **te paras**:
+ni `hook.py`, ni `plan.json`, ni cards, ni render, ni copy hasta que el usuario
+confirme o ajuste. Hacer la edición entera y dar la opinión al final es
+justo lo que no se pidió. Cuando confirme, sigue desde la misma carpeta de
+trabajo; la transcripción ya está hecha.
+
 **Al usuario sólo le llega lo que publica**: el vídeo, los subtítulos, el copy y,
 en vertical, la portada. Todo lo demás —cortes, transcripción, plan, cards,
 clips— vive en una carpeta de trabajo del temporal del sistema, **nunca junto a
@@ -44,7 +54,9 @@ W=$(python scripts/deliver.py start entrada.mp4)
 vídeo → deliver.py start → carpeta de trabajo W (todo lo de abajo va dentro)
       → analyze.py    → cuts.json    (segmentos a conservar, vía silencedetect)
       → transcribe.py --cuts cuts.json → words.json + digest.txt
-      → [lees digest.txt, editas cuts.json si hace falta y escribes plan.json]
+      → [lees digest.txt, editas cuts.json si hace falta]
+      → hook.py       → el gancho al segundo 0 (todo corto; luego repite transcribe)
+      → [escribes plan.json sobre la transcripción nueva]
       → assets.py --auto → reindexa la biblioteca (SIEMPRE, antes de plan.json)
       → cards.py      → cards/*.png  (las anotaciones, rasterizadas)
       → subtitles.py  → subs.ass     (karaoke, ya en la línea de tiempo final)
@@ -163,6 +175,43 @@ para borrar un segmento de `cuts.json`.
 afirmación fuerte, una cifra concreta, una contradicción, una historia con
 remate. Recorta `cuts.json` a esos segmentos. Un corto que funciona dura 20-45 s
 y dice algo interesante en los tres primeros segundos.
+
+**Y abre siempre con su frase gancho — en todo corto, sin que lo pidan.** Con el
+corte ya hecho, relee el digest y elige **una** frase: la que haría que alguien
+se quede (la afirmación más fuerte, la cifra, la contradicción, el veredicto).
+De 1.5 a 6 s; si es más larga, quédate con la parte que golpea. Si la frase más
+fuerte ya está en los tres primeros segundos, no toques nada.
+
+Luego decide si se entiende **sola**:
+
+- **Es vital para el contexto** —lo que viene después la retoma, la explica o
+  la contesta, o es el remate al que lleva todo el vídeo—: **duplícala**. Va al
+  inicio y se queda también en su sitio. Quitarla de ahí deja un hueco en el
+  hilo, y oírla dos veces es justo lo que hace que el final cierre.
+- **Puede aislarse** —se entiende sola y el resto no la necesita para tener
+  sentido—: **muévela**. Va sólo al inicio; repetirla sería relleno.
+
+En la duda, duplica: un corto que se repite un segundo se perdona, uno que salta
+una idea no.
+
+```bash
+python scripts/hook.py cuts.json --from 14.2 --to 17.9 --keep   # vital: duplicar
+python scripts/hook.py cuts.json --from 14.2 --to 17.9          # aislable: mover
+```
+
+Los tiempos son los de **salida** (izquierda del digest; para afinar, los de
+`words.json`). Cada borde se pega solo al borde de segmento más cercano si está
+a menos de medio segundo, que es un silencio medido; si no hay uno cerca, el
+tiempo se respeta tal cual y **tiene que caer en un silencio** que hayas visto
+en el detector, como cualquier corte a mano. El script imprime dónde queda la
+**costura** (fin del gancho, vuelta al principio): pon ahí algo nuevo en
+pantalla —la `section` del tema, un `chip`— para que el salto se lea como
+intención y no como error. Si el gancho que mueves es la última frase del vídeo,
+duplícala: moverla deja el vídeo sin cierre y sin el silencio que protege el
+fundido final.
+
+**Después repite el paso 2** (`transcribe.py --cuts`): la línea de tiempo ha
+cambiado, y `plan.json` y los subtítulos se escriben sobre la nueva.
 
 **Para vídeo largo**, quita divagaciones y falsos arranques que el detector de
 silencios no ve porque tienen audio: repeticiones, "a ver, déjame que", ramas que
@@ -339,6 +388,8 @@ autor la aprobó para todo lo que edite.
 15. **Si el vídeo recorre las piezas de algo** —una arquitectura, un harness, un
     flujo con partes—, una card `diagram` con el mapa completo cada vez que se
     pasa a una pieza nueva, con esa pieza encendida (ver más abajo).
+16. **El corto abre con su frase gancho**: duplicada si el resto depende de
+    ella, movida si se entiende sola. `hook.py`, en el paso 3.
 
 **Si el encuadre es muy cerrado, díselo al autor.** La fila de `logos` y el sello
 van a la altura del pecho, y con la cara ocupando del 15% al 80% del alto no hay
